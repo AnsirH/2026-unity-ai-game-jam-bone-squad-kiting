@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
@@ -6,53 +7,62 @@ using BoneSquadKiting.Game;
 namespace BoneSquadKiting.Bosses
 {
     /// <summary>
-    /// Temporary telegraph: draws the current pattern's danger area on the ground and follows its center.
-    /// Brightens once the zone locks (stops tracking the squad).
+    /// Temporary telegraphs: draws the danger area of every pattern being cast (the boss's and each mini
+    /// boss's) on the ground. A zone brightens once it locks, i.e. stops following the squad.
     /// </summary>
-    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class TelegraphView : MonoBehaviour
     {
         public GameDirector Director;
+        public Material Material;
         public Color TrackingColor = new(1f, 0.25f, 0.2f, 0.28f);
         public Color LockedColor = new(1f, 0.15f, 0.1f, 0.6f);
         public float Height = 0.03f;
 
-        MeshFilter _filter;
-        MeshRenderer _renderer;
+        class Zone
+        {
+            public MeshFilter Filter; public MeshRenderer Renderer;
+            public PatternDefinition Pattern; public DangerShape Shape;
+        }
+
+        readonly List<Zone> _zones = new();
         MaterialPropertyBlock _block;
-        PatternDefinition _shown;
-        DangerShape _shownShape;
         static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        void Awake()
-        {
-            _filter = GetComponent<MeshFilter>();
-            _renderer = GetComponent<MeshRenderer>();
-            _block = new MaterialPropertyBlock();
-            _renderer.enabled = false;
-        }
+        void Awake() { _block = new MaterialPropertyBlock(); }
 
         void LateUpdate()
         {
-            var current = Director != null && Director.Attacks != null && Director.Phase == GamePhase.Play
-                ? Director.Attacks.Current : null;
-            if (current is not BossAttackSystem.Active a)
+            var telegraphs = Director != null && Director.Phase == GamePhase.Play ? Director.Telegraphs : null;
+            int n = telegraphs?.Count ?? 0;
+            while (_zones.Count < n) _zones.Add(Create());
+            for (int i = 0; i < _zones.Count; i++)
             {
-                _renderer.enabled = false;
-                _shown = null;
-                return;
+                var z = _zones[i];
+                if (i >= n) { z.Renderer.enabled = false; z.Pattern = null; continue; }
+                var a = telegraphs[i];
+                if (z.Pattern != a.Pattern || !z.Shape.Equals(a.Shape))
+                {
+                    if (z.Filter.sharedMesh != null) Destroy(z.Filter.sharedMesh);
+                    z.Filter.sharedMesh = DangerShapeMesh.Build(a.Shape);
+                    z.Pattern = a.Pattern; z.Shape = a.Shape;
+                }
+                z.Filter.transform.position = new Vector3(a.Cx, Height, a.Cz);
+                bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
+                _block.SetColor(ColorId, locked ? LockedColor : TrackingColor);
+                z.Renderer.SetPropertyBlock(_block);
+                z.Renderer.enabled = true;
             }
-            if (_shown != a.Pattern || !_shownShape.Equals(a.Shape))
-            {
-                if (_filter.sharedMesh != null) Destroy(_filter.sharedMesh);
-                _filter.sharedMesh = DangerShapeMesh.Build(a.Shape);
-                _shown = a.Pattern; _shownShape = a.Shape;
-            }
-            transform.position = new Vector3(a.Cx, Height, a.Cz);
-            bool locked = a.Remaining <= GameConstants.CastTrackLockTime;
-            _block.SetColor(ColorId, locked ? LockedColor : TrackingColor);
-            _renderer.SetPropertyBlock(_block);
-            _renderer.enabled = true;
+        }
+
+        Zone Create()
+        {
+            var go = new GameObject("Zone", typeof(MeshFilter), typeof(MeshRenderer));
+            go.transform.SetParent(transform, false);
+            var z = new Zone { Filter = go.GetComponent<MeshFilter>(), Renderer = go.GetComponent<MeshRenderer>() };
+            z.Renderer.sharedMaterial = Material;
+            z.Renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            z.Renderer.enabled = false;
+            return z;
         }
     }
 }

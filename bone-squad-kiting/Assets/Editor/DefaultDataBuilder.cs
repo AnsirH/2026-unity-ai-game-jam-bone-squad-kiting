@@ -41,6 +41,15 @@ namespace BoneSquadKiting.EditorTools
             grunt.DisplayName = "잡몹";
             EditorUtility.SetDirty(grunt);
 
+            // A basic mini boss, reusing three of the boss's patterns. Its zones are fixed where they are announced.
+            EnsureFolder(Root, "Elites");
+            var eliteSeq = Upsert<AttackSequence>(Root + "/Sequences/EliteBasic.asset");
+            eliteSeq.Patterns = new[] { seq.Patterns[0], seq.Patterns[3], seq.Patterns[1] };   // core, shell, gate
+            EditorUtility.SetDirty(eliteSeq);
+            var brute = Upsert<EliteDefinition>(Root + "/Elites/Brute.asset");
+            brute.DisplayName = "미니 보스"; brute.Patterns = eliteSeq;
+            EditorUtility.SetDirty(brute);
+
             AssetDatabase.SaveAssets();
             Debug.Log("DefaultDataBuilder: wrote 4 formations, 8 patterns, 1 sequence.");
         }

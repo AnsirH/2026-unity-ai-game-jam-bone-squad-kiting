@@ -36,7 +36,7 @@ namespace BoneSquadKiting.UI
             var squad = Director.Squad;
             if (squad != null)
             {
-                GUI.Box(new Rect(12, 84, 250, 156), GUIContent.none, _box);
+                GUI.Box(new Rect(12, 84, 290, 180), GUIContent.none, _box);
                 GUI.Label(new Rect(22, 88, 230, 24), "테스트 정보 (F1)", _label);
                 GUI.Label(new Rect(22, 112, 230, 24), $"진형  {squad.Formation}  ({squad.RotationDegrees:0}°)", _label);
                 GUI.Label(new Rect(22, 136, 230, 24), $"오더  {OrderText(squad.Order.Kind)}{(squad.IsMoving ? "  · 이동 중" : "")}", _label);
@@ -47,6 +47,8 @@ namespace BoneSquadKiting.UI
                     string waves = Director.Waves != null
                         ? $"   웨이브 {Director.Waves.WavesSpawned}   진행 {Mathf.RoundToInt(Director.Waves.MaxProgress * 100)}%" : "";
                     GUI.Label(new Rect(22, 208, 240, 24), $"적  {Director.Mobs.AliveCount}{waves}", _label);
+                    if (Director.ClearRule == Stage.StageClearRule.DefeatMiniBossThenReachEnd)
+                        GUI.Label(new Rect(22, 232, 240, 24), Director.EndOpen ? "끝 지점: 열림" : "끝 지점: 닫힘 (미니 보스 처치 필요)", _label);
                 }
             }
 
