@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using BoneSquadKiting.Combat;
+using BoneSquadKiting.Fx;
 using BoneSquadKiting.Game;
 
 namespace BoneSquadKiting.Input
@@ -14,6 +15,7 @@ namespace BoneSquadKiting.Input
     public class SquadInputController : MonoBehaviour
     {
         static readonly Plane Ground = new(Vector3.up, Vector3.zero);
+        CommandPulse _pulse;
 
         public Camera Cam;
         public GameDirector Director;
@@ -40,14 +42,12 @@ namespace BoneSquadKiting.Input
                 else if (Mouse.current.leftButton.wasPressedThisFrame && AttackMovePending)
                 {
                     AttackMovePending = false;
-                    if (PickEnemy(out var enemy)) Director.IssueOrder(SquadOrder.Attack(enemy));
-                    else if (PickGround(out var point)) Director.IssueOrder(SquadOrder.AttackMove(point));
+                    IssueClickOrder(true);
                 }
                 else if (Mouse.current.rightButton.wasPressedThisFrame)
                 {
                     if (AttackMovePending) AttackMovePending = false; // right click cancels a pending attack-move
-                    else if (PickEnemy(out var enemy)) Director.IssueOrder(SquadOrder.Attack(enemy));
-                    else if (PickGround(out var point)) Director.IssueOrder(SquadOrder.Move(point));
+                    else IssueClickOrder(false);
                 }
 
                 HandleFormationKeys();
@@ -65,6 +65,18 @@ namespace BoneSquadKiting.Input
                 if (Director.Phase == GamePhase.Win) Director.Proceed();   // next stage (or back to the title after the last)
                 else Director.Restart();                                   // start, or retry this stage after a wipe
             }
+        }
+
+        void IssueClickOrder(bool attackMove)
+        {
+            SquadOrder order;
+            if (PickEnemy(out var enemy)) order = SquadOrder.Attack(enemy);
+            else if (PickGround(out var ground)) order = attackMove ? SquadOrder.AttackMove(ground) : SquadOrder.Move(ground);
+            else return;
+
+            if (!Director.IssueOrder(order)) return;
+            if (_pulse == null) _pulse = CommandPulse.Create(transform);
+            _pulse.Show(order.Target != null ? order.Target.Pos : order.Point, order.Kind != OrderKind.Move);
         }
 
         void HandleFormationKeys()
