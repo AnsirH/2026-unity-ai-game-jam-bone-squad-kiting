@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49529fdac290a2f4ab5a3cfb79b12d9f, type: 3}
+  m_Name: Catapult
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
+  DisplayName: "\uD22C\uC11D\uBCD1"
+  MaxHp: 1500
+  Speed: 0
+  Radius: 0.9
+  StopDistance: 3
+  Patterns: {fileID: 11400000, guid: 437202b9ecf3ae049a7e59fffbd3c281, type: 2}
+  FirstAttackDelay: 3
+  AttackGap: 3.5
+  AttackGapRandom: 3
+  ZoneRotationSpeed: 0
+  AttackRange: 14
+  IntroDuration: 2
+  DeathDuration: 1.5
+  IntroFx: {fileID: 0}
+  DeathFx: {fileID: 0}

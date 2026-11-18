@@ -5,9 +5,11 @@ using BoneSquadKiting.Squad;
 /// <summary>Shared PlayMode helper: a FormationController with in-memory formation definitions.</summary>
 public static class SquadTestRig
 {
-    public static FormationController MakeFc()
+    /// <param name="leader">Most tests want a plain squad; pass true to get unit 0 as squad leader.</param>
+    public static FormationController MakeFc(bool leader = false)
     {
         var fc = new GameObject("fc").AddComponent<FormationController>();
+        fc.HasLeader = leader;
         fc.Formations = new()
         {
             Def("dense", FormationMode.Grid, spacing: 0.53f),

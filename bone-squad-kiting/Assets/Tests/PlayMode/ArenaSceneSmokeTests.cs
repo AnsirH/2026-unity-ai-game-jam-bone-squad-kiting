@@ -14,6 +14,16 @@ using BoneSquadKiting.Game;
 /// </summary>
 public class ArenaSceneSmokeTests
 {
+    // These tests load whole scenes. Leave an empty one behind so later tests do not find this scene's objects.
+    [UnityTearDown]
+    public IEnumerator LeaveAnEmptyScene()
+    {
+        var loaded = SceneManager.GetActiveScene();
+        var empty = SceneManager.CreateScene("Empty " + System.Guid.NewGuid().ToString("N").Substring(0, 6));
+        SceneManager.SetActiveScene(empty);
+        yield return SceneManager.UnloadSceneAsync(loaded);
+    }
+
     [UnityTest]
     public IEnumerator Arena_PlaysAndRenders()
     {
@@ -36,6 +46,16 @@ public class ArenaSceneSmokeTests
         Assert.IsNotNull(Camera.main.GetComponent<BoneSquadKiting.Cameras.EdgeScrollCamera>(), "edge-scroll camera in scene");
         var camStart = Camera.main.transform.position;
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
+        var stage = Object.FindFirstObjectByType<BoneSquadKiting.Stage.StageSetup>();
+        Assert.IsNotNull(stage, "stage setup in scene");
+        Assert.IsNotNull(stage.Grid, "walkable grid baked at load");
+        Assert.AreSame(stage.Grid, director.Squad.Grid, "squad moves on the stage grid");
+        Assert.IsTrue(stage.Grid.IsWalkable(director.Squad.Anchor), "squad starts on walkable ground");
+        Assert.IsFalse(stage.Grid.IsWalkable(new Vector2(GameConstants.BossX, GameConstants.BossZ)), "the boss's spot is cut out");
+        Assert.IsFalse(stage.Grid.IsWalkable(new Vector2(30f, 0f)), "off the arena floor");
+        var gizmos = Object.FindFirstObjectByType<RangeGizmos>();
+        Assert.IsNotNull(gizmos, "range gizmos in scene");
+        Assert.AreSame(director, gizmos.Director);
         var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
         Assert.IsNotNull(hud, "player HUD in scene");
         Assert.IsTrue(hud.Overlay.activeSelf, "start overlay is up before the match");
@@ -60,18 +80,25 @@ public class ArenaSceneSmokeTests
         Assert.AreEqual(LayerMask.NameToLayer("Enemy"), director.BossView.gameObject.layer);
         Assert.IsNotNull(director.BossView.GetComponent<Collider>());
 
-        // Let auto-fire run, then wait for the first telegraph.
+        // The scene's ranges are short, so the squad has to be ordered onto the boss before it can fire.
+        Assert.That(director.UnitFireRange, Is.LessThan(10f), "scene uses the hand-tuned short ranges");
+        director.IssueOrder(SquadOrder.Attack(director.Boss));
+        Assert.IsTrue(director.Squad.IsMoving, "boss is outside squad range at the start");
+
+        // Let it close in and fire, then wait for the first telegraph.
         float timeout = Time.time + GameConstants.FirstAttackDelay + 3f;
         while (director.Attacks.Current == null && Time.time < timeout) yield return null;
         Assert.IsNotNull(director.Attacks.Current, "first pattern telegraphed");
-        Assert.That(director.Boss.Hp, Is.LessThan(GameConstants.BossMax), "squad auto-fire hit the boss");
+        Assert.That(director.Boss.Hp, Is.LessThan(GameConstants.BossMax), "the squad closed in and hit the boss");
         yield return null; // the HUD may have refreshed before the director started the pattern this frame
         Assert.IsTrue(hud.WarningPanel.activeSelf, "pattern warning shows during a telegraph");
         StringAssert.Contains("중앙 핵폭발", hud.WarningTitle.text);
         yield return new WaitForSeconds(0.6f);
         Capture("arena-1-telegraph-core.png");
 
-        // Dodge the first pattern (core -> ring), then show the second (gate) in line formation.
+        // Dodge the first pattern (core -> ring). Step back from the boss first: right next to it the ring
+        // overlaps the boss's keep-out area, and units pressed inward there can still be caught.
+        director.IssueOrder(SquadOrder.Move(new Vector2(0f, 3.4f)));
         director.ChangeFormation("ring");
         float resolveBy = Time.time + 4f;
         while (director.Attacks.Current != null && Time.time < resolveBy) yield return null;
@@ -109,5 +136,132 @@ public class ArenaSceneSmokeTests
         Directory.CreateDirectory(dir);
         File.WriteAllBytes(Path.Combine(dir, fileName), tex.EncodeToPNG());
         Object.Destroy(rt); Object.Destroy(tex);
+    }
+
+    [UnityTest]
+    public IEnumerator Stage1_StartsWithTheSquadInView_AndWavesArrive()
+    {
+        yield return SceneManager.LoadSceneAsync("Stage1", LoadSceneMode.Single);
+        yield return null;
+
+        var director = Object.FindFirstObjectByType<GameDirector>();
+        Assert.IsNotNull(director);
+        Assert.IsFalse(director.HasBoss);
+        Assert.IsNotNull(director.Waves, "wave spawner wired");
+        Assert.IsNotNull(director.Stage.EndPoint, "end point set");
+        Assert.AreEqual(BoneSquadKiting.Stage.StageClearRule.DefeatMiniBossThenReachEnd, director.ClearRule);
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Stage.MiniBossSpawn>(), "mini boss marker placed");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Bosses.EliteView>(), "mini boss is drawn");
+
+        // The squad must be on screen at the start.
+        var anchor = director.Squad.Anchor;
+        var view = Camera.main.WorldToViewportPoint(new Vector3(anchor.x, 0f, anchor.y));
+        Assert.That(view.x, Is.InRange(0.1f, 0.9f), "squad horizontally in view");
+        Assert.That(view.y, Is.InRange(0.05f, 0.95f), "squad vertically in view");
+        Assert.IsTrue(director.Squad.Grid.IsWalkable(anchor));
+
+        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
+        hud.OverlayButton.onClick.Invoke();
+        yield return null;
+        yield return null;
+        // No boss here, but the fixed catapults are on the stage from the start: the bar shows one of them.
+        Assert.IsTrue(hud.BossBar.activeSelf);
+        StringAssert.Contains("투석병", hud.BossText.text);
+        Assert.AreEqual(3, director.Elites.Elites.Count, "three catapults present from the start");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Stage.CameraGate>(), "camera gate placed");
+        Assert.IsTrue(Object.FindFirstObjectByType<BoneSquadKiting.Stage.CameraGate>().Closed);
+
+        float until = Time.time + director.Waves.FirstWaveDelay + 2f;
+        while (director.Mobs.AliveCount == 0 && Time.time < until) yield return null;
+        Assert.That(director.Mobs.AliveCount, Is.GreaterThan(0), "first wave arrived");
+        foreach (var m in director.Mobs.Mobs) Assert.IsTrue(director.Squad.Grid.IsWalkable(m.Pos), "mobs spawn on walkable ground");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Mobs.MobView>(), "mobs are drawn");
+
+        // Let them walk in and get shot at for a while, then look at it.
+        yield return new WaitForSeconds(7f);
+        Capture("stage-1.png");
+        Assert.AreEqual(GamePhase.Play, director.Phase);
+    }
+
+    [UnityTest]
+    public IEnumerator ClearingAStage_LeadsToTheNext_WhichStartsAtOnceWithAFreshSquad()
+    {
+        yield return SceneManager.LoadSceneAsync("Stage1", LoadSceneMode.Single);
+        yield return null;
+        var director = Object.FindFirstObjectByType<GameDirector>();
+        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
+        Assert.AreEqual("스테이지 1", director.StageTitle);
+        Assert.AreEqual("Stage2", director.NextScene);
+
+        director.Proceed();
+        yield return null;
+        Assert.AreEqual("Stage1", SceneManager.GetActiveScene().name, "Proceed does nothing before the stage is won");
+
+        hud.OverlayButton.onClick.Invoke();                 // start
+        director.Squad.Units[3].Dead = true;                // lose a unit on this stage
+        director.Phase = GamePhase.Win;                     // (skip the fight)
+        yield return null;
+        StringAssert.Contains("클리어", hud.OverlayTitle.text);
+        Assert.AreEqual("다음 스테이지 (Enter)", hud.OverlayButtonText.text);
+
+        hud.OverlayButton.onClick.Invoke();                 // next stage
+        float until = Time.realtimeSinceStartup + 10f;
+        while (SceneManager.GetActiveScene().name != "Stage2" && Time.realtimeSinceStartup < until) yield return null;
+        yield return null; yield return null;
+
+        Assert.AreEqual("Stage2", SceneManager.GetActiveScene().name);
+        var next = Object.FindFirstObjectByType<GameDirector>();
+        Assert.AreNotSame(director, next);
+        Assert.AreEqual(GamePhase.Play, next.Phase, "no title screen between stages");
+        Assert.AreEqual(GameConstants.SquadSize, next.AliveCount, "every stage starts with the full squad");
+        Assert.AreEqual("스테이지 2", next.StageTitle);
+    }
+
+    [UnityTest]
+    public IEnumerator StageOrder_RunsOneToFour_ThenTheArena_ThenBackToTheTitle()
+    {
+        string[] order = { "Stage1", "Stage2", "Stage3", "Stage4", "Arena" };
+        for (int i = 0; i < order.Length; i++)
+        {
+            Assert.AreEqual(order[i], System.IO.Path.GetFileNameWithoutExtension(UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i)), "build order = play order");
+            yield return SceneManager.LoadSceneAsync(order[i], LoadSceneMode.Single);
+            yield return null;
+            var d = Object.FindFirstObjectByType<GameDirector>();
+            Assert.AreEqual(i + 1 < order.Length ? order[i + 1] : "", d.NextScene, order[i]);
+            Assert.AreEqual($"스테이지 {i + 1}", d.StageTitle);
+            var expected = order[i] == "Arena" ? BoneSquadKiting.Stage.StageClearRule.DefeatBoss
+                : order[i] == "Stage3" ? BoneSquadKiting.Stage.StageClearRule.ReachEnd
+                : BoneSquadKiting.Stage.StageClearRule.DefeatMiniBossThenReachEnd;
+            Assert.AreEqual(expected, d.ClearRule, order[i]);
+            Assert.AreEqual(order[i] == "Arena", d.HasBoss, order[i]);
+            Assert.IsTrue(d.Squad.Grid.IsWalkable(d.Squad.Anchor), order[i] + ": squad starts on walkable ground");
+            int[] miniBosses = { 4, 6, 6, 2, 0 };            // per the stage lineup
+            var spawns = Object.FindObjectsByType<BoneSquadKiting.Stage.MiniBossSpawn>(FindObjectsSortMode.None);
+            Assert.AreEqual(miniBosses[i], spawns.Length, order[i] + ": mini boss count");
+            foreach (var sp in spawns)
+            {
+                Assert.IsNotNull(sp.Definition, order[i] + ": " + sp.name + " has a definition");
+                Assert.IsTrue(d.Squad.Grid.IsWalkable(sp.Position), order[i] + ": " + sp.name + " stands on walkable ground");
+            }
+            if (d.Stage.EndPoint != null)
+            {
+                var end = new Vector2(d.Stage.EndPoint.position.x, d.Stage.EndPoint.position.z);
+                Assert.IsTrue(d.Squad.Grid.IsWalkable(end), order[i] + ": end point on walkable ground");
+            }
+        }
+
+        // Winning the last stage goes back to the first scene, on its title screen.
+        var last = Object.FindFirstObjectByType<GameDirector>();
+        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
+        hud.OverlayButton.onClick.Invoke();
+        last.Phase = GamePhase.Win;
+        yield return null;
+        Assert.AreEqual("게임 클리어", hud.OverlayTitle.text);
+        last.Proceed();
+        float until = Time.realtimeSinceStartup + 10f;
+        while (SceneManager.GetActiveScene().name != "Stage1" && Time.realtimeSinceStartup < until) yield return null;
+        yield return null; yield return null;
+        Assert.AreEqual("Stage1", SceneManager.GetActiveScene().name);
+        Assert.AreEqual(GamePhase.Menu, Object.FindFirstObjectByType<GameDirector>().Phase, "a new run starts from the title screen");
     }
 }

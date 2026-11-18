@@ -12,7 +12,9 @@ using BoneSquadKiting.Data;
 using BoneSquadKiting.Fx;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Input;
+using BoneSquadKiting.Mobs;
 using BoneSquadKiting.Squad;
+using BoneSquadKiting.Stage;
 using BoneSquadKiting.UI;
 
 namespace BoneSquadKiting.EditorTools
@@ -26,19 +28,88 @@ namespace BoneSquadKiting.EditorTools
     public static class ArenaSceneBuilder
     {
         const string ScenePath = "Assets/Scenes/Arena.unity";
-        const string MatDir = "Assets/Prototype/Materials";
-        const string EnemyLayer = "Enemy";
+        internal const string MatDir = "Assets/Prototype/Materials";
+        internal const string EnemyLayer = "Enemy";
+        internal const string GroundLayer = "Ground", ObstacleLayer = "Obstacle";
 
         // Camera framing. Tune here (or on the camera, once the scene is hand-authored).
-        const float CameraPitch = 60f;      // degrees down from horizontal
-        const float CameraYaw = 0f;         // degrees turned around Y; 0 = straight on, boss directly ahead
-        const float CameraFov = 30f;        // vertical field of view
-        const float CameraDistance = 34f;   // from the ground point at the center of the view
+        internal const float CameraPitch = 60f;      // degrees down from horizontal
+        internal const float CameraYaw = 0f;         // degrees turned around Y; 0 = straight on, boss directly ahead
+        internal const float CameraFov = 30f;        // vertical field of view
+        internal const float CameraDistance = 34f;   // from the ground point at the center of the view
         // Start between the squad (z = 3.4) and the boss (z = -7.4) so both are in frame.
         static readonly Vector2 CameraStartLookAt = new(0f, -0.1f);
 
+        // Ranges as tuned by hand in the scene (2026-11-18). The squad has to close in on the boss to fire.
+        internal const float UnitFireRange = 5.5f;
+        internal const float SquadEngageRange = 5f;
+
+        /// <summary>
+        /// A placeholder progress stage: a corridor with a few obstacles, a start and an end point, endless
+        /// waves that grow toward the end and, on most stages, a mini boss near the end. Every number here is
+        /// a starting value, not a tuned one. Real maps will replace these scenes.
+        /// </summary>
+        class StageSpec
+        {
+            public string Name, Title, Next;
+            public float Width = 18f, Length = 64f;
+            public bool ReachEndOnly;                       // clear by reaching the end point even if mini bosses live
+            public Placement[] MiniBosses = new Placement[0];
+            public float GateAlong = -1f;                   // >= 0: a camera gate here (0 = start, 1 = end)...
+            public int[] GateUntil;                         // ...closed until these mini boss placements are dead
+            public float Interval0 = 12f, Interval1 = 5f;   // seconds between waves at the start / at the end
+            public float Count0 = 8f, Count1 = 30f;         // mobs per wave at the start / at the end
+            public string Path => $"Assets/Scenes/{Name}.unity";
+        }
+
+        /// <summary>One mini boss on a stage. Along = 0 at the start point, 1 at the end point.</summary>
+        class Placement
+        {
+            public string Elite; public float X, Along;
+            public bool FromStart;          // a fixed cannon that is simply there
+            public int[] After;             // indices of placements that must die before this one activates
+            public Placement(string elite, float x, float along, bool fromStart = false, int[] after = null)
+            { Elite = elite; X = x; Along = along; FromStart = fromStart; After = after; }
+        }
+
+        // Stage lineup (decisions #45, #46). Positions and wave numbers are placeholders.
+        //  1: three catapults along the way, the dark-flame mage at the end
+        //  2: the shadow swordsman, three catapults; once those three are down, one more catapult and the spear thrower
+        //  3: many catapults and the telekinetic mage, but the stage is cleared by reaching the end point
+        //  4: the telekinetic mage twice
+        //  5: the boss arena
+        static readonly StageSpec[] Stages =
+        {
+            new() { Name = "Stage1", Title = "스테이지 1", Next = "Stage2", Length = 84f, Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f,
+                    MiniBosses = new[] { new Placement("Catapult", -5f, 0.28f, true), new Placement("Catapult", 5f, 0.45f, true),
+                                         new Placement("Catapult", 0f, 0.64f, true), new Placement("DarkFlameMage", 0f, 0.9f) },
+                    GateAlong = 0.74f, GateUntil = new[] { 0, 1, 2 } },
+            new() { Name = "Stage2", Title = "스테이지 2", Next = "Stage3", Length = 96f, Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f,
+                    MiniBosses = new[] { new Placement("ShadowSwordsman", 0f, 0.22f),
+                                         new Placement("Catapult", -5f, 0.42f, true), new Placement("Catapult", 5f, 0.52f, true), new Placement("Catapult", 6f, 0.62f, true),
+                                         new Placement("Catapult", 4f, 0.8f, true, new[] { 1, 2, 3 }), new Placement("SpearThrower", 0f, 0.9f, false, new[] { 1, 2, 3 }) },
+                    GateAlong = 0.72f, GateUntil = new[] { 1, 2, 3 } },
+            new() { Name = "Stage3", Title = "스테이지 3", Next = "Stage4", Length = 108f, ReachEndOnly = true, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f,
+                    MiniBosses = new[] { new Placement("Catapult", -5f, 0.2f, true), new Placement("Catapult", 5f, 0.32f, true), new Placement("Catapult", -5f, 0.46f, true),
+                                         new Placement("Catapult", 5f, 0.58f, true), new Placement("Catapult", 0f, 0.72f, true), new Placement("TelekineticMage", 0f, 0.9f) },
+                    GateAlong = 0.8f, GateUntil = new[] { 0, 1, 2, 3, 4 } },
+            new() { Name = "Stage4", Title = "스테이지 4", Next = "Arena", Length = 84f, Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f,
+                    MiniBosses = new[] { new Placement("TelekineticMageGate", 0f, 0.45f), new Placement("TelekineticMageQuadrant", 0f, 0.9f) } },
+        };
+        const string ArenaTitle = "스테이지 5";
+
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
-        public static void Build()
+        public static void Build() => BuildScene(ScenePath, null);
+
+        /// <summary>Stage 1 to 4 and then the arena (stage 5), in play order. The arena is left open.</summary>
+        [MenuItem("BoneSquadKiting/Rebuild All Stage Scenes")]
+        public static void BuildAllStages()
+        {
+            foreach (var spec in Stages) BuildScene(spec.Path, spec);
+            BuildScene(ScenePath, null);
+        }
+
+        static void BuildScene(string scenePath, StageSpec mobStage)
         {
             int enemyLayer = EnsureLayer(EnemyLayer);
             EnsureFolder("Assets", "Prototype"); EnsureFolder("Assets/Prototype", "Materials");
@@ -60,6 +131,7 @@ namespace BoneSquadKiting.EditorTools
                 (GameConstants.LimitXMax - GameConstants.LimitXMin) / 10f, 1f,
                 (GameConstants.LimitZMax - GameConstants.LimitZMin) / 10f);
             plane.GetComponent<Renderer>().sharedMaterial = ground;
+            plane.layer = EnsureLayer(GroundLayer);   // its collider is the stage's walkable floor
 
             // Quarter view: a perspective camera looking down at a steep angle (framing modelled on
             // Shape of Dreams: ~60 degrees, narrow FOV, no Y turn). It sits on the +z side, so the boss
@@ -110,24 +182,58 @@ namespace BoneSquadKiting.EditorTools
             };
             var director = game.AddComponent<GameDirector>();
             director.Squad = squad;
+            director.UnitFireRange = UnitFireRange; director.SquadEngageRange = SquadEngageRange;
+            var tuning = AssetDatabase.LoadAssetAtPath<GameTuning>("Assets/Data/GameTuning.asset");
+            director.Tuning = tuning;   // the shared numbers; the two fields above are only the fallback
             director.Sequence = Load<AttackSequence>("Assets/Data/Sequences/BossMain.asset");
             // RTS camera: it does not follow the squad; the mouse at a screen edge slides it over the arena.
             var scroll = camGo.AddComponent<EdgeScrollCamera>();
             scroll.Distance = CameraDistance; scroll.LookAt = CameraStartLookAt;
+            scroll.Tuning = AssetDatabase.LoadAssetAtPath<GameTuning>("Assets/Data/GameTuning.asset");
             scroll.Apply();
+
+            // Stage data: walkable grid from the floor collider, a no-go square around the boss, start point.
+            var stageGo = new GameObject("Stage");
+            var baker = stageGo.AddComponent<WalkGridBaker>();
+            baker.Size = new Vector2(GameConstants.LimitXMax - GameConstants.LimitXMin, GameConstants.LimitZMax - GameConstants.LimitZMin);
+            baker.GroundMask = 1 << EnsureLayer(GroundLayer); baker.ObstacleMask = 1 << EnsureLayer(ObstacleLayer);
+
+            var bossArea = new GameObject("Boss Area (Exclude)");
+            bossArea.transform.SetParent(stageGo.transform, false);
+            bossArea.AddComponent<WalkOutline>().Mode = WalkOutlineMode.Exclude;
+            const float keepOut = 1.7f;
+            foreach (var corner in new[] { new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1) })
+            {
+                var point = new GameObject("Point");
+                point.transform.SetParent(bossArea.transform, false);
+                point.transform.position = new Vector3(GameConstants.BossX + corner.x * keepOut, 0f, GameConstants.BossZ + corner.y * keepOut);
+            }
+
+            var startPoint = new GameObject("Start Point");
+            startPoint.transform.SetParent(stageGo.transform, false);
+            startPoint.transform.position = new Vector3(squad.Anchor.x, 0f, squad.Anchor.y);
+
+            var stage = stageGo.AddComponent<StageSetup>();
+            stage.Ground = baker; stage.Squad = squad; stage.Cam = scroll; stage.StartPoint = startPoint.transform;
+
+            game.AddComponent<RangeGizmos>().Director = director; // Scene-view circles for tuning the two ranges
 
             var input = game.AddComponent<SquadInputController>();
             input.Cam = cam; input.Director = director; input.EnemyMask = 1 << enemyLayer;
 
             var squadView = new GameObject("Squad View").AddComponent<SquadView>();
             squadView.Squad = squad; squadView.UnitMaterial = unit;
+            var art = AssetDatabase.LoadAssetAtPath<ArtSet>("Assets/Data/Art/ArtSet.asset");
+            squadView.Art = art;
             // Pre-place the squad in its starting layout so it is visible without entering Play mode.
             var startSlots = FormationSlots.Generate(squad.Formations[0], GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
             {
-                var u = SquadView.BuildUnit(i, squadView.UnitScale, unit);
+                var u = SquadView.BuildUnit(i, art, squadView.UnitScale, squadView.LeaderScale, unit);
                 u.transform.SetParent(squadView.transform, false);
-                u.transform.position = new Vector3(squad.Anchor.x + startSlots[i].x, squadView.UnitScale, squad.Anchor.y + startSlots[i].y);
+                bool model = u.GetComponent<MeshFilter>() == null;   // a model stands on the ground; a capsule floats at its center
+                u.transform.position = new Vector3(squad.Anchor.x + startSlots[i].x, model ? 0f : squadView.UnitScale, squad.Anchor.y + startSlots[i].y);
+                if (model) u.transform.rotation = Quaternion.Euler(0f, 180f + (art != null ? art.ModelYawOffset : 0f), 0f);   // facing the far end
             }
 
             var shotView = new GameObject("Shot View").AddComponent<ShotView>();
@@ -145,9 +251,7 @@ namespace BoneSquadKiting.EditorTools
 
             var teleGo = new GameObject("Telegraph");
             var tele = teleGo.AddComponent<TelegraphView>();
-            tele.Director = director;
-            teleGo.GetComponent<MeshRenderer>().sharedMaterial = telegraph;
-            teleGo.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+            tele.Director = director; tele.Material = telegraph;
 
             // Debug overlay (F1) for playtesting, plus the player HUD.
             var testHud = game.AddComponent<TestHud>();
@@ -184,20 +288,126 @@ namespace BoneSquadKiting.EditorTools
             fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
             fx.HitParticles = particles; fx.Ring = ring;
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            if (mobStage != null) ConvertToMobStage(mobStage, plane, baker, stage, director, squad, squadView, scroll, bossGo, bossArea, teleGo, startPoint);
+            else { director.StageTitle = ArenaTitle; director.NextScene = ""; director.Stage = stage; }
+
+            EditorSceneManager.SaveScene(scene, scenePath);
+
+            // Build order = play order: the stage scenes that exist, then the arena. The first one is the title screen.
+            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+            foreach (var spec in Stages)
+                if (System.IO.File.Exists(spec.Path)) scenes.Add(new EditorBuildSettingsScene(spec.Path, true));
+            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
-            Debug.Log("ArenaSceneBuilder: wrote " + ScenePath);
+            Debug.Log("ArenaSceneBuilder: wrote " + scenePath);
         }
 
-        static T Load<T>(string path) where T : Object
+        // Reshape the freshly built arena into a corridor stage fought against rounds of mobs.
+        static void ConvertToMobStage(StageSpec spec, GameObject plane, WalkGridBaker baker, StageSetup stage, GameDirector director,
+            FormationController squad, SquadView squadView, EdgeScrollCamera scroll, GameObject bossGo, GameObject bossArea,
+            GameObject teleGo, GameObject startPoint)
+        {
+            float width = spec.Width, length = spec.Length;
+            var start = new Vector2(0f, length / 2f - 6f);   // near end; the camera looks toward -z, so "forward" is up-screen
+            var end = new Vector2(0f, -(length / 2f - 6f));
+            director.StageTitle = spec.Title; director.NextScene = spec.Next;
+
+            plane.transform.localScale = new Vector3(width / 10f, 1f, length / 10f);
+            baker.Size = new Vector2(width, length);
+
+            Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea);   // the telegraph view stays: the mini boss uses it
+            director.BossView = null; director.HasBoss = false;
+            director.ClearRule = spec.ReachEndOnly ? StageClearRule.ReachEnd : StageClearRule.DefeatMiniBossThenReachEnd;
+            director.Stage = stage;
+
+            // Move the squad and its pre-placed units to the start point.
+            var delta = start - squad.Anchor;
+            squad.StartAnchor = squad.Anchor = squad.Destination = start;
+            foreach (Transform unit in squadView.transform) unit.position += new Vector3(delta.x, 0f, delta.y);
+            startPoint.transform.position = new Vector3(start.x, 0f, start.y);
+            // The camera's limits must cover this stage before its start position is applied, or the
+            // position gets clamped to the arena's size.
+            scroll.BoundsMin = new Vector2(-width / 2f, -length / 2f); scroll.BoundsMax = new Vector2(width / 2f, length / 2f);
+            scroll.LookAt = start + new Vector2(0f, -4f); scroll.Apply();
+
+            var endPoint = new GameObject("End Point");
+            endPoint.transform.SetParent(stage.transform, false);
+            endPoint.transform.position = new Vector3(end.x, 0f, end.y);
+            stage.EndPoint = endPoint.transform; stage.EndRadius = 3f;
+
+            // A few blocks to walk (and path) around.
+            var obstacleMat = Lit("Obstacle", Hex("#2b3d52"));
+            int obstacleLayer = EnsureLayer(ObstacleLayer);
+            // Laid out as fractions of the corridor's half-length so longer stages spread them out.
+            float h = length / 2f;
+            var blocks = new[] { new Vector4(-4.5f, h * 0.44f, 6f, 2f), new Vector4(5f, h * 0.12f, 5f, 2f), new Vector4(-3f, -h * 0.19f, 8f, 2f), new Vector4(5.5f, -h * 0.47f, 4f, 4f) };
+            foreach (var b in blocks)   // x, z, size x, size z
+            {
+                var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                block.name = "Obstacle";
+                block.transform.SetParent(stage.transform, false);
+                block.transform.position = new Vector3(b.x, 0.75f, b.y);
+                block.transform.localScale = new Vector3(b.z, 1.5f, b.w);
+                block.layer = obstacleLayer;
+                block.GetComponent<Renderer>().sharedMaterial = obstacleMat;
+            }
+
+            // Endless waves that grow as the squad advances toward the end point.
+            var waves = stage.gameObject.AddComponent<WaveSpawner>();
+            waves.Mob = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
+            waves.Interval = AnimationCurve.Linear(0f, spec.Interval0, 1f, spec.Interval1);
+            waves.Count = AnimationCurve.Linear(0f, spec.Count0, 1f, spec.Count1);
+            director.Waves = waves;
+
+            // Mini bosses, placed along the corridor between the start and the end point.
+            var spawns = new MiniBossSpawn[spec.MiniBosses.Length];
+            for (int i = 0; i < spawns.Length; i++)
+            {
+                var pl = spec.MiniBosses[i];
+                var go = new GameObject($"Mini Boss {i + 1} ({pl.Elite})");
+                go.transform.SetParent(stage.transform, false);
+                go.transform.position = new Vector3(pl.X, 0f, Mathf.Lerp(start.y, end.y, pl.Along));
+                spawns[i] = go.AddComponent<MiniBossSpawn>();
+                spawns[i].Definition = Load<EliteDefinition>($"Assets/Data/Elites/{pl.Elite}.asset");
+                spawns[i].PresentFromStart = pl.FromStart;
+                spawns[i].TriggerRadius = 12f;
+            }
+            for (int i = 0; i < spawns.Length; i++)
+            {
+                var after = spec.MiniBosses[i].After;
+                if (after == null) continue;
+                spawns[i].ActivateAfter = System.Array.ConvertAll(after, k => spawns[k]);
+            }
+
+            // A camera gate: the view cannot be scrolled past this line until the listed mini bosses are dead.
+            if (spec.GateAlong >= 0f && spec.GateUntil != null)
+            {
+                var gateGo = new GameObject("Camera Gate");
+                gateGo.transform.SetParent(stage.transform, false);
+                gateGo.transform.position = new Vector3(0f, 0f, Mathf.Lerp(start.y, end.y, spec.GateAlong));
+                gateGo.transform.rotation = Quaternion.Euler(0f, 180f, 0f);   // arrow toward -z: the far side is closed
+                gateGo.AddComponent<CameraGate>().Until = System.Array.ConvertAll(spec.GateUntil, k => spawns[k]);
+            }
+
+            var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();
+            eliteView.Director = director;
+            eliteView.EnemyLayer = EnsureLayer(EnemyLayer);
+            eliteView.EliteMaterial = Lit("MiniBoss", Hex("#c9722a"), Hex("#ff8a2a") * 1.4f);
+
+            var mobView = new GameObject("Mob View").AddComponent<MobView>();
+            mobView.Director = director;
+            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
+        }
+
+        internal static T Load<T>(string path) where T : Object
         {
             var a = AssetDatabase.LoadAssetAtPath<T>(path);
             if (a == null) Debug.LogError("ArenaSceneBuilder: missing " + path + " (run Rebuild Default Data first)");
             return a;
         }
 
-        static Material Lit(string name, Color baseColor, Color? emission = null)
+        internal static Material Lit(string name, Color baseColor, Color? emission = null)
         {
             var m = Upsert($"{MatDir}/{name}.mat", Shader.Find("Universal Render Pipeline/Lit"));
             m.SetColor("_BaseColor", baseColor);
@@ -212,7 +422,7 @@ namespace BoneSquadKiting.EditorTools
             return m;
         }
 
-        static Material Upsert(string path, Shader shader)
+        internal static Material Upsert(string path, Shader shader)
         {
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (m != null) { m.shader = shader; return m; }
@@ -221,15 +431,15 @@ namespace BoneSquadKiting.EditorTools
             return m;
         }
 
-        static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
+        internal static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
 
-        static void EnsureFolder(string parent, string child)
+        internal static void EnsureFolder(string parent, string child)
         {
             if (!AssetDatabase.IsValidFolder(parent + "/" + child)) AssetDatabase.CreateFolder(parent, child);
         }
 
         /// <summary>Find or create a user layer and return its index.</summary>
-        static int EnsureLayer(string name)
+        internal static int EnsureLayer(string name)
         {
             int existing = LayerMask.NameToLayer(name);
             if (existing >= 0) return existing;

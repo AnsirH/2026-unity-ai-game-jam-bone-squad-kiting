@@ -28,3 +28,7 @@ MonoBehaviour:
     Outer: 6.4
     HalfZ: 7.1
   ScaleWithSquad: 0
+  Kind: 0
+  SustainSeconds: 4
+  TickInterval: 0.5
+  TickDamage: 15

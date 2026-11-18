@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed912701c61b41549a78099fb18827ba, type: 3}
+  m_Name: Gate_Sustained
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.PatternDefinition
+  Id: 1
+  DisplayName: "\uC30D\uBCBD \uD68C\uC804 (\uC9C0\uC18D)"
+  Advice: "W \xB7 \uC77C\uC790"
+  Detail: "\uBCBD\uC774 \uB3CC\uBA74\uC11C \uACC4\uC18D \uD729\uC501\uB2C8\uB2E4.
+    \uC77C\uC790\uB85C \uB530\uB77C \uB3C4\uC138\uC694!"
+  Recommend: line
+  Time: 2.05
+  Shape:
+    Type: 2
+    RMax: 0
+    RMin: 0
+    ROut: 0
+    Inner: 0.83
+    Outer: 6.4
+    HalfZ: 7.1
+  ScaleWithSquad: 0
+  Kind: 1
+  SustainSeconds: 4
+  TickInterval: 0.5
+  TickDamage: 15

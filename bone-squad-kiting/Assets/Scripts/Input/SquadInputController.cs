@@ -8,7 +8,7 @@ namespace BoneSquadKiting.Input
 {
     /// <summary>
     /// Mouse / keyboard to squad commands. Right click: enemy = attack it, ground = move.
-    /// A then left click: attack-move. Mouse wheel: rotate the formation. Formation hotkeys come from the formation assets (Q/W/E/R).
+    /// S: stop. F: revive. A then left click: attack-move. Mouse wheel: rotate the formation. Formation hotkeys come from the formation assets (Q/W/E/R).
     /// Reads the new Input System directly; the project has the legacy Input class disabled.
     /// </summary>
     public class SquadInputController : MonoBehaviour
@@ -30,6 +30,8 @@ namespace BoneSquadKiting.Input
             {
                 if (Pressed(Key.A)) AttackMovePending = true;
                 if (Pressed(Key.Escape)) AttackMovePending = false;
+                if (Pressed(Key.S)) { AttackMovePending = false; Director.StopSquad(); }
+                if (Pressed(Key.F)) Director.TryRevive();
 
                 // A click that lands on a HUD button must not also be read as a squad command.
                 bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -58,7 +60,11 @@ namespace BoneSquadKiting.Input
 
             // Pause has to stay reachable while paused; restart only outside a running match.
             if (Director.Phase == GamePhase.Play && Pressed(Key.P)) Director.TogglePause();
-            if (Director.Phase != GamePhase.Play && Pressed(Key.Enter)) Director.Restart();
+            if (Director.Phase != GamePhase.Play && Pressed(Key.Enter))
+            {
+                if (Director.Phase == GamePhase.Win) Director.Proceed();   // next stage (or back to the title after the last)
+                else Director.Restart();                                   // start, or retry this stage after a wipe
+            }
         }
 
         void HandleFormationKeys()

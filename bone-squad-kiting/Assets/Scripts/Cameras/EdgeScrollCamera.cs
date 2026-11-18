@@ -11,6 +11,8 @@ namespace BoneSquadKiting.Cameras
     /// </summary>
     public class EdgeScrollCamera : MonoBehaviour
     {
+        [Tooltip("Shared numbers for every stage. When set, it overrides Scroll Speed, Edge Width and Distance below.")]
+        public BoneSquadKiting.Data.GameTuning Tuning;
         public float ScrollSpeed = 14f;   // world units per second
         public float EdgeWidth = 18f;     // pixels from the screen edge that count as "at the edge"
         public float Distance = 34f;      // from the look-at point, along the view direction
@@ -21,7 +23,39 @@ namespace BoneSquadKiting.Cameras
         /// <summary>Extra world-space offset added on top of the scrolled position (screen shake).</summary>
         [System.NonSerialized] public Vector3 ShakeOffset;
 
+        /// <summary>Lines the view may not be scrolled past while their mini bosses live. Set by StageSetup.</summary>
+        [System.NonSerialized] public BoneSquadKiting.Stage.CameraGate[] Gates;
+
         bool _mouseSeen;
+
+        // Temporary look at a point (mini boss intro / death): go there, hold, come back.
+        Vector2 _focusPoint, _focusReturn;
+        float _focusDuration, _focusElapsed = -1f;
+
+        public bool Focusing => _focusElapsed >= 0f;
+
+        /// <summary>Glide to a point, hold, and return to where the view was, over <paramref name="seconds"/>.</summary>
+        public void FocusOn(Vector2 point, float seconds)
+        {
+            if (seconds <= 0f) return;
+            if (!Focusing) _focusReturn = LookAt;
+            _focusPoint = point; _focusDuration = seconds; _focusElapsed = 0f;
+        }
+
+        /// <summary>Advance a focus move. Public so tests can drive time. Returns true while one is running.</summary>
+        public bool TickFocus(float dt)
+        {
+            if (!Focusing) return false;
+            _focusElapsed += dt;
+            float t = Mathf.Clamp01(_focusElapsed / _focusDuration);
+            const float edge = 0.3f;   // share of the time spent travelling each way
+            float w = t < edge ? Mathf.SmoothStep(0f, 1f, t / edge)
+                    : t > 1f - edge ? Mathf.SmoothStep(1f, 0f, (t - (1f - edge)) / edge) : 1f;
+            LookAt = Vector2.Lerp(_focusReturn, _focusPoint, w);
+            if (t >= 1f) { LookAt = _focusReturn; _focusElapsed = -1f; }
+            Apply();
+            return true;
+        }
 
         /// <summary>
         /// Which way to scroll for a mouse position, as (right, up) in -1..1. Zero when the cursor is not
@@ -39,6 +73,7 @@ namespace BoneSquadKiting.Cameras
 
         void LateUpdate()
         {
+            if (TickFocus(Time.unscaledDeltaTime)) return;   // no edge scrolling while the camera is being directed
             // Until the mouse has reported a position it reads (0, 0), which would look like the corner.
             if (Mouse.current != null && Mouse.current.position.ReadValue() != Vector2.zero) _mouseSeen = true;
             var dir = _mouseSeen && Application.isFocused
@@ -63,7 +98,10 @@ namespace BoneSquadKiting.Cameras
         /// <summary>Clamp the look-at point and place the camera for it.</summary>
         public void Apply()
         {
+            if (Tuning != null) { ScrollSpeed = Tuning.CameraScrollSpeed; EdgeWidth = Tuning.CameraEdgeWidth; Distance = Tuning.CameraDistance; }
             LookAt = new Vector2(Mathf.Clamp(LookAt.x, BoundsMin.x, BoundsMax.x), Mathf.Clamp(LookAt.y, BoundsMin.y, BoundsMax.y));
+            if (Gates != null && !Focusing)   // a directed look (mini boss intro) may go past a closed gate
+                foreach (var gate in Gates) if (gate != null) LookAt = gate.Clamp(LookAt);
             transform.position = new Vector3(LookAt.x, 0f, LookAt.y) - transform.forward * Distance + ShakeOffset;
         }
 

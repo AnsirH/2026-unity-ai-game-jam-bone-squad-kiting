@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using BoneSquadKiting.Bosses;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
+using BoneSquadKiting.Mobs;
 using BoneSquadKiting.Squad;
+using BoneSquadKiting.Stage;
 
 namespace BoneSquadKiting.Game
 {
@@ -19,9 +22,26 @@ namespace BoneSquadKiting.Game
         public AttackSequence Sequence;     // boss pattern sequence asset
         public BossView BossView;           // optional scene visual (collider + EnemyRef)
 
-        [Header("Tuning (editable while playing)")]
+        [Header("Stage")]
+        public bool HasBoss = true;                                   // false for stages fought against rounds of mobs only
+        public StageClearRule ClearRule = StageClearRule.DefeatBoss;
+        public StageSetup Stage;            // optional: start / end points and the walkable grid
+        public WaveSpawner Waves;           // optional: this stage's endless mob waves
+        public string StageTitle = "";      // shown when the stage starts and on its clear screen, e.g. "스테이지 1"
+        public string NextScene = "";       // scene to load after this stage is cleared; empty = this is the last stage
+
+        public bool IsFinalStage => string.IsNullOrEmpty(NextScene);
+
+        // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
+        static bool _continueRun;
+
+        [Header("Tuning")]
+        [Tooltip("Shared numbers for every stage. When set, it overrides the three fields below and the squad's and mobs' tuning.")]
+        public GameTuning Tuning;
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
         [Min(0f)] public float SquadEngageRange = GameConstants.SquadEngageRange;  // from the anchor: attack orders stop here
+
+        [Min(0.1f)] public float ReviveSeconds = 3f;                              // how long one revive takes
 
         [Header("State")]
         public GamePhase Phase = GamePhase.Menu;
@@ -33,6 +53,45 @@ namespace BoneSquadKiting.Game
         public EnemyRegistry Enemies { get; private set; }
         public BossAttackSystem Attacks { get; private set; }
         public ShotSystem Shots { get; private set; }
+        public MobSystem Mobs { get; private set; }
+        public EliteSystem Elites { get; private set; }
+
+        /// <summary>Every pattern being cast right now: the boss's and each mini boss's.</summary>
+        public readonly List<BossAttackSystem.Active> Telegraphs = new();
+
+        /// <summary>The telegraph that will go off first, if any. The HUD warns about this one.</summary>
+        public BossAttackSystem.Active? NextTelegraph
+        {
+            get
+            {
+                BossAttackSystem.Active? best = null;
+                foreach (var t in Telegraphs) if (best == null || t.Remaining < best.Value.Remaining) best = t;
+                return best;
+            }
+        }
+
+        /// <summary>
+        /// True while an intro / death moment is playing: the simulation is frozen and input is ignored,
+        /// but effects and the camera keep moving (Time.timeScale is untouched).
+        /// </summary>
+        public bool InCutscene => _cutsceneRemaining > 0f;
+        float _cutsceneRemaining;
+        int _aliveLastStep;
+        MiniBossSpawn[] _miniBosses = new MiniBossSpawn[0];
+
+        /// <summary>Whether the end point currently counts (for rules that open it only after the mini boss).</summary>
+        public bool EndOpen
+        {
+            get
+            {
+                if (ClearRule != StageClearRule.DefeatMiniBossThenReachEnd) return ClearRule == StageClearRule.ReachEnd;
+                foreach (var m in _miniBosses) if (!m.Defeated) return false;
+                return true;
+            }
+        }
+        public ReviveSystem Revives { get; private set; }
+        public int DeadCount => Squad.Units.Count - Squad.AliveCount;
+        public FlowField Flow { get; private set; }
 
         // Stable hooks for HUD / FX: the systems above are recreated on every Restart.
         public event System.Action<PatternDefinition> PatternStarted;
@@ -40,6 +99,14 @@ namespace BoneSquadKiting.Game
         public event System.Action<string> FormationChanged;
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
+        public event System.Action<int, int> WaveStarted;    // wave number (1-based), mobs spawned
+        /// <summary>Focus point, seconds, title to show (may be null), effect prefab to spawn (may be null).</summary>
+        public event System.Action<Vector2, float, string, GameObject> CutsceneStarted;
+        public event System.Action<Elite> MiniBossAppeared;
+        public event System.Action<Elite> MiniBossDefeated;
+        public event System.Action<SquadUnit, SquadUnit> ReviveStarted;     // reviver, dead unit
+        public event System.Action<SquadUnit, SquadUnit> ReviveCompleted;   // reviver, revived unit
+        public event System.Action<SquadUnit, SquadUnit> ReviveCancelled;   // reviver (now dead), unit that stays dead
 
         readonly List<(float t, float d)> _hits = new();
 
@@ -47,9 +114,33 @@ namespace BoneSquadKiting.Game
 
         public void Restart()
         {
-            Boss = new Boss();
+            Boss = HasBoss ? new Boss() : null;
             Enemies = new EnemyRegistry();
-            Enemies.Register(Boss);
+            if (Boss != null) Enemies.Register(Boss);
+            Mobs = new MobSystem();
+            Elites = new EliteSystem();
+            Elites.OnPatternStarted += (e, p) => PatternStarted?.Invoke(p);
+            Elites.OnPatternResolved += (e, hit, lost) =>
+            {
+                if (lost > 0) Squad.Reform();
+                PatternResolved?.Invoke(hit, lost);
+            };
+            Elites.OnDied += OnMiniBossDied;
+            // Mini boss markers placed in this director's own scene.
+            var found = new List<MiniBossSpawn>();
+            foreach (var m in FindObjectsByType<MiniBossSpawn>(FindObjectsSortMode.None))
+                if (m.gameObject.scene == gameObject.scene) found.Add(m);
+            _miniBosses = found.ToArray();
+            foreach (var m in _miniBosses) m.ResetSpawn();
+            _cutsceneRemaining = 0f;
+            _aliveLastStep = GameConstants.SquadSize;
+            Telegraphs.Clear();
+            Revives = new ReviveSystem();
+            Revives.OnStarted += (a, b) => ReviveStarted?.Invoke(a, b);
+            Revives.OnCompleted += (a, b) => ReviveCompleted?.Invoke(a, b);
+            Revives.OnCancelled += (a, b) => ReviveCancelled?.Invoke(a, b);
+            Flow = Squad.Grid != null ? new FlowField(Squad.Grid) : null;
+
             Attacks = new BossAttackSystem { Sequence = Sequence };
             Attacks.OnStart += p => PatternStarted?.Invoke(p);
             Attacks.OnResolved += (hit, lost) =>
@@ -63,23 +154,59 @@ namespace BoneSquadKiting.Game
             _hits.Clear();
             TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1; Paused = false;
             Squad.Init();
-            if (BossView != null) BossView.Bind(Boss);
+            if (Waves != null)
+            {
+                Vector2? end = Stage != null && Stage.EndPoint != null
+                    ? new Vector2(Stage.EndPoint.position.x, Stage.EndPoint.position.z) : null;
+                Waves.Begin(Squad.Grid, Squad.Anchor, end);
+            }
+            if (BossView != null && Boss != null) BossView.Bind(Boss);
+            ApplyTuning();
             Phase = GamePhase.Play;
             FormationChanged?.Invoke(Squad.Formation);
         }
 
-        public void TogglePause() { if (Phase == GamePhase.Play) Paused = !Paused; }
+        /// <summary>
+        /// After a win: go on. Loads the next stage (which starts right away with a fresh squad), or after
+        /// the last stage goes back to the first scene's title screen. Does nothing unless the stage is won.
+        /// </summary>
+        public void Proceed()
+        {
+            if (Phase != GamePhase.Win) return;
+            if (IsFinalStage) { _continueRun = false; SceneManager.LoadScene(0); }
+            else { _continueRun = true; SceneManager.LoadScene(NextScene); }
+        }
+
+        public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
 
         public void ChangeFormation(string id)
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene) return;
             if (Squad.SetFormation(id)) FormationChanged?.Invoke(id);
+        }
+
+        /// <summary>
+        /// Revive action (F): one free living unit starts bringing one dead unit back. Returns false when
+        /// nobody is dead or nobody is free. Can be used again while earlier revives are still running.
+        /// </summary>
+        public bool TryRevive()
+        {
+            if (Phase != GamePhase.Play || Paused || InCutscene) return false;
+            return Revives.TryStart(Squad.Units);
+        }
+
+        /// <summary>Stop where the squad is: the anchor halts and the order becomes a plain hold.</summary>
+        public void StopSquad()
+        {
+            if (Phase != GamePhase.Play || Paused || InCutscene) return;
+            Squad.Halt();
+            Squad.Order = SquadOrder.Move(Squad.Anchor);
         }
 
         /// <summary>Turn the formation by mouse-wheel notches. Positive = clockwise seen from above.</summary>
         public void RotateFormation(int clockwiseNotches)
         {
-            if (Phase != GamePhase.Play || Paused || clockwiseNotches == 0) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene || clockwiseNotches == 0) return;
             Squad.Rotate(clockwiseNotches);
             FormationRotated?.Invoke(Squad.RotationDegrees);
         }
@@ -91,8 +218,9 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public void IssueOrder(SquadOrder o)
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene) return;
             Squad.Order = o;
+            Squad.FaceToward(o.Kind == OrderKind.AttackTarget && o.Target != null ? o.Target.Pos : o.Point);
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
                 bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
@@ -118,10 +246,86 @@ namespace BoneSquadKiting.Game
             }
         }
 
+        /// <summary>
+        /// Copy the shared tuning asset's numbers into this stage's systems. Runs every step, so the asset
+        /// can be edited while playing. Without an asset the fields on the components themselves apply.
+        /// </summary>
+        public void ApplyTuning()
+        {
+            if (Tuning == null) return;
+            UnitFireRange = Tuning.UnitFireRange;
+            SquadEngageRange = Tuning.SquadEngageRange;
+            ReviveSeconds = Tuning.ReviveSeconds;
+            if (Squad != null)
+            {
+                Squad.RotationStepDegrees = Tuning.RotationStepDegrees;
+                Squad.RotationSpeed = Tuning.RotationSpeed;
+                Squad.SeatSize = Tuning.SeatSize;
+                Squad.AnchorSpeed = Tuning.AnchorSpeed; Squad.AnchorArrive = Tuning.AnchorArrive;
+                Squad.UnitBaseSpeed = Tuning.UnitBaseSpeed; Squad.UnitSpeedDistGain = Tuning.UnitSpeedDistGain;
+                Squad.UnitSpeedDistCap = Tuning.UnitSpeedDistCap; Squad.UnitArrive = Tuning.UnitArrive;
+            }
+            if (Shots != null) { Shots.ThreatRadius = Tuning.ThreatRadius; Shots.AttackMoveRadius = Tuning.AttackMoveRadius; }
+            if (Revives != null) Revives.AppearRadius = Tuning.ReviveAppearRadius;
+            if (Mobs != null) { Mobs.SwitchDistance = Tuning.MobSwitchDistance; Mobs.MaxAlive = Tuning.MobMaxAlive; }
+        }
+
+        void OnValidate() => ApplyTuning();   // keeps the Scene-view range gizmos in step with the asset
+
         void Start()
         {
+            ApplyTuning();
             // Stand the squad on the field before the match starts, so the menu is not an empty arena.
             if (Squad != null && Squad.Units.Count == 0) Squad.Init();
+            if (_continueRun) { _continueRun = false; Restart(); }
+        }
+
+        // A mini boss appears, with its intro, when the squad's anchor comes within its trigger radius.
+        void TriggerMiniBosses()
+        {
+            foreach (var m in _miniBosses)
+            {
+                if (m.Triggered || m.Definition == null || !m.Unlocked) continue;
+                if (!m.PresentFromStart && (m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
+                var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
+                var elite = Elites.Spawn(m.Definition, pos, Enemies);
+                m.MarkTriggered(elite);
+                MiniBossAppeared?.Invoke(elite);
+                if (m.PlayIntro && !m.PresentFromStart)
+                    StartCutscene(pos, m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+            }
+        }
+
+        // A mini boss fell. Only the stage's last one gets the big finish: its death moment plays, the swarm
+        // is swept away and the waves stop, so the walk to the end point is clear. Earlier ones just die and
+        // the waves keep coming.
+        void OnMiniBossDied(Elite elite)
+        {
+            MiniBossDefeated?.Invoke(elite);
+            foreach (var m in _miniBosses) if (!m.Defeated) return;   // others remain (including ones yet to appear)
+            Mobs.Clear(Enemies);
+            Shots.Shots.Clear();
+            if (Waves != null) Waves.Stopped = true;
+            StartCutscene(elite.Pos, elite.Def.DeathDuration, null, elite.Def.DeathFx);
+        }
+
+        void StartCutscene(Vector2 focus, float seconds, string title, GameObject fx)
+        {
+            if (seconds <= 0f) return;
+            _cutsceneRemaining = seconds;
+            CutsceneStarted?.Invoke(focus, seconds, title, fx);
+        }
+
+        bool StageCleared()
+        {
+            bool reachedEnd = Stage != null && Stage.ReachedEnd;
+            switch (ClearRule)
+            {
+                case StageClearRule.DefeatBoss: return Boss != null && !Boss.Alive;
+                case StageClearRule.ReachEnd: return reachedEnd;
+                case StageClearRule.DefeatMiniBossThenReachEnd: return EndOpen && reachedEnd;
+                default: return false;
+            }
         }
 
         void Update() => Step(Mathf.Min(MaxDt, Time.deltaTime));
@@ -130,27 +334,64 @@ namespace BoneSquadKiting.Game
         public void Step(float dt)
         {
             if (Phase != GamePhase.Play || Paused) return;
+            ApplyTuning();
+            if (InCutscene)
+            {
+                _cutsceneRemaining -= dt;   // nothing else advances: nobody gets hit while the camera is away
+                return;
+            }
             Elapsed += dt;
 
             if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
 
             Squad.Tick(dt);
+
+            if (Waves != null)
+            {
+                int spawned = Waves.Tick(Squad, Mobs, Enemies, dt);
+                if (spawned > 0) WaveStarted?.Invoke(Waves.WavesSpawned, spawned);
+            }
+            Mobs.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
+            if (Mobs.UnitsKilledLastTick > 0) Squad.Reform();   // close up around the survivors
+
+            Revives.Duration = ReviveSeconds;
+            Revives.Tick(Squad.Anchor, dt);
+            if (Revives.CompletedLastTick > 0) Squad.Reform();  // make room: the revived walk to free slots
+
             Shots.FireRange = UnitFireRange;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
-            Attacks.Tick(Squad, Boss, dt);
+            if (Boss != null) Attacks.Tick(Squad, Boss, dt);
+
+            // Deaths are processed before new arrivals, so a mini boss that waits for another one to die
+            // appears on the same frame, and a newcomer does not act on the frame it appears.
+            Elites.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
+            if (InCutscene) return;   // the last mini boss just died: its moment starts now
+            TriggerMiniBosses();
+            if (InCutscene) return;   // one just appeared with an intro: freeze from this frame on
+
+            Telegraphs.Clear();
+            if (Attacks.Current.HasValue) Telegraphs.Add(Attacks.Current.Value);
+            foreach (var e in Elites.Elites) if (e.Attacks.Current.HasValue) Telegraphs.Add(e.Attacks.Current.Value);
 
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);
             LastDps = CombatMath.Dps(_hits, Elapsed);
-            Boss.Flash = Mathf.Max(0, Boss.Flash - dt * 3f);
-
-            if (BossPhase == 1 && CombatMath.IsPhase2(Boss.HpFrac))
+            if (Boss != null)
             {
-                BossPhase = 2; Boss.Phase = 2;
-                PhaseTwoStarted?.Invoke();
+                Boss.Flash = Mathf.Max(0, Boss.Flash - dt * 3f);
+                if (BossPhase == 1 && CombatMath.IsPhase2(Boss.HpFrac))
+                {
+                    BossPhase = 2; Boss.Phase = 2;
+                    PhaseTwoStarted?.Invoke();
+                }
             }
 
+            // Whatever just killed units (a burst, a sustained tick, a mob), close the formation up.
+            int aliveNow = AliveCount;
+            if (aliveNow < _aliveLastStep) Squad.Reform();
+            _aliveLastStep = aliveNow;
+
             if (AliveCount == 0) Phase = GamePhase.Lose;
-            else if (!Boss.Alive) Phase = GamePhase.Win;
+            else if (StageCleared()) Phase = GamePhase.Win;
         }
     }
 }

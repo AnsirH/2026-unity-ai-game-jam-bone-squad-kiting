@@ -34,8 +34,91 @@ namespace BoneSquadKiting.EditorTools
                 Pattern(6, PatternId.Gate, 1.8f), Pattern(7, PatternId.Shell, 1.8f),
             };
             EditorUtility.SetDirty(seq);
+
+            // The basic swarm enemy. Values are MobDefinition's defaults (starting numbers from the M2 design).
+            EnsureFolder(Root, "Mobs");
+            var grunt = Upsert<MobDefinition>(Root + "/Mobs/Grunt.asset");
+            grunt.DisplayName = "잡몹";
+            EditorUtility.SetDirty(grunt);
+
+            // A basic mini boss, reusing three of the boss's patterns. Its zones are fixed where they are announced.
+            EnsureFolder(Root, "Elites");
+            var eliteSeq = Upsert<AttackSequence>(Root + "/Sequences/EliteBasic.asset");
+            eliteSeq.Patterns = new[] { seq.Patterns[0], seq.Patterns[3], seq.Patterns[1] };   // core, shell, gate
+            EditorUtility.SetDirty(eliteSeq);
+            var brute = Upsert<EliteDefinition>(Root + "/Elites/Brute.asset");
+            brute.DisplayName = "미니 보스"; brute.Patterns = eliteSeq;
+            EditorUtility.SetDirty(brute);
+
+            // The five mini bosses of the stage lineup. Each casts one pattern; everything but the pattern,
+            // the name and the cannon's settings is the EliteDefinition default (starting values, not tuned).
+            // The telekinetic mage is meant to cast rotating zones, which do not exist yet: it uses the plain
+            // gate pattern for now.
+            Elite("Catapult", "투석병", seq.Patterns[0], cannon: true);
+            Elite("DarkFlameMage", "검정불꽃마법사", seq.Patterns[3]);
+            Elite("SpearThrower", "창투척병", seq.Patterns[1]);
+            Elite("ShadowSwordsman", "그림자검사", seq.Patterns[2]);
+            // The telekinetic mage's zones turn (ZoneRotationSpeed on the mini boss). Three variants so every
+            // kind of rotating zone can be tried; which mini boss uses which is a placeholder choice.
+            var sustainedGate = Upsert<PatternDefinition>(Root + "/Patterns/Gate_Sustained.asset");
+            CopyPattern(seq.Patterns[1], sustainedGate);
+            sustainedGate.DisplayName = "쌍벽 회전 (지속)"; sustainedGate.Detail = "벽이 돌면서 계속 휩씁니다. 일자로 따라 도세요!";
+            sustainedGate.Kind = PatternKind.Sustained; sustainedGate.SustainSeconds = 4f; sustainedGate.TickInterval = 0.5f; sustainedGate.TickDamage = 15f;
+            EditorUtility.SetDirty(sustainedGate);
+
+            Elite("TelekineticMage", "염동력 마법사", sustainedGate, rotation: 30f);                 // sustained, turning gate
+            Elite("TelekineticMageGate", "염동력 마법사", seq.Patterns[1], rotation: 40f);            // burst, turning gate
+            Elite("TelekineticMageQuadrant", "염동력 마법사", seq.Patterns[2], rotation: -40f);       // burst, turning quadrants, the other way
+
+            // The shared tuning asset. Created once with the values in use so far; after that it is edited by
+            // hand (often while playing), so an existing one is left alone.
+            if (AssetDatabase.LoadAssetAtPath<GameTuning>(Root + "/GameTuning.asset") == null)
+            {
+                var tuning = Upsert<GameTuning>(Root + "/GameTuning.asset");
+                EditorUtility.SetDirty(tuning);
+            }
+
+            // The shared art set. Created once with the squad models if they are in the project; after that it
+            // is the artists' to edit, so an existing one is left alone.
+            EnsureFolder(Root, "Art");
+            if (AssetDatabase.LoadAssetAtPath<ArtSet>(Root + "/Art/ArtSet.asset") == null)
+            {
+                var art = Upsert<ArtSet>(Root + "/Art/ArtSet.asset");
+                art.UnitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Character/Soldier/Prefabs/Soldier.prefab");
+                art.LeaderPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Character/Commander/Prefabs/Commander.prefab");
+                // The models are much bigger than the game's unit spacing (0.5): shrink them to fit.
+                art.UnitScale = 0.36f; art.LeaderScale = 0.17f;
+                // State names as they are in the models' Animators today. Missing ones are skipped at runtime.
+                art.UnitStates = new AnimStates { Idle = "Idle", Run = "Soldier_Fire_SlowRun", Attack = "Fire", Die = "" };
+                art.LeaderStates = new AnimStates { Idle = "", Run = "Spear_Walk", Attack = "", Die = "" };
+                EditorUtility.SetDirty(art);
+            }
+
             AssetDatabase.SaveAssets();
             Debug.Log("DefaultDataBuilder: wrote 4 formations, 8 patterns, 1 sequence.");
+        }
+
+        static void CopyPattern(PatternDefinition from, PatternDefinition to)
+        {
+            to.Id = from.Id; to.DisplayName = from.DisplayName; to.Advice = from.Advice; to.Detail = from.Detail;
+            to.Recommend = from.Recommend; to.Time = from.Time; to.Shape = from.Shape; to.ScaleWithSquad = from.ScaleWithSquad;
+        }
+
+        static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false, float rotation = 0f)
+        {
+            var seq = Upsert<AttackSequence>($"{Root}/Sequences/Elite_{file}.asset");
+            seq.Patterns = new[] { pattern };
+            EditorUtility.SetDirty(seq);
+            var e = Upsert<EliteDefinition>($"{Root}/Elites/{file}.asset");
+            e.DisplayName = name; e.Patterns = seq;
+            e.ZoneRotationSpeed = rotation;
+            if (cannon)
+            {
+                // A fixed emplacement: does not walk, fires irregularly, weaker than a walking mini boss.
+                e.Speed = 0f; e.MaxHp = 1500f; e.Radius = 0.9f;
+                e.AttackGap = 3.5f; e.AttackGapRandom = 3f; e.AttackRange = 14f;
+            }
+            EditorUtility.SetDirty(e);
         }
 
         static void Formation(string id, string name, Key key, FormationMode mode,

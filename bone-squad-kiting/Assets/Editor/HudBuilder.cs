@@ -39,6 +39,7 @@ namespace BoneSquadKiting.EditorTools
             // Boss bar, top center.
             var bossBg = Panel(root, "Boss Bar", new Color(0, 0, 0, 0.6f), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -27), new Vector2(640, 26));
             var bossFill = Panel(bossBg.rectTransform, "Fill", new Color(0.85f, 0.2f, 0.2f, 0.95f), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            hud.BossBar = bossBg.gameObject;
             hud.BossFill = bossFill.rectTransform;
             hud.BossText = Label(bossBg.rectTransform, "Text", 16, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
@@ -83,7 +84,7 @@ namespace BoneSquadKiting.EditorTools
             return hud;
         }
 
-        static RectTransform Rect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b, bool stretch)
+        internal static RectTransform Rect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b, bool stretch)
         {
             var go = new GameObject(name, typeof(RectTransform));
             var rt = go.GetComponent<RectTransform>();
@@ -94,7 +95,7 @@ namespace BoneSquadKiting.EditorTools
             return rt;
         }
 
-        static Image Panel(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b)
+        internal static Image Panel(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b)
         {
             var rt = Rect(parent, name, anchorMin, anchorMax, a, b, false);
             var img = rt.gameObject.AddComponent<Image>();
@@ -102,7 +103,7 @@ namespace BoneSquadKiting.EditorTools
             return img;
         }
 
-        static Text Label(Transform parent, string name, int size, TextAnchor align, Vector2 anchorMin, Vector2 anchorMax,
+        internal static Text Label(Transform parent, string name, int size, TextAnchor align, Vector2 anchorMin, Vector2 anchorMax,
                           Vector2 a, Vector2 b, bool bold = false, bool stretch = false)
         {
             var rt = Rect(parent, name, anchorMin, anchorMax, a, b, stretch);
