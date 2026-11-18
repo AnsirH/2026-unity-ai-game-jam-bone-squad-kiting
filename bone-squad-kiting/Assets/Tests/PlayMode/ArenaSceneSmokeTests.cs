@@ -44,7 +44,6 @@ public class ArenaSceneSmokeTests
         Assert.AreEqual(GameConstants.SquadSize, director.AliveCount, "squad stands on the field before the match starts");
         Assert.IsFalse(Camera.main.orthographic, "quarter view uses a perspective camera");
         Assert.IsNotNull(Camera.main.GetComponent<BoneSquadKiting.Cameras.EdgeScrollCamera>(), "edge-scroll camera in scene");
-        var camStart = Camera.main.transform.position;
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
         var stage = Object.FindFirstObjectByType<BoneSquadKiting.Stage.StageSetup>();
         Assert.IsNotNull(stage, "stage setup in scene");
@@ -116,7 +115,10 @@ public class ArenaSceneSmokeTests
         while (director.Attacks.Current == null && Time.time < nextBy) yield return null;
         yield return new WaitForSeconds(1.0f);
         Capture("arena-3-gate-line.png");
-        Assert.AreEqual(camStart, Camera.main.transform.position, "the camera does not follow the squad");
+        // The camera stays on the squad (leaning toward the mouse), so the squad's center is always in view.
+        var squadOnScreen = Camera.main.WorldToViewportPoint(new Vector3(director.Squad.Anchor.x, 0f, director.Squad.Anchor.y));
+        Assert.That(squadOnScreen.x, Is.InRange(0.05f, 0.95f), "the squad's center stays in view (x)");
+        Assert.That(squadOnScreen.y, Is.InRange(0.05f, 0.95f), "the squad's center stays in view (y)");
         Assert.AreEqual(GamePhase.Play, director.Phase);
     }
 
