@@ -143,7 +143,7 @@ public class ArenaSceneSmokeTests
     [UnityTest]
     public IEnumerator Stage1_StartsWithTheSquadInView_AndWavesArrive()
     {
-        yield return SceneManager.LoadSceneAsync("Stage1", LoadSceneMode.Single);
+        yield return LoadByPath("Assets/Scenes/Test_Stage1.unity");
         yield return null;
 
         var director = Object.FindFirstObjectByType<GameDirector>();
@@ -185,85 +185,46 @@ public class ArenaSceneSmokeTests
         Assert.AreEqual(GamePhase.Play, director.Phase);
     }
 
-    [UnityTest]
-    public IEnumerator ClearingAStage_LeadsToTheNext_WhichStartsAtOnceWithAFreshSquad()
+    // Test scenes are not in the build list, so they are loaded by path.
+    static IEnumerator LoadByPath(string path)
     {
-        yield return SceneManager.LoadSceneAsync("Stage1", LoadSceneMode.Single);
+#if UNITY_EDITOR
+        yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(path, new LoadSceneParameters(LoadSceneMode.Single));
+#else
         yield return null;
-        var director = Object.FindFirstObjectByType<GameDirector>();
-        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
-        Assert.AreEqual("스테이지 1", director.StageTitle);
-        Assert.AreEqual("Stage2", director.NextScene);
-
-        director.Proceed();
-        yield return null;
-        Assert.AreEqual("Stage1", SceneManager.GetActiveScene().name, "Proceed does nothing before the stage is won");
-
-        hud.OverlayButton.onClick.Invoke();                 // start
-        director.Squad.Units[3].Dead = true;                // lose a unit on this stage
-        director.Phase = GamePhase.Win;                     // (skip the fight)
-        yield return null;
-        StringAssert.Contains("클리어", hud.OverlayTitle.text);
-        Assert.AreEqual("다음 스테이지 (Enter)", hud.OverlayButtonText.text);
-
-        hud.OverlayButton.onClick.Invoke();                 // next stage
-        float until = Time.realtimeSinceStartup + 10f;
-        while (SceneManager.GetActiveScene().name != "Stage2" && Time.realtimeSinceStartup < until) yield return null;
-        yield return null; yield return null;
-
-        Assert.AreEqual("Stage2", SceneManager.GetActiveScene().name);
-        var next = Object.FindFirstObjectByType<GameDirector>();
-        Assert.AreNotSame(director, next);
-        Assert.AreEqual(GamePhase.Play, next.Phase, "no title screen between stages");
-        Assert.AreEqual(GameConstants.SquadSize, next.AliveCount, "every stage starts with the full squad");
-        Assert.AreEqual("스테이지 2", next.StageTitle);
+#endif
     }
 
     [UnityTest]
-    public IEnumerator StageOrder_RunsOneToFour_ThenTheArena_ThenBackToTheTitle()
+    public IEnumerator TestStages_AreStandalone_AndSetUpPerTheLineup()
     {
-        string[] order = { "Stage1", "Stage2", "Stage3", "Stage4", "Arena" };
-        for (int i = 0; i < order.Length; i++)
+        string[] scenes = { "Test_Stage1", "Test_Stage2", "Test_Stage3", "Test_Stage4", "Arena" };
+        for (int i = 0; i < scenes.Length; i++)
         {
-            Assert.AreEqual(order[i], System.IO.Path.GetFileNameWithoutExtension(UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i)), "build order = play order");
-            yield return SceneManager.LoadSceneAsync(order[i], LoadSceneMode.Single);
+            yield return LoadByPath($"Assets/Scenes/{scenes[i]}.unity");
             yield return null;
             var d = Object.FindFirstObjectByType<GameDirector>();
-            Assert.AreEqual(i + 1 < order.Length ? order[i + 1] : "", d.NextScene, order[i]);
+            Assert.AreEqual("", d.NextScene, scenes[i] + " leads nowhere: the game's stage order lives in Game.unity");
             Assert.AreEqual($"스테이지 {i + 1}", d.StageTitle);
-            var expected = order[i] == "Arena" ? BoneSquadKiting.Stage.StageClearRule.DefeatBoss
-                : order[i] == "Stage3" ? BoneSquadKiting.Stage.StageClearRule.ReachEnd
+            var expected = scenes[i] == "Arena" ? BoneSquadKiting.Stage.StageClearRule.DefeatBoss
+                : scenes[i] == "Test_Stage3" ? BoneSquadKiting.Stage.StageClearRule.ReachEnd
                 : BoneSquadKiting.Stage.StageClearRule.DefeatMiniBossThenReachEnd;
-            Assert.AreEqual(expected, d.ClearRule, order[i]);
-            Assert.AreEqual(order[i] == "Arena", d.HasBoss, order[i]);
-            Assert.IsTrue(d.Squad.Grid.IsWalkable(d.Squad.Anchor), order[i] + ": squad starts on walkable ground");
+            Assert.AreEqual(expected, d.ClearRule, scenes[i]);
+            Assert.AreEqual(scenes[i] == "Arena", d.HasBoss, scenes[i]);
+            Assert.IsTrue(d.Squad.Grid.IsWalkable(d.Squad.Anchor), scenes[i] + ": squad starts on walkable ground");
             int[] miniBosses = { 4, 6, 6, 2, 0 };            // per the stage lineup
             var spawns = Object.FindObjectsByType<BoneSquadKiting.Stage.MiniBossSpawn>(FindObjectsSortMode.None);
-            Assert.AreEqual(miniBosses[i], spawns.Length, order[i] + ": mini boss count");
+            Assert.AreEqual(miniBosses[i], spawns.Length, scenes[i] + ": mini boss count");
             foreach (var sp in spawns)
             {
-                Assert.IsNotNull(sp.Definition, order[i] + ": " + sp.name + " has a definition");
-                Assert.IsTrue(d.Squad.Grid.IsWalkable(sp.Position), order[i] + ": " + sp.name + " stands on walkable ground");
+                Assert.IsNotNull(sp.Definition, scenes[i] + ": " + sp.name + " has a definition");
+                Assert.IsTrue(d.Squad.Grid.IsWalkable(sp.Position), scenes[i] + ": " + sp.name + " stands on walkable ground");
             }
             if (d.Stage.EndPoint != null)
             {
                 var end = new Vector2(d.Stage.EndPoint.position.x, d.Stage.EndPoint.position.z);
-                Assert.IsTrue(d.Squad.Grid.IsWalkable(end), order[i] + ": end point on walkable ground");
+                Assert.IsTrue(d.Squad.Grid.IsWalkable(end), scenes[i] + ": end point on walkable ground");
             }
         }
-
-        // Winning the last stage goes back to the first scene, on its title screen.
-        var last = Object.FindFirstObjectByType<GameDirector>();
-        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
-        hud.OverlayButton.onClick.Invoke();
-        last.Phase = GamePhase.Win;
-        yield return null;
-        Assert.AreEqual("게임 클리어", hud.OverlayTitle.text);
-        last.Proceed();
-        float until = Time.realtimeSinceStartup + 10f;
-        while (SceneManager.GetActiveScene().name != "Stage1" && Time.realtimeSinceStartup < until) yield return null;
-        yield return null; yield return null;
-        Assert.AreEqual("Stage1", SceneManager.GetActiveScene().name);
-        Assert.AreEqual(GamePhase.Menu, Object.FindFirstObjectByType<GameDirector>().Phase, "a new run starts from the title screen");
     }
 }

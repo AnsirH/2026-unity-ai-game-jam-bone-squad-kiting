@@ -20,10 +20,16 @@ namespace BoneSquadKiting.Visuals
         /// <summary>Name an animation event must call for the attack to let go of its projectile.</summary>
         public const string AttackEventName = "AttackRelease";
 
-        /// <summary>Seconds into the attack animation at which its AttackRelease event sits; 0 when it has none.</summary>
-        public float AttackEventTime { get; private set; }
-        /// <summary>Length of the attack animation that has the event; 0 when there is none.</summary>
-        public float AttackLength { get; private set; }
+        /// <summary>Seconds after an attack starts at which its AttackRelease event fires; 0 when it has none.</summary>
+        public float AttackEventTime => _eventTime / AttackSpeed;
+        /// <summary>How long the attack animation that has the event takes to play; 0 when there is none.</summary>
+        public float AttackLength => _clipLength / AttackSpeed;
+        /// <summary>
+        /// Playback speed of the attack state, as set in the Animator. It cannot be read until the state has
+        /// played once, so it is 1 for the very first attack (the event still releases the shot on time).
+        /// </summary>
+        public float AttackSpeed { get; private set; } = 1f;
+        float _eventTime, _clipLength;
         /// <summary>Raised when the attack animation reaches its AttackRelease event.</summary>
         public System.Action AttackReleased;
 
@@ -36,18 +42,26 @@ namespace BoneSquadKiting.Visuals
         // Look through the model's clips for the attack event, to learn when the projectile leaves.
         void ReadAttackTiming()
         {
-            AttackEventTime = AttackLength = 0f;
+            _eventTime = _clipLength = 0f;
             var controller = Animator != null ? Animator.runtimeAnimatorController : null;
             if (controller == null) return;
             foreach (var clip in controller.animationClips)
                 foreach (var e in clip.events)
-                    if (e.functionName == AttackEventName) { AttackEventTime = e.time; AttackLength = clip.length; return; }
+                    if (e.functionName == AttackEventName) { _eventTime = e.time; _clipLength = clip.length; return; }
         }
 
         void Awake()
         {
             if (Animator == null) Animator = GetComponentInChildren<Animator>();
             ReadAttackTiming();
+        }
+
+        void Update()
+        {
+            // Learn the attack state's speed while it plays.
+            if (_clipLength <= 0f || Animator == null || string.IsNullOrEmpty(States.Attack)) return;
+            var info = Animator.GetCurrentAnimatorStateInfo(0);
+            if (info.shortNameHash == Animator.StringToHash(States.Attack) && info.speed > 0.01f) AttackSpeed = info.speed * Mathf.Max(0.01f, Animator.speed);
         }
 
         /// <summary>The state currently requested (Attack shows briefly, then falls back).</summary>
