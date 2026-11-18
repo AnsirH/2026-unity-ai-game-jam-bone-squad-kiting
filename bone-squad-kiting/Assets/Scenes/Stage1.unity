@@ -864,6 +864,12 @@ MonoBehaviour:
   HasLeader: 1
   LeaderFacing: {x: 0, y: -1}
   SeatSize: 0.5
+  AnchorSpeed: 3.66
+  AnchorArrive: 0.024
+  UnitBaseSpeed: 1.58
+  UnitSpeedDistGain: 2.4
+  UnitSpeedDistCap: 9
+  UnitArrive: 0.015
   Formation: dense
   RotationStepDegrees: 15
   RotationDegrees: 0
@@ -20716,7 +20722,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 44
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -50776,6 +50782,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd57e1b206411254290cff6126713453, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Stage.WaveSpawner
+  Plan: {fileID: 11400000, guid: f553297b2aa946c8ad45d0b561af2a15, type: 2}
   Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
   Interval:
     serializedVersion: 2
@@ -50831,6 +50838,7 @@ MonoBehaviour:
   AheadShare: 0.7
   GroupSize: 8
   GroupSpread: 1.5
+  Hold: 0
 --- !u!114 &1477567278
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50849,6 +50857,9 @@ MonoBehaviour:
   StartPoint: {fileID: 736993318}
   EndPoint: {fileID: 311682367}
   EndRadius: 3
+  GroundFollowMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!4 &1477567279
 Transform:
   m_ObjectHideFlags: 0
@@ -50888,6 +50899,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Stage.WalkGridBaker
   Size: {x: 18, y: 84}
+  FitToScene: 0
+  FitPadding: 1.5
   CellSize: 0.75
   Clearance: 0.3
   RayHeight: 50
