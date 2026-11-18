@@ -17,6 +17,7 @@ namespace BoneSquadKiting.Bosses
         public struct Active
         {
             public PatternDefinition Pattern;
+            public DangerShape Shape;   // the pattern's shape as cast (already scaled to the squad if it scales)
             public float Cx, Cz, Elapsed, Remaining;
         }
 
@@ -41,7 +42,7 @@ namespace BoneSquadKiting.Bosses
                     a.Cz = Mathf.Lerp(a.Cz, squad.Anchor.y, k);
                 }
                 Current = a;
-                if (a.Remaining <= 0) Resolve(a.Pattern.Shape, a.Cx, a.Cz, squad.Units, boss);
+                if (a.Remaining <= 0) Resolve(a.Shape, a.Cx, a.Cz, squad.Units, boss);
             }
             else
             {
@@ -55,7 +56,8 @@ namespace BoneSquadKiting.Bosses
             if (Sequence == null || Sequence.Patterns == null || Sequence.Patterns.Length == 0) return;
             var p = Sequence.Patterns[Index % Sequence.Patterns.Length];
             Index++;
-            Current = new Active { Pattern = p, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
+            var shape = p.ScaleWithSquad ? p.Shape.Scaled(FormationSlots.SquadFraction(squad.AliveCount)) : p.Shape;
+            Current = new Active { Pattern = p, Shape = shape, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
             OnStart?.Invoke(p);
         }
 

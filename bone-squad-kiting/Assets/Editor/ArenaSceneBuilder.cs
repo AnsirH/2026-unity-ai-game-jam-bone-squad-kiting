@@ -121,7 +121,7 @@ namespace BoneSquadKiting.EditorTools
             var squadView = new GameObject("Squad View").AddComponent<SquadView>();
             squadView.Squad = squad; squadView.UnitMaterial = unit;
             // Pre-place the squad in its starting layout so it is visible without entering Play mode.
-            var startSlots = FormationSlots.Generate(squad.Formations[0]);
+            var startSlots = FormationSlots.Generate(squad.Formations[0], GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
             {
                 var u = SquadView.BuildUnit(i, squadView.UnitScale, unit);

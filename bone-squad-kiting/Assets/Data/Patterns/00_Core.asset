@@ -27,3 +27,4 @@ MonoBehaviour:
     Inner: 0
     Outer: 0
     HalfZ: 0
+  ScaleWithSquad: 1

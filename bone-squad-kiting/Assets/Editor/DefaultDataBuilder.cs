@@ -51,6 +51,7 @@ namespace BoneSquadKiting.EditorTools
         {
             var p = Upsert<PatternDefinition>($"{Root}/Patterns/{slot:00}_{id}.asset");
             p.Id = id; p.Time = time;
+            p.ScaleWithSquad = id == PatternId.Core; // shrinks with the squad, like the ring that dodges it
             switch (id)
             {
                 case PatternId.Core:

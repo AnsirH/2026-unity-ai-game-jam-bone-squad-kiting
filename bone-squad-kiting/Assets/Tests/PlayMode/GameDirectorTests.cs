@@ -159,6 +159,17 @@ public class GameDirectorTests
         Assert.AreEqual(30f, reported);
     }
 
+    [Test]
+    public void LosingUnits_ReformsTheSquadAroundTheSurvivors()
+    {
+        _dir.Restart();
+        for (int i = 5; i < 25; i++) { _fc.Units[i].Hp = 1f; }   // the next hit kills 20 of them
+        Run(GameConstants.FirstAttackDelay + 2f + 0.2f);          // dense squad eats the first disc
+        Assert.AreEqual(5, _dir.AliveCount);
+        float reach = 0; foreach (var u in _fc.Units) if (!u.Dead) reach = Mathf.Max(reach, u.Slot.magnitude);
+        Assert.That(reach, Is.LessThan(0.53f + 1e-3f), "5 survivors: the anchor and its four neighbours");
+    }
+
     class FarEnemy : IEnemy
     {
         public Vector2 Pos { get; set; }

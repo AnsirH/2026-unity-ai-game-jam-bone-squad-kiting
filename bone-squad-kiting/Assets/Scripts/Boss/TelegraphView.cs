@@ -21,6 +21,7 @@ namespace BoneSquadKiting.Bosses
         MeshRenderer _renderer;
         MaterialPropertyBlock _block;
         PatternDefinition _shown;
+        DangerShape _shownShape;
         static readonly int ColorId = Shader.PropertyToID("_Color");
 
         void Awake()
@@ -41,11 +42,11 @@ namespace BoneSquadKiting.Bosses
                 _shown = null;
                 return;
             }
-            if (_shown != a.Pattern)
+            if (_shown != a.Pattern || !_shownShape.Equals(a.Shape))
             {
                 if (_filter.sharedMesh != null) Destroy(_filter.sharedMesh);
-                _filter.sharedMesh = DangerShapeMesh.Build(a.Pattern.Shape);
-                _shown = a.Pattern;
+                _filter.sharedMesh = DangerShapeMesh.Build(a.Shape);
+                _shown = a.Pattern; _shownShape = a.Shape;
             }
             transform.position = new Vector3(a.Cx, Height, a.Cz);
             bool locked = a.Remaining <= GameConstants.CastTrackLockTime;

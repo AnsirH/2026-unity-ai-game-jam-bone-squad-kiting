@@ -43,10 +43,7 @@ namespace BoneSquadKiting.Game
 
         readonly List<(float t, float d)> _hits = new();
 
-        public int AliveCount
-        {
-            get { int n = 0; foreach (var u in Squad.Units) if (!u.Dead) n++; return n; }
-        }
+        public int AliveCount => Squad.AliveCount;
 
         public void Restart()
         {
@@ -55,7 +52,11 @@ namespace BoneSquadKiting.Game
             Enemies.Register(Boss);
             Attacks = new BossAttackSystem { Sequence = Sequence };
             Attacks.OnStart += p => PatternStarted?.Invoke(p);
-            Attacks.OnResolved += (hit, lost) => PatternResolved?.Invoke(hit, lost);
+            Attacks.OnResolved += (hit, lost) =>
+            {
+                if (lost > 0) Squad.Reform(); // close the formation up around the survivors
+                PatternResolved?.Invoke(hit, lost);
+            };
             Shots = new ShotSystem();
             Shots.OnHit += d => { _hits.Add((Elapsed, d)); TotalDamage += d; };
 
