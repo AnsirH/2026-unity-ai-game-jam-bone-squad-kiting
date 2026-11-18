@@ -12,6 +12,7 @@ using BoneSquadKiting.Data;
 using BoneSquadKiting.Fx;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Input;
+using BoneSquadKiting.Mobs;
 using BoneSquadKiting.Squad;
 using BoneSquadKiting.Stage;
 using BoneSquadKiting.UI;
@@ -43,8 +44,19 @@ namespace BoneSquadKiting.EditorTools
         const float UnitFireRange = 5.5f;
         const float SquadEngageRange = 5f;
 
+        const string StageProtoPath = "Assets/Scenes/StageProto.unity";
+
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
-        public static void Build()
+        public static void Build() => BuildScene(ScenePath, mobStage: false);
+
+        /// <summary>
+        /// A placeholder progress stage for trying out mobs: a long corridor with a few obstacles, a start
+        /// and an end point, and three rounds of mobs. Same squad, camera and HUD as the arena, no boss.
+        /// </summary>
+        [MenuItem("BoneSquadKiting/Rebuild Stage Proto Scene")]
+        public static void BuildStageProto() => BuildScene(StageProtoPath, mobStage: true);
+
+        static void BuildScene(string scenePath, bool mobStage)
         {
             int enemyLayer = EnsureLayer(EnemyLayer);
             EnsureFolder("Assets", "Prototype"); EnsureFolder("Assets/Prototype", "Materials");
@@ -218,10 +230,81 @@ namespace BoneSquadKiting.EditorTools
             fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
             fx.HitParticles = particles; fx.Ring = ring;
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            if (mobStage) ConvertToMobStage(plane, baker, stage, director, squad, squadView, scroll, bossGo, bossArea, teleGo, startPoint);
+
+            EditorSceneManager.SaveScene(scene, scenePath);
+            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene> { new(ScenePath, true) };
+            if (System.IO.File.Exists(StageProtoPath)) scenes.Add(new EditorBuildSettingsScene(StageProtoPath, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
-            Debug.Log("ArenaSceneBuilder: wrote " + ScenePath);
+            Debug.Log("ArenaSceneBuilder: wrote " + scenePath);
+        }
+
+        // Reshape the freshly built arena into a corridor stage fought against rounds of mobs.
+        static void ConvertToMobStage(GameObject plane, WalkGridBaker baker, StageSetup stage, GameDirector director,
+            FormationController squad, SquadView squadView, EdgeScrollCamera scroll, GameObject bossGo, GameObject bossArea,
+            GameObject teleGo, GameObject startPoint)
+        {
+            const float width = 18f, length = 64f;
+            var start = new Vector2(0f, 26f);            // near end; the camera looks toward -z, so "forward" is up-screen
+            var end = new Vector2(0f, -26f);
+
+            plane.transform.localScale = new Vector3(width / 10f, 1f, length / 10f);
+            baker.Size = new Vector2(width, length);
+
+            Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea); Object.DestroyImmediate(teleGo);
+            director.BossView = null; director.HasBoss = false;
+            director.ClearRule = StageClearRule.KillAllThenReachEnd;
+            director.Stage = stage;
+
+            // Move the squad and its pre-placed units to the start point.
+            var delta = start - squad.Anchor;
+            squad.StartAnchor = squad.Anchor = squad.Destination = start;
+            foreach (Transform unit in squadView.transform) unit.position += new Vector3(delta.x, 0f, delta.y);
+            startPoint.transform.position = new Vector3(start.x, 0f, start.y);
+            scroll.LookAt = start + new Vector2(0f, -4f); scroll.Apply();
+
+            var endPoint = new GameObject("End Point");
+            endPoint.transform.SetParent(stage.transform, false);
+            endPoint.transform.position = new Vector3(end.x, 0f, end.y);
+            stage.EndPoint = endPoint.transform; stage.EndRadius = 3f;
+
+            // A few blocks to walk (and path) around.
+            var obstacleMat = Lit("Obstacle", Hex("#2b3d52"));
+            int obstacleLayer = EnsureLayer(ObstacleLayer);
+            var blocks = new[] { new Vector4(-4.5f, 14f, 6f, 2f), new Vector4(5f, 4f, 5f, 2f), new Vector4(-3f, -6f, 8f, 2f), new Vector4(5.5f, -15f, 4f, 4f) };
+            foreach (var b in blocks)   // x, z, size x, size z
+            {
+                var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                block.name = "Obstacle";
+                block.transform.SetParent(stage.transform, false);
+                block.transform.position = new Vector3(b.x, 0.75f, b.y);
+                block.transform.localScale = new Vector3(b.z, 1.5f, b.w);
+                block.layer = obstacleLayer;
+                block.GetComponent<Renderer>().sharedMaterial = obstacleMat;
+            }
+
+            // Three rounds, each coming from further down the corridor.
+            var grunt = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
+            var spawner = stage.gameObject.AddComponent<RoundSpawner>();
+            var roundSpecs = new[] { (count: 20, z: 12f), (count: 30, z: -2f), (count: 40, z: -18f) };
+            for (int r = 0; r < roundSpecs.Length; r++)
+            {
+                var points = new Transform[2];
+                for (int i = 0; i < 2; i++)
+                {
+                    var p = new GameObject($"Round {r + 1} Spawn {i + 1}");
+                    p.transform.SetParent(stage.transform, false);
+                    p.transform.position = new Vector3(i == 0 ? -5f : 5f, 0f, roundSpecs[r].z);
+                    points[i] = p.transform;
+                }
+                spawner.Rounds.Add(new RoundSpawner.Round { Mob = grunt, Count = roundSpecs[r].count, SpawnPoints = points, Spread = 2.5f });
+            }
+            director.Rounds = spawner;
+
+            var mobView = new GameObject("Mob View").AddComponent<MobView>();
+            mobView.Director = director;
+            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
         }
 
         static T Load<T>(string path) where T : Object

@@ -21,6 +21,7 @@ namespace BoneSquadKiting.UI
         public GameDirector Director;
 
         [Header("Top")]
+        public GameObject BossBar;          // hidden on stages without a boss
         public RectTransform BossFill;
         public Text BossText, AliveText, DpsText;
 
@@ -59,6 +60,8 @@ namespace BoneSquadKiting.UI
             if (OverlayButton != null) OverlayButton.onClick.AddListener(Director.Restart);
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
+            Director.RoundStarted += OnRoundStarted;
+            Director.AllEnemiesCleared += OnAllCleared;
             if (Toast != null) Toast.text = "";
         }
 
@@ -67,7 +70,12 @@ namespace BoneSquadKiting.UI
             if (Director == null) return;
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
+            Director.RoundStarted -= OnRoundStarted;
+            Director.AllEnemiesCleared -= OnAllCleared;
         }
+
+        void OnRoundStarted(int round, int total) => ShowToast($"라운드 {round} / {total}");
+        void OnAllCleared() => ShowToast(Director.ClearRule == Stage.StageClearRule.KillAllThenReachEnd ? "모든 적 처치 — 끝 지점으로!" : "모든 적 처치");
 
         void OnResolved(int hit, int lost) => ShowToast(hit == 0 ? "PERFECT DODGE!" : $"피격 {hit}명 · 전사 {lost}명");
         void OnPhaseTwo() => ShowToast("PHASE 2");
@@ -90,6 +98,7 @@ namespace BoneSquadKiting.UI
         {
             bool playing = Director.Phase == GamePhase.Play;
 
+            if (BossBar != null && BossBar.activeSelf != Director.HasBoss) BossBar.SetActive(Director.HasBoss);
             float frac = Director.Boss != null ? Director.Boss.HpFrac : 1f;
             float hp = Director.Boss != null ? Director.Boss.Hp : GameConstants.BossMax;
             SetFill(BossFill, frac);

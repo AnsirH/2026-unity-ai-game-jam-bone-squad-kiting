@@ -34,6 +34,13 @@ namespace BoneSquadKiting.EditorTools
                 Pattern(6, PatternId.Gate, 1.8f), Pattern(7, PatternId.Shell, 1.8f),
             };
             EditorUtility.SetDirty(seq);
+
+            // The basic swarm enemy. Values are MobDefinition's defaults (starting numbers from the M2 design).
+            EnsureFolder(Root, "Mobs");
+            var grunt = Upsert<MobDefinition>(Root + "/Mobs/Grunt.asset");
+            grunt.DisplayName = "잡몹";
+            EditorUtility.SetDirty(grunt);
+
             AssetDatabase.SaveAssets();
             Debug.Log("DefaultDataBuilder: wrote 4 formations, 8 patterns, 1 sequence.");
         }

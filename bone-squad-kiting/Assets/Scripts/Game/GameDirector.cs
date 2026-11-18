@@ -4,7 +4,9 @@ using BoneSquadKiting.Bosses;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
+using BoneSquadKiting.Mobs;
 using BoneSquadKiting.Squad;
+using BoneSquadKiting.Stage;
 
 namespace BoneSquadKiting.Game
 {
@@ -18,6 +20,12 @@ namespace BoneSquadKiting.Game
         public FormationController Squad;   // assigned in the scene
         public AttackSequence Sequence;     // boss pattern sequence asset
         public BossView BossView;           // optional scene visual (collider + EnemyRef)
+
+        [Header("Stage")]
+        public bool HasBoss = true;                                   // false for stages fought against rounds of mobs only
+        public StageClearRule ClearRule = StageClearRule.DefeatBoss;
+        public StageSetup Stage;            // optional: start / end points and the walkable grid
+        public RoundSpawner Rounds;         // optional: this stage's rounds of mobs
 
         [Header("Tuning (editable while playing)")]
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
@@ -33,6 +41,11 @@ namespace BoneSquadKiting.Game
         public EnemyRegistry Enemies { get; private set; }
         public BossAttackSystem Attacks { get; private set; }
         public ShotSystem Shots { get; private set; }
+        public MobSystem Mobs { get; private set; }
+        public FlowField Flow { get; private set; }
+
+        /// <summary>True once every round has been started and no mob is left alive (always true with no rounds).</summary>
+        public bool EnemiesCleared => (Rounds == null || Rounds.AllStarted) && (Mobs == null || Mobs.AliveCount == 0);
 
         // Stable hooks for HUD / FX: the systems above are recreated on every Restart.
         public event System.Action<PatternDefinition> PatternStarted;
@@ -40,6 +53,10 @@ namespace BoneSquadKiting.Game
         public event System.Action<string> FormationChanged;
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
+        public event System.Action<int, int> RoundStarted;   // round number (1-based), total rounds
+        public event System.Action AllEnemiesCleared;         // last round wiped out
+
+        bool _clearedAnnounced;
 
         readonly List<(float t, float d)> _hits = new();
 
@@ -47,9 +64,13 @@ namespace BoneSquadKiting.Game
 
         public void Restart()
         {
-            Boss = new Boss();
+            Boss = HasBoss ? new Boss() : null;
             Enemies = new EnemyRegistry();
-            Enemies.Register(Boss);
+            if (Boss != null) Enemies.Register(Boss);
+            Mobs = new MobSystem();
+            Flow = Squad.Grid != null ? new FlowField(Squad.Grid) : null;
+            if (Rounds != null) Rounds.ResetRounds();
+            _clearedAnnounced = false;
             Attacks = new BossAttackSystem { Sequence = Sequence };
             Attacks.OnStart += p => PatternStarted?.Invoke(p);
             Attacks.OnResolved += (hit, lost) =>
@@ -63,7 +84,7 @@ namespace BoneSquadKiting.Game
             _hits.Clear();
             TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1; Paused = false;
             Squad.Init();
-            if (BossView != null) BossView.Bind(Boss);
+            if (BossView != null && Boss != null) BossView.Bind(Boss);
             Phase = GamePhase.Play;
             FormationChanged?.Invoke(Squad.Formation);
         }
@@ -74,6 +95,14 @@ namespace BoneSquadKiting.Game
         {
             if (Phase != GamePhase.Play || Paused) return;
             if (Squad.SetFormation(id)) FormationChanged?.Invoke(id);
+        }
+
+        /// <summary>Stop where the squad is: the anchor halts and the order becomes a plain hold.</summary>
+        public void StopSquad()
+        {
+            if (Phase != GamePhase.Play || Paused) return;
+            Squad.Halt();
+            Squad.Order = SquadOrder.Move(Squad.Anchor);
         }
 
         /// <summary>Turn the formation by mouse-wheel notches. Positive = clockwise seen from above.</summary>
@@ -124,6 +153,19 @@ namespace BoneSquadKiting.Game
             if (Squad != null && Squad.Units.Count == 0) Squad.Init();
         }
 
+        bool StageCleared()
+        {
+            bool reachedEnd = Stage != null && Stage.ReachedEnd;
+            switch (ClearRule)
+            {
+                case StageClearRule.DefeatBoss: return Boss != null && !Boss.Alive;
+                case StageClearRule.KillAllThenReachEnd: return EnemiesCleared && reachedEnd;
+                case StageClearRule.KillAll: return EnemiesCleared;
+                case StageClearRule.ReachEnd: return reachedEnd;
+                default: return false;
+            }
+        }
+
         void Update() => Step(Mathf.Min(MaxDt, Time.deltaTime));
 
         /// <summary>Advance the match by dt. Public so tests can drive time.</summary>
@@ -135,22 +177,35 @@ namespace BoneSquadKiting.Game
             if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
 
             Squad.Tick(dt);
+
+            if (Rounds != null && Rounds.Tick(Mobs, Enemies, Squad.Grid, Elapsed))
+                RoundStarted?.Invoke(Rounds.Started, Rounds.Total);
+            Mobs.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
+            if (Mobs.UnitsKilledLastTick > 0) Squad.Reform();   // close up around the survivors
+            if (!_clearedAnnounced && Rounds != null && Rounds.Total > 0 && EnemiesCleared)
+            {
+                _clearedAnnounced = true;
+                AllEnemiesCleared?.Invoke();
+            }
+
             Shots.FireRange = UnitFireRange;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
-            Attacks.Tick(Squad, Boss, dt);
+            if (Boss != null) Attacks.Tick(Squad, Boss, dt);
 
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);
             LastDps = CombatMath.Dps(_hits, Elapsed);
-            Boss.Flash = Mathf.Max(0, Boss.Flash - dt * 3f);
-
-            if (BossPhase == 1 && CombatMath.IsPhase2(Boss.HpFrac))
+            if (Boss != null)
             {
-                BossPhase = 2; Boss.Phase = 2;
-                PhaseTwoStarted?.Invoke();
+                Boss.Flash = Mathf.Max(0, Boss.Flash - dt * 3f);
+                if (BossPhase == 1 && CombatMath.IsPhase2(Boss.HpFrac))
+                {
+                    BossPhase = 2; Boss.Phase = 2;
+                    PhaseTwoStarted?.Invoke();
+                }
             }
 
             if (AliveCount == 0) Phase = GamePhase.Lose;
-            else if (!Boss.Alive) Phase = GamePhase.Win;
+            else if (StageCleared()) Phase = GamePhase.Win;
         }
     }
 }
