@@ -24,6 +24,7 @@ namespace BoneSquadKiting.Mobs
         public readonly List<MobShot> Shots = new();
 
         public System.Action<SquadUnit, float> OnUnitHit;   // unit, damage
+        public event System.Action<MobShot, SquadUnit> OnProjectileHit;
         public System.Action<Mob> OnMobDied;
 
         /// <summary>Units killed by mobs during the last Tick. The caller reforms the squad when it is non-zero.</summary>
@@ -150,16 +151,21 @@ namespace BoneSquadKiting.Mobs
             for (int i = Shots.Count - 1; i >= 0; i--)
             {
                 var s = Shots[i];
-                float step = s.Def.ShotSpeed * dt;
+                float multiplier = s.Def.ShotLifetime > 0f && s.Def.ShotSpeedCurve != null
+                    ? Mathf.Max(0f, s.Def.ShotSpeedCurve.Evaluate(s.Age / s.Def.ShotLifetime)) : 1f;
+                float step = s.Def.ShotSpeed * multiplier * dt;
+                s.Age += dt;
                 s.X += s.Dir.x * step; s.Z += s.Dir.y * step; s.Left -= step;
                 var hit = NearestUnit(squad, s.Pos, s.Def.ShotRadius + UnitRadius);
                 if (hit != null)
                 {
                     var took = SquadDamage.Apply(squad.Units, hit, s.Def.AttackDamage);
                     OnUnitHit?.Invoke(took, s.Def.AttackDamage);
+                    OnProjectileHit?.Invoke(s, took);
                     if (took.Dead) UnitsKilledLastTick++;
                 }
-                if (hit != null || s.Left <= 0f || (grid != null && !grid.IsWalkable(s.Pos))) Shots.RemoveAt(i);
+                bool expired = s.Def.ShotLifetime > 0f ? s.Age >= s.Def.ShotLifetime : s.Left <= 0f;
+                if (hit != null || expired || (grid != null && !grid.IsWalkable(s.Pos))) Shots.RemoveAt(i);
             }
         }
 

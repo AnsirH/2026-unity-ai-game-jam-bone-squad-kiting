@@ -30,6 +30,7 @@ namespace BoneSquadKiting.Mobs
     /// <summary>A ranged mob's shot in the air. Plain data; MobSystem moves it.</summary>
     public class MobShot
     {
+        public float Age;
         public MobDefinition Def;
         public float X, Z;
         public Vector2 Dir;
