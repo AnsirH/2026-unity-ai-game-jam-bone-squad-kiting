@@ -470,12 +470,16 @@ git add bone-squad-kiting/Assets/Scripts/Core/DangerShape.cs bone-squad-kiting/A
 
 ## Task 5: 분대 이동 — 중심점 + 유닛 추종
 
+> **구현 메모(2026-11-18):** Task 5~9의 로직과 테스트는 구현·커밋됨(EditMode 17, PlayMode 22 통과). 남은 것은 씬에 붙이는 단계뿐이다 — Task 5 Step 6(`SquadView`는 작성됨, 씬 배치 전), Task 6 Step 2(수동 입력 확인), Task 7 Step 6(보스·투사체 비주얼, `BossView`/`EnemyRef` 코드는 작성됨), Task 8 Step 5(`TelegraphView` 미작성). Task 1 씬 작업과 함께 한다.
+>
+> 아래 코드 블록과 실제 구현의 차이: 상태 enum은 `GamePhase`(필드명 `Phase`와 구분), `ShotSystem.OnBossHit` → `OnHit`, `GameDirector`에 HUD용 이벤트(`PatternStarted`/`PatternResolved`/`FormationChanged`/`PhaseTwoStarted`)와 테스트용 `Step(dt)` 추가, 공격 간격 전환 임계는 `GameConstants.FastAttackHpFrac`(0.55), 진형 핫키는 에셋의 `HotKey` + Q/W/E/R, PlayMode 공용 헬퍼는 `SquadTestRig.MakeFc()`. 실제 코드가 기준이다.
+
 **Files:**
 - Create: `Assets/Scripts/Squad/FormationController.cs`
 - Create: `Assets/Scripts/Squad/SquadUnit.cs`
 - Test: `Assets/Tests/PlayMode/SquadMovementTests.cs`
 
-- [ ] **Step 1: 실패 PlayMode 테스트**
+- [x] **Step 1: 실패 PlayMode 테스트**
 
 목적지를 주면 중심이 그쪽으로 이동하고, 유닛들이 `중심+슬롯` 근처로 수렴한다.
 
@@ -522,9 +526,9 @@ public class SquadMovementTests
 
 > 이후 `CombatTests`/`PatternResolveTests`에서도 `new GameObject...AddComponent<FormationController>()` 대신 `SquadMovementTests.MakeFc()`를 써서 진형 에셋이 주입된 상태로 `Init()`한다.
 
-- [ ] **Step 2: 실패 확인** — Run PlayMode 테스트. Expected: FAIL (타입 미정의).
+- [x] **Step 2: 실패 확인** — Run PlayMode 테스트. Expected: FAIL (타입 미정의).
 
-- [ ] **Step 3: SquadUnit 구현(데이터+이동, 원본 update 포팅)**
+- [x] **Step 3: SquadUnit 구현(데이터+이동, 원본 update 포팅)**
 
 중심 이동: `d>0.024`면 `min(d, 7.4*dt)`. 유닛: 목표 `clamp(anchor+slot, LIMIT)`, 거리>0.015면 `min(dist, (9.7+min(9,dist*2.4))*dt)`. (원본과 동일. SmoothDamp은 스펙의 대안이나 M1은 원본 수식 유지해 1:1 보장.)
 
@@ -557,7 +561,7 @@ namespace BoneSquadKiting.Squad
 }
 ```
 
-- [ ] **Step 4: FormationController 구현**
+- [x] **Step 4: FormationController 구현**
 
 중심 이동 + 25유닛 생성/슬롯 배분 + 틱. `Init()`은 원본 reset의 유닛 배치(시작 `z=3.4` dense). `Tick(dt)`는 anchor 이동 후 각 유닛 `MoveToward`. (MonoBehaviour지만 로직은 `Tick(dt)`로 분리해 테스트가 수동 구동.)
 
@@ -612,13 +616,13 @@ namespace BoneSquadKiting.Squad
 }
 ```
 
-- [ ] **Step 5: 통과 확인** — Run PlayMode 테스트. Expected: PASS.
+- [x] **Step 5: 통과 확인** — Run PlayMode 테스트. Expected: PASS.
 
 - [ ] **Step 6: 유닛 비주얼(임시 도형) 바인딩**
 
 각 `SquadUnit`에 작은 Capsule/Cylinder 프리미티브를 대응시키는 `SquadView`(MonoBehaviour)를 만들어 매 프레임 `transform.position = new Vector3(u.X, 0, u.Z)`. 색: 청록 머티리얼. (렌더만, 로직 아님.)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Squad bone-squad-kiting/Assets/Tests/PlayMode/SquadMovementTests.cs && git commit -m "feat: squad formation movement (anchor + unit follow) with playmode tests"
@@ -722,7 +726,7 @@ git add bone-squad-kiting/Assets/Scripts/Combat bone-squad-kiting/Assets/Tests/E
 **Files:**
 - Create: `Assets/Scripts/Input/SquadInputController.cs`
 
-- [ ] **Step 1: 구현(스마트 커맨드 + 어택땅)**
+- [x] **Step 1: 구현(스마트 커맨드 + 어택땅)**
 
 - **우클릭**: 카메라 레이를 먼저 **적 콜라이더**에 Raycast → 맞으면 그 `IEnemy`로 `AttackTarget`; 아니면 y=0 지면 교차점으로 `Move`.
 - **A → 좌클릭(어택땅)**: `A` 누르면 어택땅 대기모드(커서 피드백). 다음 좌클릭의 지면점으로 `AttackMove`(좌클릭이 적 위면 `AttackTarget`). Esc/우클릭으로 취소.
@@ -805,7 +809,7 @@ namespace BoneSquadKiting.Input
 
 - [ ] **Step 2: 수동 검증** — PlayMode에서 우클릭 지면 이동·우클릭 보스 공격명령·A+좌클릭 어택땅·1~4 진형 전환 확인(스크린샷/플레이).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Input && git commit -m "feat: squad input (rmb smart command, attack-move, formation keys, pause, restart)"
@@ -820,7 +824,7 @@ git add bone-squad-kiting/Assets/Scripts/Input && git commit -m "feat: squad inp
 - Create: `Assets/Scripts/Squad/ShotSystem.cs`
 - Test: `Assets/Tests/PlayMode/CombatTests.cs`
 
-- [ ] **Step 1: 실패 테스트(보스가 시간 경과로 피해 입음)**
+- [x] **Step 1: 실패 테스트(보스가 시간 경과로 피해 입음)**
 
 ```csharp
 using System.Collections; using NUnit.Framework; using UnityEngine; using UnityEngine.TestTools;
@@ -842,9 +846,9 @@ public class CombatTests
 }
 ```
 
-- [ ] **Step 2: 실패 확인** — Run PlayMode. Expected: FAIL.
+- [x] **Step 2: 실패 확인** — Run PlayMode. Expected: FAIL.
 
-- [ ] **Step 3: Boss 구현 (`IEnemy`,`IDamageable`)**
+- [x] **Step 3: Boss 구현 (`IEnemy`,`IDamageable`)**
 
 ```csharp
 using UnityEngine; using BoneSquadKiting.Core; using BoneSquadKiting.Combat;
@@ -864,7 +868,7 @@ namespace BoneSquadKiting.Bosses
 
 > `GameDirector.Restart`에서 `EnemyRegistry.Register(Boss)`. 보스 비주얼(Step 6)에 콜라이더+`EnemyRef{ Enemy = boss }` 부착해 우클릭 피킹 가능하게.
 
-- [ ] **Step 4: ShotSystem 구현(오더 기반 타겟 획득 + 원본 발사/명중)**
+- [x] **Step 4: ShotSystem 구현(오더 기반 타겟 획득 + 원본 발사/명중)**
 
 유닛 평타: **타겟 선택** — 오더가 `AttackTarget`이고 그 적이 생존·사거리 내면 그 적, 아니면 `registry.NearestInRange(유닛, 15.9)`. 타겟 있고 cd<=0 → 쿨 `0.76+rand*0.16`, 투사체 생성(타겟 방향, 속도22). 투사체는 **생성 시점 타겟**을 추적 보관(`TargetRef`); 명중(반경1.15) 시 `IDamageable.ApplyDamage(33)`, hit 콜백(DPS·플래시). M1은 타겟이 보스뿐이라 결과는 원본과 동일하되, 구조는 다중 적 대응.
 
@@ -918,7 +922,7 @@ namespace BoneSquadKiting.Squad
 }
 ```
 
-- [ ] **Step 5: 통과 확인** — Run PlayMode. Expected: PASS.
+- [x] **Step 5: 통과 확인** — Run PlayMode. Expected: PASS.
 
 - [ ] **Step 6: 보스/투사체 비주얼(임시) + 피킹 브리지** — 보스 큰 Cylinder(붉은 Emissive, 콜라이더 유지, 레이어 `Enemy`), 투사체 작은 Sphere/TrailRenderer. 보스 오브젝트에 아래 두 컴포넌트를 붙인다.
 
@@ -945,7 +949,7 @@ namespace BoneSquadKiting.Bosses
 }
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Boss bone-squad-kiting/Assets/Scripts/Combat/EnemyRef.cs bone-squad-kiting/Assets/Scripts/Squad/ShotSystem.cs bone-squad-kiting/Assets/Tests/PlayMode/CombatTests.cs && git commit -m "feat: auto-attack shots and boss hp with playmode test"
@@ -960,7 +964,7 @@ git add bone-squad-kiting/Assets/Scripts/Boss bone-squad-kiting/Assets/Scripts/C
 - Create: `Assets/Scripts/Boss/TelegraphView.cs`
 - Test: `Assets/Tests/PlayMode/PatternResolveTests.cs`
 
-- [ ] **Step 1: 실패 테스트(장판 안 유닛만 피해)**
+- [x] **Step 1: 실패 테스트(장판 안 유닛만 피해)**
 
 core 패턴 resolve 시 중심 반경<3.10 유닛이 55 피해.
 
@@ -982,9 +986,9 @@ public class PatternResolveTests
 }
 ```
 
-- [ ] **Step 2: 실패 확인** — Run PlayMode. Expected: FAIL.
+- [x] **Step 2: 실패 확인** — Run PlayMode. Expected: FAIL.
 
-- [ ] **Step 3: BossAttackSystem 구현**
+- [x] **Step 3: BossAttackSystem 구현**
 
 상태: 현재 패턴(`PatternDefinition`)/elapsed/remaining, nextAttack 타이머, attackIndex. 시퀀스는 **`AttackSequence` 에셋** 주입(`public AttackSequence Sequence;`). `Tick`에서 패턴 없으면 nextAttack 감소→StartPattern, 있으면 remaining 감소→막판 0.38s 전까지 장판 중심이 anchor 추종(lerp 11), remaining<=0이면 Resolve. `Resolve`: 각 유닛 `DangerShapeEval.InDanger(shape,…)`면 55 피해·사망, 결과(피격/사망 수) 반환. nextAttack = HpFrac<0.55 ? 1.45 : 1.9. `ForceResolve(DangerShape,…)`는 테스트/디버그용.
 
@@ -1043,13 +1047,13 @@ namespace BoneSquadKiting.Bosses
 }
 ```
 
-- [ ] **Step 4: 통과 확인** — Run PlayMode. Expected: PASS.
+- [x] **Step 4: 통과 확인** — Run PlayMode. Expected: PASS.
 
 - [ ] **Step 5: TelegraphView(임시 시각화)**
 
 현재 패턴의 안전/위험 영역을 지면 위 반투명 메시로 표시: core=원, gate=좌우 사각, quadrant=4모서리 사각, shell=도넛. M1은 간단히 반투명 Quad/절차 메시 + 붉은/청록 색. 중심은 `Current.Cx,Cz` 추종. 카운트다운은 Task 9 HUD에서.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Boss bone-squad-kiting/Assets/Tests/PlayMode/PatternResolveTests.cs && git commit -m "feat: boss attack scheduling, telegraph tracking, and pattern resolve"
@@ -1064,7 +1068,7 @@ git add bone-squad-kiting/Assets/Scripts/Boss bone-squad-kiting/Assets/Tests/Pla
 - Create: `Assets/Scripts/Core/CombatMath.cs`
 - Test: `Assets/Tests/EditMode/CombatMathTests.cs`
 
-- [ ] **Step 1: 실패 테스트(DPS 윈도 & 페이즈 임계)**
+- [x] **Step 1: 실패 테스트(DPS 윈도 & 페이즈 임계)**
 
 ```csharp
 using NUnit.Framework; using System.Collections.Generic; using BoneSquadKiting.Core;
@@ -1083,9 +1087,9 @@ public class CombatMathTests
 }
 ```
 
-- [ ] **Step 2: 실패 확인** — Run EditMode. Expected: FAIL.
+- [x] **Step 2: 실패 확인** — Run EditMode. Expected: FAIL.
 
-- [ ] **Step 3: CombatMath 구현** (클래스명이 네임스페이스 `BoneSquadKiting.Combat`과 겹치지 않게 `CombatMath`)
+- [x] **Step 3: CombatMath 구현** (클래스명이 네임스페이스 `BoneSquadKiting.Combat`과 겹치지 않게 `CombatMath`)
 
 ```csharp
 using System.Collections.Generic;
@@ -1103,9 +1107,9 @@ namespace BoneSquadKiting.Core
 }
 ```
 
-- [ ] **Step 4: 통과 확인** — Run EditMode. Expected: PASS.
+- [x] **Step 4: 통과 확인** — Run EditMode. Expected: PASS.
 
-- [ ] **Step 5: GameDirector 구현(원본 game 상태 + update 루프 결선)**
+- [x] **Step 5: GameDirector 구현(원본 game 상태 + update 루프 결선)**
 
 `Phase {Menu,Play,Win,Lose}`. 필드: elapsed, paused, hitEvents, lastDps, bossPhase. `Update(dt)`에서 play일 때: squad.Tick → shots.Tick(+hitEvent 기록) → attack.Tick → DPS 갱신 → 페이즈 전환 체크(HpFrac<0.54 & phase1→phase2) → 전멸 시 `Lose`, 보스 0 시 `Win`. `ChangeFormation/TogglePause/Restart/Begin`. hitEvent는 shots.OnBossHit에서 `(elapsed, dmg)` 추가, 2.4s 지난 건 제거. 시스템 인스턴스(FormationController, ShotSystem, BossAttackSystem, Boss)를 보유·구동.
 
@@ -1182,7 +1186,7 @@ namespace BoneSquadKiting.Game
 >
 > **확인 필요(원본 대조):** 2페이즈 전환 임계는 `Phase2HpFrac = 0.54`인데 `BossAttackSystem.Resolve`의 공격 간격 전환은 `0.55f` 하드코딩이다. 프로토타입 원본에서 두 값이 실제로 다른지 확인하고, 같다면 `CombatMath.IsPhase2(boss.HpFrac)`로 통일한다.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Game bone-squad-kiting/Assets/Scripts/Core/CombatMath.cs bone-squad-kiting/Assets/Tests/EditMode/CombatMathTests.cs && git commit -m "feat: game director state machine with dps and phase logic"
