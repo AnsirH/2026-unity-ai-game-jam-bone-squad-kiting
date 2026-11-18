@@ -31,7 +31,7 @@ public class ArenaSceneSmokeTests
         // Otherwise the first screenshots show the Editor's cyan "still compiling" placeholder shader.
         UnityEditor.ShaderUtil.allowAsyncCompilation = false;
 #endif
-        yield return SceneManager.LoadSceneAsync("Arena", LoadSceneMode.Single);
+        yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/Arena.unity", new LoadSceneParameters(LoadSceneMode.Single));   // not in the build any more
         yield return null;
 
         var director = Object.FindFirstObjectByType<GameDirector>();
