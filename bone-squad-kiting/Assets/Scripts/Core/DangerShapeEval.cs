@@ -28,6 +28,8 @@ namespace BoneSquadKiting.Core
                 case DangerShapeType.Annulus:       return r > s.RMin && r < s.ROut;
                 case DangerShapeType.CrossBandsX:   return ax > s.Inner && ax < s.Outer && az < s.HalfZ;
                 case DangerShapeType.QuadrantBoxes: return ax > s.Inner && az > s.Inner && ax < s.Outer && az < s.Outer;
+                case DangerShapeType.ThreeLanes:
+                    return az < s.HalfZ && Mathf.Min(ax, Mathf.Abs(ax - s.LaneSpacing)) < s.LaneHalfWidth;
                 default: return false;
             }
         }

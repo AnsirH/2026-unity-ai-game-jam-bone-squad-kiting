@@ -20,6 +20,9 @@ namespace BoneSquadKiting.Core
                     Box(v, t, s.Inner, s.Outer, -s.HalfZ, s.HalfZ);
                     Box(v, t, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ);
                     break;
+                case DangerShapeType.ThreeLanes:
+                    Box(v, t, -s.ThreeLaneHalfSpan, s.ThreeLaneHalfSpan, -s.HalfZ, s.HalfZ);
+                    break;
                 case DangerShapeType.QuadrantBoxes:
                     Box(v, t, s.Inner, s.Outer, s.Inner, s.Outer);
                     Box(v, t, -s.Outer, -s.Inner, s.Inner, s.Outer);

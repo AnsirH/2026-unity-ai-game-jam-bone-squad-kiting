@@ -35,6 +35,11 @@ Shader "BoneSquad/Sword Plunge"
 
             float Hash(float n) { return frac(sin(n * 27.17 + 4.35) * 15736.9); }
 
+            // The blade seats 66 ms after first contact.
+            static const float SeatDelay = 0.066;
+
+            bool IsStoneChip(float id) { return fmod(id, 3.0) < 0.5; }
+
             // Periodic angular noise keeps the brush seam closed around the full circle.
             float Fray(float turn, float count)
             {
@@ -66,17 +71,33 @@ Shader "BoneSquad/Sword Plunge"
                     else
                     {
                         float id = v.layer.y;
-                        float life = saturate(age / (0.29 + 0.19 * Hash(id+3)));
-                        float angle = Tau * (id + 0.5 * Hash(id)) / 18;
-                        float2 direction = float2(cos(angle),sin(angle));
-                        float travel = 1 - pow(1-life,2.2);
-                        float distance = travel * (0.95 + 2.2 * Hash(id+1));
-                        float height = 4 * life * (1-life) * (.85 + 1.70 * Hash(id+9));
-                        float taper = 1 - life;
-                        p = float3(0, 0.08 + height, 0);
-                        p.xz = direction * (distance + (v.uv.y-.5)*(.65+1.05*Hash(id+7))*taper);
-                        p.xz += right*(v.uv.x-0.5)*(.20+.20*Hash(id+6))*taper;
-                        p.y += (v.uv.y-0.5)*(.60+1.25*Hash(id+2))*taper;
+                        if (IsStoneChip(id))
+                        {
+                            float life = saturate((age-SeatDelay)/(0.33+0.14*Hash(id+2)));
+                            float angle = Tau*(id+0.6*Hash(id))/18;
+                            float2 direction = float2(cos(angle),sin(angle));
+                            float radius = (0.28+0.4*Hash(id+8)) + life*(1.4+1.7*Hash(id+1));
+                            float height = 4*life*(1-life)*(0.8+1.15*Hash(id+4));
+                            float spin = id+life*(3+2*Hash(id+6));
+                            float2 uv = (v.uv-.5)*float2(.62,.42)*(.7+.5*Hash(id));
+                            float2 face = float2(uv.x*cos(spin)-uv.y*sin(spin),uv.x*sin(spin)+uv.y*cos(spin));
+                            p.xz = direction*radius + right*face.x;
+                            p.y = 0.10 + height + face.y;
+                        }
+                        else
+                        {
+                            float life = saturate(age / (0.29 + 0.19 * Hash(id+3)));
+                            float angle = Tau * (id + 0.5 * Hash(id)) / 18;
+                            float2 direction = float2(cos(angle),sin(angle));
+                            float travel = 1 - pow(1-life,2.2);
+                            float distance = travel * (0.95 + 2.2 * Hash(id+1));
+                            float height = 4 * life * (1-life) * (.85 + 1.70 * Hash(id+9));
+                            float taper = 1 - life;
+                            p = float3(0, 0.08 + height, 0);
+                            p.xz = direction * (distance + (v.uv.y-.5)*(.65+1.05*Hash(id+7))*taper);
+                            p.xz += right*(v.uv.x-0.5)*(.20+.20*Hash(id+6))*taper;
+                            p.y += (v.uv.y-0.5)*(.60+1.25*Hash(id+2))*taper;
+                        }
                     }
                 }
                 o.pos=TransformObjectToHClip(p);
@@ -112,8 +133,8 @@ Shader "BoneSquad/Sword Plunge"
                 float r=length(p), angle=atan2(p.y,p.x);
                 float turn=angle/Tau+.5;
                 float chop=Fray(turn,29), tooth=Fray(turn,79);
-                // The contact holds for two frames before the pressure breaks outwards.
-                float t=saturate((age-.035)/.42);
+                // The flash marks first contact. The wave surges as the blade embeds.
+                float t=saturate((age-.027)/.34);
                 float front=.055+.89*(1-pow(1-t,2.7));
                 float contour=front*(1+.022*(chop-.5)+.012*(tooth-.5));
                 float behind=contour-r;
@@ -125,11 +146,14 @@ Shader "BoneSquad/Sword Plunge"
                 float vein=exp(-abs(behind-bandWidth*(.25+.25*tooth))/.009)*smoothstep(.39,.75,chop);
                 float rupture=smoothstep(.008,.046,age)*ringFade;
                 half4 stone=BrokenStone(p,r,behind,age);
-                float impact=exp(-25*age);
+                float impact=exp(-33*age);
                 float flash=exp(-r/.085)*impact;
                 float flare=exp(-r/.23)*pow(saturate(cos(angle*5+.8)),18)*impact*(1-smoothstep(.75,.98,r));
                 half3 light=_Energy.rgb*(rupture*(2.15*stroke+.88*vein)+flash*3+flare*2.2);
                 light+=half3(.82,1.6,2.1)*(flash+flare*.65+rupture*stroke*.30);
+                // Briefly pick out the newly split stone faces under the seated blade.
+                float seatPulse = smoothstep(SeatDelay-.012,SeatDelay,age)*exp(-27*max(0,age-SeatDelay));
+                light += stone.rgb*seatPulse*3.2 + _Energy.rgb*seatPulse*exp(-r/.14)*.95;
                 float waveAlpha=saturate(ink*.96*rupture+(flash+flare)*.7+.34*rupture*stroke);
                 return half4(light+stone.rgb*(1-waveAlpha),waveAlpha+stone.a*(1-waveAlpha));
             }
@@ -165,6 +189,20 @@ Shader "BoneSquad/Sword Plunge"
                 clip(age);
                 float u=i.uv.y;
                 float id=i.layer.y;
+                if (IsStoneChip(id))
+                {
+                    float life=(age-SeatDelay)/(.33+.14*Hash(id+2));
+                    clip(life);
+                    float2 q=i.uv*2-1;
+                    float d=max(max(abs(q.x+.19*q.y)-.81,abs(q.y-.16*q.x)-.77),
+                                max(q.x*.73+q.y-.94,-q.x*.86-q.y-.90));
+                    float aa=max(fwidth(d),.008);
+                    float alpha=(1-smoothstep(-aa,aa,d))*(1-smoothstep(.73,1,life));
+                    float face=smoothstep(-aa,aa,q.y-.36*q.x+.09);
+                    float lip=exp(-abs(d+.065)/.09)*smoothstep(-.4,.62,q.y-.3*q.x);
+                    half3 rock=lerp(half3(.026,.023,.029),half3(.16,.145,.14),face);
+                    return half4((rock + _Energy.rgb*lip*(.24+.85*(1-saturate(life))))*alpha,alpha);
+                }
                 float jag=lerp(Hash(floor(u*6)+id),Hash(floor(u*6)+id+1),frac(u*6));
                 float profile=pow(saturate(sin(3.14159*u)),.85)*(.67+.33*jag);
                 float across=(i.uv.x-.5)*2+.17*(jag-.5);

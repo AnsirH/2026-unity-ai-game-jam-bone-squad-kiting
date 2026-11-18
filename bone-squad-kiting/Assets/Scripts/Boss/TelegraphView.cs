@@ -3,6 +3,7 @@ using UnityEngine;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
 using BoneSquadKiting.Game;
+using BoneSquadKiting.Fx;
 
 namespace BoneSquadKiting.Bosses
 {
@@ -23,6 +24,7 @@ namespace BoneSquadKiting.Bosses
         {
             public MeshFilter Filter; public MeshRenderer Renderer;
             public PatternDefinition Pattern; public DangerShape Shape;
+            public MeshRenderer VolleyWarning;
         }
 
         readonly List<Zone> _zones = new();
@@ -39,16 +41,25 @@ namespace BoneSquadKiting.Bosses
             for (int i = 0; i < _zones.Count; i++)
             {
                 var z = _zones[i];
-                if (i >= n) { z.Renderer.enabled = false; z.Pattern = null; continue; }
+                if (i >= n) { z.Filter.gameObject.SetActive(false); z.Pattern = null; continue; }
+                z.Filter.gameObject.SetActive(true);
                 var a = telegraphs[i];
                 if (z.Pattern != a.Pattern || !z.Shape.Equals(a.Shape))
                 {
                     if (z.Filter.sharedMesh != null) Destroy(z.Filter.sharedMesh);
-                    z.Filter.sharedMesh = DangerShapeMesh.Build(a.Shape);
+                    z.Filter.sharedMesh = a.Pattern != null && a.Pattern.LaneWarningMaterial != null && a.Shape.Type == DangerShapeType.ThreeLanes
+                        ? null : DangerShapeMesh.Build(a.Shape);
                     z.Pattern = a.Pattern; z.Shape = a.Shape;
                 }
                 z.Filter.transform.position = new Vector3(a.Cx, Height, a.Cz);
                 z.Filter.transform.rotation = Quaternion.Euler(0f, a.Angle, 0f);   // +Y turns clockwise seen from above
+                bool drawVolleyWarning = a.Shape.Type == DangerShapeType.ThreeLanes && a.Pattern != null && a.Pattern.LaneWarningMaterial != null;
+                if (drawVolleyWarning)
+                {
+                    DrawVolleyWarning(z, a);
+                    continue;
+                }
+                if (z.VolleyWarning != null) z.VolleyWarning.enabled = false;
                 bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
                 var color = a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor;
                 if (a.Pattern != null && a.Pattern.LethalTelegraph)
@@ -60,10 +71,28 @@ namespace BoneSquadKiting.Bosses
                 {
                     color.a *= 0.7f;
                 }
+                if (a.Shape.Type == DangerShapeType.ThreeLanes && !a.Sustaining)
+                    color.a *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(a.Remaining / 0.4f));
                 _block.SetColor(ColorId, color);
                 z.Renderer.SetPropertyBlock(_block);
                 z.Renderer.enabled = true;
             }
+        }
+
+        void DrawVolleyWarning(Zone zone, BossAttackSystem.Active cast)
+        {
+            zone.Renderer.enabled = false;
+            if (zone.VolleyWarning == null)
+            {
+                var go = new GameObject("Volley Warning", typeof(MeshFilter), typeof(MeshRenderer));
+                go.transform.SetParent(zone.Filter.transform, false);
+                go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                go.GetComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+                zone.VolleyWarning = go.GetComponent<MeshRenderer>();
+                zone.VolleyWarning.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+
+            SovereignVolleyCast.DrawWarning(zone.VolleyWarning, cast.Pattern, cast.Shape, cast.Elapsed, cast.Remaining, _block);
         }
 
         Zone Create()
