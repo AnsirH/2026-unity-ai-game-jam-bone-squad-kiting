@@ -31,7 +31,11 @@ namespace BoneSquadKiting.Core
         public const float AnchorArrive = 0.024f, UnitArrive = 0.015f;
 
         // Combat
-        public const float FireRange = 15.9f;
+        // Starting values only. The live values are GameDirector.UnitFireRange / SquadEngageRange,
+        // editable in the inspector while playing. 15.9 is the prototype's range and covers almost the
+        // whole arena, so both are expected to be retuned.
+        public const float FireRange = 15.9f;          // per unit: how far one unit can shoot
+        public const float SquadEngageRange = 15.9f;   // per squad, from the anchor: attack orders stop here
         public const float ShotSpeed = 22f;
         public const float ShotLife = 1.35f;
         public const float ShotHitRadius = 1.15f;
@@ -45,6 +49,9 @@ namespace BoneSquadKiting.Core
         public const float Phase2HpFrac = 0.54f;
         public const float NextAttackPhase1 = 1.9f, NextAttackPhase2 = 1.45f;
         public const float FirstAttackDelay = 3.1f;
+        // Attack cadence switches at 0.55 while the phase flag switches at 0.54. The prototype really uses two
+        // different values here (resolvePattern vs update), so this is intentional.
+        public const float FastAttackHpFrac = 0.55f;
 
         // Telegraph lock: last 0.38s the zone stops tracking the commander
         public const float CastTrackLockTime = 0.38f;
