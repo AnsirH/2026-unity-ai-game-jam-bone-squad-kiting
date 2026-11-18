@@ -115,7 +115,7 @@ namespace BoneSquadKiting.EditorTools
             EnsureFolder("Assets", "Prototype"); EnsureFolder("Assets/Prototype", "Materials");
 
             var ground = Lit("Ground", Hex("#0d2434"));
-            var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f, faction: Faction.Ally);
+            var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f);            // faction look: squad leader and mini bosses up only
             var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f, faction: Faction.Enemy);
             var shot = Lit("Shot", Hex("#ffe27a"), Hex("#ffd24a") * 2.5f);
             var telegraph = Upsert($"{MatDir}/Telegraph.mat", TelegraphShader());
@@ -407,7 +407,7 @@ namespace BoneSquadKiting.EditorTools
 
             var mobView = new GameObject("Mob View").AddComponent<MobView>();
             mobView.Director = director;
-            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f, faction: Faction.Enemy);
+            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
         }
 
         // The wave plan a rebuilt stage keeps: the one its scene pointed at before the rebuild, else the

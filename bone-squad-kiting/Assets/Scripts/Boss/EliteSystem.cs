@@ -87,6 +87,7 @@ namespace BoneSquadKiting.Bosses
                 }
                 // A cast in progress always finishes; a new one only starts while the squad is within reach.
                 bool inReach = e.Def.AttackRange <= 0f || (squad.Anchor - e.Pos).magnitude <= e.Def.AttackRange;
+                e.Attacks.HasCaster = true; e.Attacks.CasterX = e.X; e.Attacks.CasterZ = e.Z;
                 if (e.Casting || inReach) e.Attacks.Tick(squad, null, dt);
                 if (e.Casting || e.Def.Speed <= 0f) continue;   // it stands still while casting: the squad's chance to shoot — or to move
 
