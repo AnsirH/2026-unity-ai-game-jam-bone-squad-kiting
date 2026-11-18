@@ -1,8 +1,8 @@
-# KITE SQUAD 25 — M1 프로토타입 1:1 이식 Implementation Plan
+# KITE SQUAD 25 — M1 프로토타입 이식 + 조작/데이터 확장 Implementation Plan
 
 > **실행 방법:** 태스크를 위에서부터 하나씩(TDD: 실패 테스트 → 구현 → 통과 → 커밋) 진행한다. 각 스텝은 체크박스(`- [ ]`)로 추적한다. Unity 작업은 `unity:unity-cli`·`unity:unity-package-management`·`unity:ui-ugui`·`unity:urp-postprocessing` 스킬을 해당 태스크에서 따른다.
 
-**Goal:** HTML 프로토타입 `KITE SQUAD 25`의 게임플레이를 Unity 6000.3.28f1 · URP로 수치까지 동일하게 1:1 재현한다(임시 기하도형).
+**Goal:** HTML 프로토타입 `KITE SQUAD 25`의 게임플레이를 Unity 6000.3.28f1 · URP로 수치까지 동일하게 재현하고(임시 기하도형), 그 위에 패턴·진형 데이터화(결정 #8)와 RTS식 공격 명령(결정 #9)을 얹는다.
 
 **Architecture:** 게임플레이는 프로토타입의 (x, z) 월드를 Unity **XZ 평면**에 직접 매핑하고, 2D 투영 수식 대신 **직교 쿼터뷰 카메라**로 렌더링한다. 결정론적 로직(진형 슬롯 생성, 장판 shape 판정, 수치)은 MonoBehaviour와 분리된 순수 C# 평가기로 두고 EditMode 테스트로 고정한다. 이동·평타·패턴·HUD는 PlayMode에서 통합 검증한다. 모든 상수는 원본과 동일.
 
@@ -14,13 +14,15 @@
 
 **좌표 매핑 규약(전 태스크 공통):** 원본 `world.x → Unity x`, `world.z → Unity z`, 높이 `h → Unity y`. 즉 지면은 XZ 평면(y=0). 원본의 모든 속도/거리/반경 상수를 Unity 월드 유닛으로 그대로 사용한다. 화면→월드 변환(`unproject`)은 카메라 레이를 y=0 평면과 교차시켜 구한다.
 
-**작업 규칙:** `main/` 샌드박스 안에서만 작업한다. git push는 사용자가 명시적으로 요청할 때만. 커밋은 각 태스크 끝에서.
+**작업 규칙:** 구현은 bsk-main 세션이 이 저장소(로컬 `main/` 폴더 = 저장소 루트)에서 한다. 아래 경로와 git 명령은 모두 **저장소 루트 기준**이다. git push는 사용자가 명시적으로 요청할 때만. 커밋은 각 태스크 끝에서.
+
+**이름 규약:** Unity 프로젝트 폴더 `bone-squad-kiting/`, 런타임 어셈블리 `BoneSquadKiting`(`Assets/Scripts/BoneSquadKiting.asmdef`), 네임스페이스 `BoneSquadKiting.*`. 네임스페이스와 같은 이름의 타입을 만들지 않는다(그래서 보스 네임스페이스는 `BoneSquadKiting.Bosses`, 수치 유틸 클래스는 `CombatMath`). 입력은 **새 Input System 전용**(`activeInputHandler: 1`)이라 `UnityEngine.Input`을 쓰지 않는다.
 
 ---
 
 ## File Structure
 
-프로젝트 루트: `main/KiteSquad/`(Unity 프로젝트). 스크립트 루트: `Assets/Scripts/`.
+프로젝트 루트: `bone-squad-kiting/`(Unity 프로젝트). 스크립트 루트: `Assets/Scripts/`.
 
 | 파일 | 책임 |
 | --- | --- |
@@ -28,7 +30,7 @@
 | `Assets/Scripts/Core/DangerShape.cs` | 장판 모양 데이터 타입(`Disc`/`Annulus`/`CrossBandsX`/`QuadrantBoxes` + 파라미터) |
 | `Assets/Scripts/Core/DangerShapeEval.cs` | `InDanger(shape, cx,cz, x,z)` — shape 범용 판정(순수 함수) |
 | `Assets/Scripts/Core/FormationSlots.cs` | `Generate(def)` — 진형 정의→25슬롯 오프셋(순수 함수) |
-| `Assets/Scripts/Core/Combat.cs` | DPS 윈도 계산·페이즈 임계 등 순수 수치 로직 |
+| `Assets/Scripts/Core/CombatMath.cs` | DPS 윈도 계산·페이즈 임계 등 순수 수치 로직 |
 | `Assets/Scripts/Data/PatternDefinition.cs` | ScriptableObject: id·name·time·recommend·advice·detail·DangerShape |
 | `Assets/Scripts/Data/FormationDefinition.cs` | ScriptableObject: id·name·hotkey·슬롯 생성 규칙(grid/line/ring/cross+파라미터) |
 | `Assets/Scripts/Data/AttackSequence.cs` | ScriptableObject: `PatternDefinition[]` 순서(보스별 패턴 묶음) |
@@ -36,11 +38,13 @@
 | `Assets/Scripts/Combat/IEnemy.cs`, `IDamageable.cs` | 적 추상화(위치·생존·피해). 보스/잡몹 공통 |
 | `Assets/Scripts/Combat/EnemyRegistry.cs` | 활성 적 목록·등록/해제·획득 질의(최근접/범위). M1=보스1 |
 | `Assets/Scripts/Combat/SquadOrder.cs` | `OrderKind{Move,AttackMove,AttackTarget}` + 대상점/타겟 |
+| `Assets/Scripts/Combat/EnemyRef.cs` | 콜라이더가 붙은 적 오브젝트가 자신의 `IEnemy`를 노출하는 브리지(우클릭 피킹용) |
 | `Assets/Scripts/Squad/FormationController.cs` | 중심점(anchor) 이동, 진형 전환, 유닛 슬롯 배분, **현재 오더 보유** |
 | `Assets/Scripts/Squad/SquadUnit.cs` | 유닛 추종(center+offset), 평타 쿨/발사, hp, 사망 |
 | `Assets/Scripts/Squad/ShotSystem.cs` | 투사체 풀·이동·명중·피해 + **오더 기반 타겟 획득** |
 | `Assets/Scripts/Boss/Boss.cs` | 보스 hp/phase/flash 상태 (`IEnemy`,`IDamageable` 구현) |
 | `Assets/Scripts/Boss/BossAttackSystem.cs` | `AttackSequence` 소비·스케줄·텔레그래프·resolve(shape 판정→유닛 피해) |
+| `Assets/Scripts/Boss/BossView.cs` | 보스 비주얼(콜라이더+`EnemyRef`), `Bind(Boss)`로 상태 연결 |
 | `Assets/Scripts/Boss/TelegraphView.cs` | 장판 시각화(임시 반투명 메시/디캘, DangerShape 기반) |
 | `Assets/Scripts/Game/GameDirector.cs` | 상태머신(menu/play/win/lose), 일시정지, 승패, 시스템 오케스트레이션 |
 | `Assets/Scripts/Input/SquadInputController.cs` | 우클릭 스마트 커맨드(이동/타겟), **A+좌클릭 어택땅**, 1~4 진형, P 일시정지, Enter 재시작 |
@@ -53,33 +57,35 @@
 
 ## Task 0: Unity 프로젝트 스캐폴딩
 
-**Files:**
-- Create: `main/KiteSquad/` (Unity 프로젝트 전체)
-- Modify: `main/.gitignore` (Unity 무시 규칙 추가)
+> **진행 상태:** Step 1~3은 완료·커밋됨(`cccc396`, `40922f4`). 프로젝트는 `bone-squad-kiting/`에 있고 Unity용 무시 규칙은 `bone-squad-kiting/.gitignore`에 들어 있다. 런타임 asmdef `Assets/Scripts/BoneSquadKiting.asmdef`도 이미 있다. **남은 것은 Step 4.**
 
-- [ ] **Step 1: Editor 6000.3.28f1 설치 확인**
+**Files:**
+- Create: `bone-squad-kiting/` (Unity 프로젝트 전체)
+- Create: `bone-squad-kiting/.gitignore` (Unity 무시 규칙)
+
+- [x] **Step 1: Editor 6000.3.28f1 설치 확인**
 
 `unity:unity-cli` 스킬을 따른다. 설치 여부 확인:
 Run: `unity editors -i` (설치 목록) → 6000.3.28f1 없으면 `unity install --version 6000.3.28f1 --module windows-il2cpp`
 Expected: 목록에 `6000.3.28f1`.
 
-- [ ] **Step 2: URP 템플릿으로 프로젝트 생성**
+- [x] **Step 2: URP 템플릿으로 프로젝트 생성**
 
-Run: `unity create --path "main/KiteSquad" --version 6000.3.28f1 --template urp` (정확한 플래그는 unity-cli 스킬의 `create` 섹션 확인)
-Expected: `main/KiteSquad/Assets`, `ProjectSettings/ProjectVersion.txt`에 `6000.3.28f1`.
+Run: `unity create --path "bone-squad-kiting" --version 6000.3.28f1 --template urp` (정확한 플래그는 unity-cli 스킬의 `create` 섹션 확인)
+Expected: `bone-squad-kiting/Assets`, `ProjectSettings/ProjectVersion.txt`에 `6000.3.28f1`.
 
-- [ ] **Step 3: Unity용 .gitignore 추가**
+- [x] **Step 3: Unity용 .gitignore 추가**
 
-`main/.gitignore` 끝에 표준 Unity 무시 규칙을 추가한다(`KiteSquad/[Ll]ibrary/`, `[Tt]emp/`, `[Oo]bj/`, `[Bb]uild/`, `[Ll]ogs/`, `[Uu]serSettings/`, `*.csproj`, `*.sln` 등). 규칙은 GitHub `Unity.gitignore` 표준을 사용하되 경로 앞에 `KiteSquad/`를 붙인다.
+GitHub `Unity.gitignore` 표준 규칙을 `bone-squad-kiting/.gitignore`에 둔다(프로젝트 폴더 안에 있으므로 경로 접두사 불필요).
 
 - [ ] **Step 4: 테스트 프레임워크 어셈블리 준비**
 
-`Assets/Tests/EditMode/EditMode.asmdef`(참조: 프로젝트 런타임 asmdef + `UnityEngine.TestRunner`,`UnityEditor.TestRunner`, 플랫폼 EditMode), `Assets/Tests/PlayMode/PlayMode.asmdef` 생성. 런타임 코드용 `Assets/Scripts/KiteSquad.asmdef`도 생성해 테스트에서 참조. (ui-ugui/unity-cli 스킬에 asmdef 예시 있음.)
+`Assets/Tests/EditMode/EditMode.asmdef`(참조: `BoneSquadKiting` + `UnityEngine.TestRunner`,`UnityEditor.TestRunner`, 플랫폼 Editor), `Assets/Tests/PlayMode/PlayMode.asmdef`(참조: `BoneSquadKiting` + `UnityEngine.TestRunner`) 생성. 기존 `Assets/Scripts/BoneSquadKiting.asmdef`의 `references`가 비어 있으므로 **`Unity.InputSystem`**(Task 6)과 **`Unity.TextMeshPro`**(Task 10)를 추가한다. (ui-ugui/unity-cli 스킬에 asmdef 예시 있음.)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit** (스캐폴딩 자체는 커밋됨. Step 4의 asmdef만 커밋)
 
 ```bash
-cd main && git add KiteSquad .gitignore && git commit -m "chore: scaffold Unity 6000.3.28f1 URP project for KiteSquad"
+git add bone-squad-kiting/Assets/Tests bone-squad-kiting/Assets/Scripts/BoneSquadKiting.asmdef && git commit -m "chore: add test assemblies and runtime asmdef references"
 ```
 
 ---
@@ -87,8 +93,8 @@ cd main && git add KiteSquad .gitignore && git commit -m "chore: scaffold Unity 
 ## Task 1: 아레나 씬 + 쿼터뷰 직교 카메라 + URP 포스트
 
 **Files:**
-- Create: `main/KiteSquad/Assets/Scenes/Arena.unity`
-- Create: `main/KiteSquad/Assets/Settings/ArenaVolume.asset` (URP Volume Profile)
+- Create: `bone-squad-kiting/Assets/Scenes/Arena.unity`
+- Create: `bone-squad-kiting/Assets/Settings/ArenaVolume.asset` (URP Volume Profile)
 
 - [ ] **Step 1: 아레나 지면 생성**
 
@@ -111,7 +117,7 @@ Expected: 어두운 아레나 + 비네트 + (이후 오브젝트에서) 블룸.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets && git commit -m "feat: add arena scene with quarter-view ortho camera and URP post"
+git add bone-squad-kiting/Assets && git commit -m "feat: add arena scene with quarter-view ortho camera and URP post"
 ```
 
 ---
@@ -119,13 +125,16 @@ cd main && git add KiteSquad/Assets && git commit -m "feat: add arena scene with
 ## Task 2: 상수 + 패턴 데이터
 
 **Files:**
-- Create: `Assets/Scripts/Core/GameConstants.cs`
-- Create: `Assets/Scripts/Core/AttackPattern.cs`
+- Exists: `Assets/Scripts/Core/GameConstants.cs` (작성·커밋됨 — 아래 값과 대조만)
+- Delete: `Assets/Scripts/Core/AttackPattern.cs` + `.meta` (하드코딩 테이블. 결정 #8의 SO 구조가 대체. `PatternId`는 `DangerShape.cs`로 옮김)
+- Create: `Assets/Scripts/Core/DangerShape.cs`
+- Create: `Assets/Scripts/Data/PatternDefinition.cs`, `Assets/Scripts/Data/AttackSequence.cs`
+- Create: `Assets/Data/Patterns/*.asset`(8개), `Assets/Data/Sequences/BossMain.asset`
 
-- [ ] **Step 1: 상수 작성(원본과 1:1)**
+- [x] **Step 1: 상수 작성(원본과 1:1)**
 
 ```csharp
-namespace KiteSquad.Core
+namespace BoneSquadKiting.Core
 {
     public static class GameConstants
     {
@@ -179,7 +188,7 @@ namespace KiteSquad.Core
 장판을 **조립형 모양 데이터**로 표현한다(판정 로직은 Task 4 평가기). 패턴 추가 시 에셋에서 모양·파라미터만 바꾼다. 정말 새 기하가 필요할 때만 `DangerShapeType`에 1종 추가.
 
 ```csharp
-namespace KiteSquad.Core
+namespace BoneSquadKiting.Core
 {
     public enum PatternId { Core, Gate, Quadrant, Shell }
     public enum DangerShapeType { Disc, Annulus, CrossBandsX, QuadrantBoxes }
@@ -202,10 +211,10 @@ namespace KiteSquad.Core
 - [ ] **Step 3: PatternDefinition / AttackSequence ScriptableObject + 데이터 에셋(원본 1:1)**
 
 ```csharp
-using UnityEngine; using KiteSquad.Core;
-namespace KiteSquad.Data
+using UnityEngine; using BoneSquadKiting.Core;
+namespace BoneSquadKiting.Data
 {
-    [CreateAssetMenu(menuName="KiteSquad/Pattern")]
+    [CreateAssetMenu(menuName="BoneSquadKiting/Pattern")]
     public class PatternDefinition : ScriptableObject
     {
         public PatternId Id;
@@ -214,7 +223,7 @@ namespace KiteSquad.Data
         public float Time;
         public DangerShape Shape;
     }
-    [CreateAssetMenu(menuName="KiteSquad/AttackSequence")]
+    [CreateAssetMenu(menuName="BoneSquadKiting/AttackSequence")]
     public class AttackSequence : ScriptableObject { public PatternDefinition[] Patterns; }
 }
 ```
@@ -232,17 +241,23 @@ namespace KiteSquad.Data
 | 6 | Gate | 쌍벽 압착 | 2 · 일자 | line | 1.8 | `BandsX(0.83, 6.4, 7.1)` |
 | 7 | Shell | 외곽 소거 | 1 · 밀집 | dense | 1.8 | `Annulus(1.73, 6.05)` |
 
-> 같은 패턴이 time만 다르게 재등장하므로 **슬롯당 에셋 1개**(총 8개)로 둔다. 모양/문구 중복은 데이터 편집으로 흡수(코드 무변경). detail 문구는 원본 ATTACKS의 해당 안내문 사용.
+> 같은 패턴이 time만 다르게 재등장하므로 **슬롯당 에셋 1개**(총 8개)로 둔다. 모양/문구 중복은 데이터 편집으로 흡수(코드 무변경).
+>
+> detail 문구(삭제되는 `AttackPattern.cs`에서 옮김): Core "중앙이 폭발합니다. 원형으로 흩어지세요!" · Gate "좌우가 휩쓸립니다. 일자로 줄이세요!" · Quadrant "십자 통로만 안전합니다!" · Shell "바깥부터 폭발합니다. 중심으로 모이세요!"
 
-- [ ] **Step 3: 컴파일 확인**
+- [ ] **Step 4: 기존 하드코딩 테이블 삭제**
+
+에셋에 값을 다 옮긴 뒤 `Assets/Scripts/Core/AttackPattern.cs`와 `.meta`를 삭제한다(`PatternId` 중복 정의 방지).
+
+- [ ] **Step 5: 컴파일 확인**
 
 Run: `unity:unity-cli` 스킬의 컴파일/로그 확인 기능으로 에러 0 확인.
 Expected: 컴파일 에러 없음.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Core && git commit -m "feat: add game constants and boss attack table (1:1 from prototype)"
+git add bone-squad-kiting/Assets/Scripts/Core bone-squad-kiting/Assets/Scripts/Data bone-squad-kiting/Assets/Data && git commit -m "feat: replace hardcoded attack table with pattern data assets"
 ```
 
 ---
@@ -262,7 +277,7 @@ cd main && git add KiteSquad/Assets/Scripts/Core && git commit -m "feat: add gam
 원본값: dense=5×5(간격0.53), line=25개 `x=(i%3-1)*0.12, z=(i-12)*0.49`, ring=반경3.7 25개, cross=중심1+4방향×6=25. 테스트는 `FormationDefinition`을 메모리 생성해 `FormationSlots.Generate`로 검증.
 
 ```csharp
-using NUnit.Framework; using UnityEngine; using KiteSquad.Core; using KiteSquad.Data;
+using NUnit.Framework; using UnityEngine; using BoneSquadKiting.Core; using BoneSquadKiting.Data;
 public class FormationSlotsTests
 {
     static FormationDefinition Def(FormationMode m, float p0=0,float p1=0,int c=0)
@@ -274,6 +289,14 @@ public class FormationSlotsTests
         Assert.AreEqual(25, s.Length);
         Assert.AreEqual(new Vector2(0,0), s[12]);
         Assert.That(s[0], Is.EqualTo(new Vector2(-1.06f,-1.06f)).Using(V2Cmp(1e-4f)));
+    }
+    [Test] public void Line_IsStaggeredColumn()
+    {
+        var d = Def(FormationMode.Line, p0:0.49f); d.Stagger = 0.12f;
+        var s = FormationSlots.Generate(d);
+        Assert.AreEqual(25, s.Length);
+        Assert.That(s[0],  Is.EqualTo(new Vector2(-0.12f, -5.88f)).Using(V2Cmp(1e-4f)));
+        Assert.That(s[13], Is.EqualTo(new Vector2(0f, 0.49f)).Using(V2Cmp(1e-4f)));
     }
     [Test] public void Ring_RadiusIs3_7()
     { foreach (var p in FormationSlots.Generate(Def(FormationMode.Ring, p1:3.7f)))
@@ -299,16 +322,17 @@ Expected: FAIL (`FormationSlots`/`FormationDefinition` 미정의).
 
 ```csharp
 // Data/FormationDefinition.cs
-using UnityEngine;
-namespace KiteSquad.Data
+using UnityEngine; using UnityEngine.InputSystem;
+namespace BoneSquadKiting.Data
 {
     public enum FormationMode { Grid, Line, Ring, Cross }
-    [CreateAssetMenu(menuName="KiteSquad/Formation")]
+    [CreateAssetMenu(menuName="BoneSquadKiting/Formation")]
     public class FormationDefinition : ScriptableObject
     {
-        public string Id, DisplayName; public KeyCode HotKey;
+        public string Id, DisplayName; public Key HotKey;   // Input System key (Digit1..Digit4)
         public FormationMode Mode;
         public float Spacing;  // Grid 간격 / Cross 암 간격 / Line z간격
+        public float Stagger;  // Line x 지그재그 폭
         public float Radius;   // Ring 반경
         public int Count;      // 예약(가변 인원)
     }
@@ -316,8 +340,8 @@ namespace KiteSquad.Data
 ```
 ```csharp
 // Core/FormationSlots.cs — 오프셋 Vector2(x, z), 25개
-using UnityEngine; using System.Collections.Generic; using KiteSquad.Data;
-namespace KiteSquad.Core
+using UnityEngine; using System.Collections.Generic; using BoneSquadKiting.Data;
+namespace BoneSquadKiting.Core
 {
     public static class FormationSlots
     {
@@ -330,7 +354,7 @@ namespace KiteSquad.Core
                     for (int iz=0; iz<5; iz++) for (int ix=0; ix<5; ix++)
                         o.Add(new Vector2((ix-2)*d.Spacing, (iz-2)*d.Spacing)); break;
                 case FormationMode.Line:
-                    for (int i=0; i<25; i++) o.Add(new Vector2((i%3-1)*0.12f, (i-12)*0.49f)); break;
+                    for (int i=0; i<25; i++) o.Add(new Vector2((i%3-1)*d.Stagger, (i-12)*d.Spacing)); break;
                 case FormationMode.Ring:
                     for (int i=0; i<25; i++){ float a=Mathf.PI*2f*i/25f; o.Add(new Vector2(Mathf.Cos(a)*d.Radius, Mathf.Sin(a)*d.Radius)); } break;
                 case FormationMode.Cross:
@@ -343,19 +367,19 @@ namespace KiteSquad.Core
     }
 }
 ```
-에셋: `dense`(Grid, Spacing 0.53, HotKey Alpha1), `line`(Line, HotKey Alpha2), `ring`(Ring, Radius 3.7, HotKey Alpha3), `cross`(Cross, Spacing 0.61, HotKey Alpha4). 런타임은 이 에셋 목록을 `FormationController`/HUD/입력이 공유.
+에셋: `dense`(Grid, Spacing 0.53, HotKey Digit1), `line`(Line, Spacing 0.49, Stagger 0.12, HotKey Digit2), `ring`(Ring, Radius 3.7, HotKey Digit3), `cross`(Cross, Spacing 0.61, HotKey Digit4). 슬롯 수 25는 `GameConstants.SquadSize`와 같은 고정값이다(가변 인원은 M1 범위 밖). 런타임은 이 에셋 목록을 `FormationController`/HUD/입력이 공유.
 
 > 주의: cross는 중심1 + 6×4=24 = 25. 인덱스 순서가 원본과 동일(`[-x,+x,-z,+z]` 반복)해야 유닛 슬롯 배분이 일관된다. line/ring/grid 기본값은 원본과 동일하게 에셋에 저장.
 
 - [ ] **Step 4: 통과 확인**
 
 Run: EditMode 테스트.
-Expected: PASS (4 케이스 + 4 테스트).
+Expected: PASS (4 테스트).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Core/FormationSlots.cs KiteSquad/Assets/Scripts/Data/FormationDefinition.cs KiteSquad/Assets/Data/Formations KiteSquad/Assets/Tests/EditMode/FormationSlotsTests.cs && git commit -m "feat: add formation definitions (SO) and slot generator with tests"
+git add bone-squad-kiting/Assets/Scripts/Core/FormationSlots.cs bone-squad-kiting/Assets/Scripts/Data/FormationDefinition.cs bone-squad-kiting/Assets/Data/Formations bone-squad-kiting/Assets/Tests/EditMode/FormationSlotsTests.cs && git commit -m "feat: add formation definitions (SO) and slot generator with tests"
 ```
 
 ---
@@ -373,7 +397,7 @@ cd main && git add KiteSquad/Assets/Scripts/Core/FormationSlots.cs KiteSquad/Ass
 원본값 그대로: Disc `r<3.10`; BandsX `|dx|>0.83 && |dx|<6.4 && |dz|<7.1`; Quadrants `|dx|>0.56 && |dz|>0.56 && |dx|<5.7 && |dz|<5.7`; Annulus `1.73<r<6.05`. (dx=x-cx, dz=z-cz)
 
 ```csharp
-using NUnit.Framework; using KiteSquad.Core;
+using NUnit.Framework; using BoneSquadKiting.Core;
 public class DangerShapeEvalTests
 {
     [Test] public void Disc_InsideRadiusIsDanger()
@@ -410,7 +434,7 @@ public class DangerShapeEvalTests
 
 ```csharp
 using UnityEngine;
-namespace KiteSquad.Core
+namespace BoneSquadKiting.Core
 {
     public static class DangerShapeEval
     {
@@ -435,7 +459,7 @@ namespace KiteSquad.Core
 - [ ] **Step 5: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Core/DangerShape.cs KiteSquad/Assets/Scripts/Core/DangerShapeEval.cs KiteSquad/Assets/Tests/EditMode/DangerShapeEvalTests.cs && git commit -m "feat: add data-driven danger-shape evaluator with tests"
+git add bone-squad-kiting/Assets/Scripts/Core/DangerShape.cs bone-squad-kiting/Assets/Scripts/Core/DangerShapeEval.cs bone-squad-kiting/Assets/Tests/EditMode/DangerShapeEvalTests.cs && git commit -m "feat: add data-driven danger-shape evaluator with tests"
 ```
 
 ---
@@ -456,7 +480,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using KiteSquad.Squad; using KiteSquad.Data;
+using BoneSquadKiting.Squad; using BoneSquadKiting.Data;
 
 public class SquadMovementTests
 {
@@ -465,9 +489,9 @@ public class SquadMovementTests
     public static FormationController MakeFc()
     {
         var go = new GameObject("fc"); var fc = go.AddComponent<FormationController>();
-        FormationDefinition D(string id, FormationMode m, float sp=0, float r=0)
-        { var d = ScriptableObject.CreateInstance<FormationDefinition>(); d.Id=id; d.Mode=m; d.Spacing=sp; d.Radius=r; return d; }
-        fc.Formations = new() { D("dense",FormationMode.Grid,0.53f), D("line",FormationMode.Line),
+        FormationDefinition D(string id, FormationMode m, float sp=0, float r=0, float st=0)
+        { var d = ScriptableObject.CreateInstance<FormationDefinition>(); d.Id=id; d.Mode=m; d.Spacing=sp; d.Radius=r; d.Stagger=st; return d; }
+        fc.Formations = new() { D("dense",FormationMode.Grid,0.53f), D("line",FormationMode.Line,0.49f,st:0.12f),
                                 D("ring",FormationMode.Ring,r:3.7f), D("cross",FormationMode.Cross,0.61f) };
         fc.Init();
         return fc;
@@ -502,8 +526,8 @@ public class SquadMovementTests
 
 ```csharp
 using UnityEngine;
-using KiteSquad.Core;
-namespace KiteSquad.Squad
+using BoneSquadKiting.Core;
+namespace BoneSquadKiting.Squad
 {
     public class SquadUnit
     {
@@ -536,8 +560,8 @@ namespace KiteSquad.Squad
 ```csharp
 using UnityEngine;
 using System.Collections.Generic;
-using KiteSquad.Core; using KiteSquad.Combat; using KiteSquad.Data;
-namespace KiteSquad.Squad
+using BoneSquadKiting.Core; using BoneSquadKiting.Combat; using BoneSquadKiting.Data;
+namespace BoneSquadKiting.Squad
 {
     public class FormationController : MonoBehaviour
     {
@@ -593,7 +617,7 @@ namespace KiteSquad.Squad
 - [ ] **Step 7: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Squad KiteSquad/Assets/Tests/PlayMode/SquadMovementTests.cs && git commit -m "feat: squad formation movement (anchor + unit follow) with playmode tests"
+git add bone-squad-kiting/Assets/Scripts/Squad bone-squad-kiting/Assets/Tests/PlayMode/SquadMovementTests.cs && git commit -m "feat: squad formation movement (anchor + unit follow) with playmode tests"
 ```
 
 ---
@@ -611,7 +635,7 @@ cd main && git add KiteSquad/Assets/Scripts/Squad KiteSquad/Assets/Tests/PlayMod
 - [ ] **Step 1: 실패 테스트(레지스트리 획득)**
 
 ```csharp
-using NUnit.Framework; using UnityEngine; using KiteSquad.Combat;
+using NUnit.Framework; using UnityEngine; using BoneSquadKiting.Combat;
 public class EnemyRegistryTests
 {
     class FakeEnemy : IEnemy { public Vector2 Pos{get;set;} public bool Alive{get;set;}=true; }
@@ -635,7 +659,7 @@ public class EnemyRegistryTests
 ```csharp
 // Combat/IEnemy.cs
 using UnityEngine;
-namespace KiteSquad.Combat
+namespace BoneSquadKiting.Combat
 {
     public interface IDamageable { void ApplyDamage(float amount); }
     public interface IEnemy { Vector2 Pos { get; } bool Alive { get; } }
@@ -644,7 +668,7 @@ namespace KiteSquad.Combat
 ```csharp
 // Combat/EnemyRegistry.cs
 using System.Collections.Generic; using UnityEngine;
-namespace KiteSquad.Combat
+namespace BoneSquadKiting.Combat
 {
     public class EnemyRegistry
     {
@@ -664,7 +688,7 @@ namespace KiteSquad.Combat
 ```csharp
 // Combat/SquadOrder.cs
 using UnityEngine;
-namespace KiteSquad.Combat
+namespace BoneSquadKiting.Combat
 {
     public enum OrderKind { Move, AttackMove, AttackTarget }
     public struct SquadOrder
@@ -677,14 +701,14 @@ namespace KiteSquad.Combat
 }
 ```
 
-`FormationController`에 `public SquadOrder Order;` 추가. `SetDestination`은 `Order = SquadOrder.Move(p)` + anchor 목적지 지정으로 통합. `AttackMove(p)`도 anchor 목적지를 p로 두되 Kind만 다름(이동 중 자동사격은 기존대로, Task 7에서 타겟 획득이 오더를 참조). `AttackTarget(t)`는 타겟이 사거리 밖이면 anchor를 타겟 쪽으로(클램프 내) 전진.
+`FormationController`에 `public SquadOrder Order;` 추가. `SetDestination`은 `Order = SquadOrder.Move(p)` + anchor 목적지 지정으로 통합. `AttackMove(p)`도 anchor 목적지를 p로 두되 Kind만 다름(이동 중 자동사격은 기존대로, Task 7에서 타겟 획득이 오더를 참조). `AttackTarget(t)`는 타겟이 사거리(`FireRange`) 밖일 때만 anchor를 타겟 쪽으로(클램프 내) 전진하고, 이미 사거리 안이면 **그 자리에 멈춰** 사격한다(Task 9 `IssueOrder`). M1 아레나에서는 보스가 항상 사거리 안이라 보스 우클릭은 "정지 후 집중사격"이 된다.
 
 - [ ] **Step 4: 통과 확인** — Run EditMode. Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Combat KiteSquad/Assets/Tests/EditMode/EnemyRegistryTests.cs && git commit -m "feat: enemy abstraction (IEnemy/registry) and squad order state"
+git add bone-squad-kiting/Assets/Scripts/Combat bone-squad-kiting/Assets/Tests/EditMode/EnemyRegistryTests.cs && git commit -m "feat: enemy abstraction (IEnemy/registry) and squad order state"
 ```
 
 ---
@@ -701,9 +725,9 @@ cd main && git add KiteSquad/Assets/Scripts/Combat KiteSquad/Assets/Tests/EditMo
 - 진형 키 `1/q→dense,2/w→line,3/e→ring,4/r→cross`(에셋 HotKey 기반), `p→pause`, `enter→restart`, `space→(예약)`.
 
 ```csharp
-using UnityEngine;
-using KiteSquad.Squad; using KiteSquad.Game; using KiteSquad.Combat;
-namespace KiteSquad.Input
+using UnityEngine; using UnityEngine.InputSystem;
+using BoneSquadKiting.Squad; using BoneSquadKiting.Game; using BoneSquadKiting.Combat;
+namespace BoneSquadKiting.Input
 {
     public class SquadInputController : MonoBehaviour
     {
@@ -716,8 +740,8 @@ namespace KiteSquad.Input
         {
             if (Director.Phase == Phase.Play && !Director.Paused)
             {
-                if (Key(KeyCode.A)) _attackMovePending = true;
-                if (Key(KeyCode.Escape)) _attackMovePending = false;
+                if (Pressed(Key.A)) _attackMovePending = true;
+                if (Pressed(Key.Escape)) _attackMovePending = false;
 
                 // LMB: resolve attack-move if armed
                 if (LmbDown() && _attackMovePending)
@@ -726,17 +750,19 @@ namespace KiteSquad.Input
                     if (PickEnemy(out var en)) Director.IssueOrder(SquadOrder.Attack(en));
                     else if (PickGround(out var gp)) Director.IssueOrder(SquadOrder.AttackMove(gp));
                 }
-                // RMB: smart command — enemy → attack target, ground → move
+                // RMB: cancels a pending attack-move, otherwise smart command — enemy → attack target, ground → move
                 else if (RmbDown())
                 {
-                    if (PickEnemy(out var en)) Director.IssueOrder(SquadOrder.Attack(en));
+                    if (_attackMovePending) _attackMovePending = false;
+                    else if (PickEnemy(out var en)) Director.IssueOrder(SquadOrder.Attack(en));
                     else if (PickGround(out var gp)) Director.IssueOrder(SquadOrder.Move(gp));
                 }
 
                 HandleFormationKeys();
-                if (Key(KeyCode.P)) Director.TogglePause();
             }
-            if (Key(KeyCode.Return) && Director.Phase is Phase.Menu or Phase.Win or Phase.Lose) Director.Restart();
+            // Pause must stay reachable while paused, so it sits outside the !Paused block.
+            if (Director.Phase == Phase.Play && Pressed(Key.P)) Director.TogglePause();
+            if (Pressed(Key.Enter) && Director.Phase is Phase.Menu or Phase.Win or Phase.Lose) Director.Restart();
         }
 
         bool PickEnemy(out IEnemy enemy)
@@ -744,7 +770,7 @@ namespace KiteSquad.Input
             enemy = null;
             var ray = Cam.ScreenPointToRay(MousePos());
             if (Physics.Raycast(ray, out var hit, 500f, EnemyMask)
-                && hit.collider.TryGetComponent<EnemyRef>(out var r) && r.Enemy.Alive)
+                && hit.collider.TryGetComponent<EnemyRef>(out var r) && r.Enemy is { Alive: true })
             { enemy = r.Enemy; return true; }
             return false;
         }
@@ -756,20 +782,21 @@ namespace KiteSquad.Input
         }
         void HandleFormationKeys()
         {
-            if (Key(KeyCode.Alpha1)||Key(KeyCode.Q)) Director.ChangeFormation("dense");
-            if (Key(KeyCode.Alpha2)||Key(KeyCode.W)) Director.ChangeFormation("line");
-            if (Key(KeyCode.Alpha3)||Key(KeyCode.E)) Director.ChangeFormation("ring");
-            if (Key(KeyCode.Alpha4)||Key(KeyCode.R)) Director.ChangeFormation("cross");
+            if (Pressed(Key.Digit1)||Pressed(Key.Q)) Director.ChangeFormation("dense");
+            if (Pressed(Key.Digit2)||Pressed(Key.W)) Director.ChangeFormation("line");
+            if (Pressed(Key.Digit3)||Pressed(Key.E)) Director.ChangeFormation("ring");
+            if (Pressed(Key.Digit4)||Pressed(Key.R)) Director.ChangeFormation("cross");
         }
-        static bool Key(KeyCode k) => UnityEngine.Input.GetKeyDown(k);
-        static bool LmbDown() => UnityEngine.Input.GetMouseButtonDown(0);
-        static bool RmbDown() => UnityEngine.Input.GetMouseButtonDown(1);
-        static Vector3 MousePos() => UnityEngine.Input.mousePosition;
+        // New Input System only (ProjectSettings activeInputHandler: 1) — UnityEngine.Input would throw.
+        static bool Pressed(Key k) => Keyboard.current != null && Keyboard.current[k].wasPressedThisFrame;
+        static bool LmbDown() => Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+        static bool RmbDown() => Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
+        static Vector3 MousePos() => Mouse.current != null ? (Vector3)Mouse.current.position.ReadValue() : Vector3.zero;
     }
 }
 ```
 
-> `EnemyRef`(MonoBehaviour)는 콜라이더가 붙은 적 오브젝트에서 자신의 `IEnemy`를 노출하는 작은 브리지. 보스 비주얼(Task 7)에 콜라이더+`EnemyRef` 부착. 신 Input System 전용이면 `Mouse.current`/`Keyboard.current`로 교체(Task 0 설정 확인).
+> `EnemyRef`(MonoBehaviour)는 콜라이더가 붙은 적 오브젝트에서 자신의 `IEnemy`를 노출하는 작은 브리지(코드는 Task 7 Step 6). 보스 비주얼에 콜라이더+`EnemyRef` 부착. 입력은 `Keyboard.current`/`Mouse.current`를 직접 읽는다 — 런타임 asmdef에 `Unity.InputSystem` 참조가 있어야 한다(Task 0 Step 4).
 > 우클릭 지면 드래그 이동(원본 draggingRight 느낌)을 유지하려면 `GetMouseButton(1)` held일 때 적 비피킹 시 계속 `Move` 갱신하도록 확장 가능.
 
 - [ ] **Step 2: 수동 검증** — PlayMode에서 우클릭 지면 이동·우클릭 보스 공격명령·A+좌클릭 어택땅·1~4 진형 전환 확인(스크린샷/플레이).
@@ -777,7 +804,7 @@ namespace KiteSquad.Input
 - [ ] **Step 3: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Input && git commit -m "feat: squad input (rmb smart command, attack-move, formation keys, pause, restart)"
+git add bone-squad-kiting/Assets/Scripts/Input && git commit -m "feat: squad input (rmb smart command, attack-move, formation keys, pause, restart)"
 ```
 
 ---
@@ -793,7 +820,7 @@ cd main && git add KiteSquad/Assets/Scripts/Input && git commit -m "feat: squad 
 
 ```csharp
 using System.Collections; using NUnit.Framework; using UnityEngine; using UnityEngine.TestTools;
-using KiteSquad.Squad; using KiteSquad.Boss; using KiteSquad.Core; using KiteSquad.Combat;
+using BoneSquadKiting.Squad; using BoneSquadKiting.Bosses; using BoneSquadKiting.Core; using BoneSquadKiting.Combat;
 
 public class CombatTests
 {
@@ -816,8 +843,8 @@ public class CombatTests
 - [ ] **Step 3: Boss 구현 (`IEnemy`,`IDamageable`)**
 
 ```csharp
-using UnityEngine; using KiteSquad.Core; using KiteSquad.Combat;
-namespace KiteSquad.Boss
+using UnityEngine; using BoneSquadKiting.Core; using BoneSquadKiting.Combat;
+namespace BoneSquadKiting.Bosses
 {
     public class Boss : IEnemy, IDamageable
     {
@@ -839,8 +866,8 @@ namespace KiteSquad.Boss
 
 ```csharp
 using System.Collections.Generic; using UnityEngine;
-using KiteSquad.Core; using KiteSquad.Combat;
-namespace KiteSquad.Squad
+using BoneSquadKiting.Core; using BoneSquadKiting.Combat;
+namespace BoneSquadKiting.Squad
 {
     public struct Shot { public float X, Z, Vx, Vz, Life; public int Owner; public IEnemy Target; }
     public class ShotSystem
@@ -889,12 +916,35 @@ namespace KiteSquad.Squad
 
 - [ ] **Step 5: 통과 확인** — Run PlayMode. Expected: PASS.
 
-- [ ] **Step 6: 보스/투사체 비주얼(임시)** — 보스 큰 Cylinder(붉은 Emissive), 투사체 작은 Sphere/TrailRenderer.
+- [ ] **Step 6: 보스/투사체 비주얼(임시) + 피킹 브리지** — 보스 큰 Cylinder(붉은 Emissive, 콜라이더 유지, 레이어 `Enemy`), 투사체 작은 Sphere/TrailRenderer. 보스 오브젝트에 아래 두 컴포넌트를 붙인다.
+
+```csharp
+// Combat/EnemyRef.cs
+using UnityEngine;
+namespace BoneSquadKiting.Combat
+{
+    public class EnemyRef : MonoBehaviour { public IEnemy Enemy; } // set at runtime (interfaces are not serialized)
+}
+```
+```csharp
+// Boss/BossView.cs
+using UnityEngine; using BoneSquadKiting.Combat;
+namespace BoneSquadKiting.Bosses
+{
+    [RequireComponent(typeof(EnemyRef))]
+    public class BossView : MonoBehaviour
+    {
+        Boss _boss;
+        public void Bind(Boss boss) { _boss = boss; GetComponent<EnemyRef>().Enemy = boss; }
+        void Update() { if (_boss != null) transform.position = new Vector3(_boss.Pos.x, 0, _boss.Pos.y); }
+    }
+}
+```
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Boss/Boss.cs KiteSquad/Assets/Scripts/Squad/ShotSystem.cs KiteSquad/Assets/Tests/PlayMode/CombatTests.cs && git commit -m "feat: auto-attack shots and boss hp with playmode test"
+git add bone-squad-kiting/Assets/Scripts/Boss bone-squad-kiting/Assets/Scripts/Combat/EnemyRef.cs bone-squad-kiting/Assets/Scripts/Squad/ShotSystem.cs bone-squad-kiting/Assets/Tests/PlayMode/CombatTests.cs && git commit -m "feat: auto-attack shots and boss hp with playmode test"
 ```
 
 ---
@@ -912,7 +962,7 @@ core 패턴 resolve 시 중심 반경<3.10 유닛이 55 피해.
 
 ```csharp
 using System.Collections; using NUnit.Framework; using UnityEngine; using UnityEngine.TestTools;
-using KiteSquad.Squad; using KiteSquad.Boss; using KiteSquad.Core;
+using BoneSquadKiting.Squad; using BoneSquadKiting.Bosses; using BoneSquadKiting.Core;
 
 public class PatternResolveTests
 {
@@ -936,8 +986,8 @@ public class PatternResolveTests
 
 ```csharp
 using System.Collections.Generic; using UnityEngine;
-using KiteSquad.Core; using KiteSquad.Squad; using KiteSquad.Data;
-namespace KiteSquad.Boss
+using BoneSquadKiting.Core; using BoneSquadKiting.Squad; using BoneSquadKiting.Data;
+namespace BoneSquadKiting.Bosses
 {
     public class BossAttackSystem
     {
@@ -998,7 +1048,7 @@ namespace KiteSquad.Boss
 - [ ] **Step 6: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Boss KiteSquad/Assets/Tests/PlayMode/PatternResolveTests.cs && git commit -m "feat: boss attack scheduling, telegraph tracking, and pattern resolve"
+git add bone-squad-kiting/Assets/Scripts/Boss bone-squad-kiting/Assets/Tests/PlayMode/PatternResolveTests.cs && git commit -m "feat: boss attack scheduling, telegraph tracking, and pattern resolve"
 ```
 
 ---
@@ -1007,37 +1057,37 @@ cd main && git add KiteSquad/Assets/Scripts/Boss KiteSquad/Assets/Tests/PlayMode
 
 **Files:**
 - Create: `Assets/Scripts/Game/GameDirector.cs`
-- Create: `Assets/Scripts/Core/Combat.cs`
+- Create: `Assets/Scripts/Core/CombatMath.cs`
 - Test: `Assets/Tests/EditMode/CombatMathTests.cs`
 
 - [ ] **Step 1: 실패 테스트(DPS 윈도 & 페이즈 임계)**
 
 ```csharp
-using NUnit.Framework; using System.Collections.Generic; using KiteSquad.Core;
+using NUnit.Framework; using System.Collections.Generic; using BoneSquadKiting.Core;
 public class CombatMathTests
 {
     [Test] public void Dps_IsSumOverWindow()
     {
         var ev = new List<(float t,float d)> { (0.0f,33), (1.0f,33), (2.0f,33) };
-        Assert.That(Combat.Dps(ev, now:2.0f), Is.EqualTo(99f/GameConstants.DpsWindow).Within(0.01f));
+        Assert.That(CombatMath.Dps(ev, now:2.0f), Is.EqualTo(99f/GameConstants.DpsWindow).Within(0.01f));
     }
     [Test] public void Phase2_TriggersBelow54Percent()
     {
-        Assert.IsFalse(Combat.IsPhase2(0.55f));
-        Assert.IsTrue (Combat.IsPhase2(0.53f));
+        Assert.IsFalse(CombatMath.IsPhase2(0.55f));
+        Assert.IsTrue (CombatMath.IsPhase2(0.53f));
     }
 }
 ```
 
 - [ ] **Step 2: 실패 확인** — Run EditMode. Expected: FAIL.
 
-- [ ] **Step 3: Combat 구현**
+- [ ] **Step 3: CombatMath 구현** (클래스명이 네임스페이스 `BoneSquadKiting.Combat`과 겹치지 않게 `CombatMath`)
 
 ```csharp
 using System.Collections.Generic;
-namespace KiteSquad.Core
+namespace BoneSquadKiting.Core
 {
-    public static class Combat
+    public static class CombatMath
     {
         public static float Dps(IList<(float t, float d)> events, float now)
         {
@@ -1057,9 +1107,9 @@ namespace KiteSquad.Core
 
 ```csharp
 using System.Collections.Generic; using UnityEngine;
-using KiteSquad.Core; using KiteSquad.Squad; using KiteSquad.Boss;
-using KiteSquad.Combat; using KiteSquad.Data;
-namespace KiteSquad.Game
+using BoneSquadKiting.Core; using BoneSquadKiting.Squad; using BoneSquadKiting.Bosses;
+using BoneSquadKiting.Combat; using BoneSquadKiting.Data;
+namespace BoneSquadKiting.Game
 {
     public enum Phase { Menu, Play, Win, Lose }
     public class GameDirector : MonoBehaviour
@@ -1092,12 +1142,17 @@ namespace KiteSquad.Game
         public void TogglePause() { if (Phase == Phase.Play) Paused = !Paused; }
         public void ChangeFormation(string id) { if (Phase == Phase.Play) Squad.SetFormation(id); }
 
-        // Called by input. Move/AttackMove set anchor destination; AttackTarget chases if out of range.
+        // Called by input. Move/AttackMove set anchor destination.
+        // AttackTarget advances only when the target is out of range; in range it holds position and fires.
         public void IssueOrder(SquadOrder o)
         {
             if (Phase != Phase.Play || Paused) return;
             Squad.Order = o;
-            if (o.Kind == OrderKind.AttackTarget && o.Target != null) Squad.SetDestination(o.Target.Pos);
+            if (o.Kind == OrderKind.AttackTarget && o.Target != null)
+            {
+                bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < GameConstants.FireRange;
+                Squad.SetDestination(inRange ? Squad.Anchor : o.Target.Pos);
+            }
             else Squad.SetDestination(o.Point);
         }
 
@@ -1109,8 +1164,8 @@ namespace KiteSquad.Game
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             Attacks.Tick(Squad, Boss, dt);
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);
-            LastDps = Combat.Dps(_hits, Elapsed);
-            if (Combat.IsPhase2(Boss.HpFrac) && BossPhase == 1) { BossPhase = 2; Boss.Phase = 2; }
+            LastDps = CombatMath.Dps(_hits, Elapsed);
+            if (CombatMath.IsPhase2(Boss.HpFrac) && BossPhase == 1) { BossPhase = 2; Boss.Phase = 2; }
             bool allDead = true; foreach (var u in Squad.Units) if (!u.Dead) { allDead = false; break; }
             if (allDead) Phase = Phase.Lose;
             else if (Boss.Hp <= 0) Phase = Phase.Win;
@@ -1119,12 +1174,14 @@ namespace KiteSquad.Game
 }
 ```
 
-> `BossView`(MonoBehaviour): 콜라이더 + `EnemyRef`를 들고 `Bind(Boss)`로 참조 연결, 매 프레임 `transform.position=(Boss.Pos.x,0,Boss.Pos.y)`. 우클릭 피킹·플래시 표시에 사용.
+> `BossView`(Task 7 Step 6에서 작성): 콜라이더 + `EnemyRef`를 들고 `Bind(Boss)`로 참조 연결. 우클릭 피킹·플래시 표시에 사용.
+>
+> **확인 필요(원본 대조):** 2페이즈 전환 임계는 `Phase2HpFrac = 0.54`인데 `BossAttackSystem.Resolve`의 공격 간격 전환은 `0.55f` 하드코딩이다. 프로토타입 원본에서 두 값이 실제로 다른지 확인하고, 같다면 `CombatMath.IsPhase2(boss.HpFrac)`로 통일한다.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Game KiteSquad/Assets/Scripts/Core/Combat.cs KiteSquad/Assets/Tests/EditMode/CombatMathTests.cs && git commit -m "feat: game director state machine with dps and phase logic"
+git add bone-squad-kiting/Assets/Scripts/Game bone-squad-kiting/Assets/Scripts/Core/CombatMath.cs bone-squad-kiting/Assets/Tests/EditMode/CombatMathTests.cs && git commit -m "feat: game director state machine with dps and phase logic"
 ```
 
 ---
@@ -1133,7 +1190,7 @@ cd main && git add KiteSquad/Assets/Scripts/Game KiteSquad/Assets/Scripts/Core/C
 
 **Files:**
 - Create: `Assets/Scripts/UI/Hud.cs`
-- Create: `main/KiteSquad/Assets/Prefabs/HudCanvas.prefab` (또는 씬 내 Canvas)
+- Create: `bone-squad-kiting/Assets/Prefabs/HudCanvas.prefab` (또는 씬 내 Canvas)
 
 - [ ] **Step 1: Canvas 구성**
 
@@ -1148,7 +1205,7 @@ cd main && git add KiteSquad/Assets/Scripts/Game KiteSquad/Assets/Scripts/Core/C
 - [ ] **Step 4: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/UI KiteSquad/Assets/Prefabs KiteSquad/Assets/Scenes && git commit -m "feat: ugui hud (boss bar, alive, dps, formation panel, warnings, overlay)"
+git add bone-squad-kiting/Assets/Scripts/UI bone-squad-kiting/Assets/Prefabs bone-squad-kiting/Assets/Scenes && git commit -m "feat: ugui hud (boss bar, alive, dps, formation panel, warnings, overlay)"
 ```
 
 ---
@@ -1167,7 +1224,7 @@ cd main && git add KiteSquad/Assets/Scripts/UI KiteSquad/Assets/Prefabs KiteSqua
 - [ ] **Step 3: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Fx && git commit -m "feat: temp juice fx (shake, flash, particles, rings)"
+git add bone-squad-kiting/Assets/Scripts/Fx && git commit -m "feat: temp juice fx (shake, flash, particles, rings)"
 ```
 
 ---
@@ -1194,7 +1251,7 @@ M1 완료 시 `docs/decisions.md`의 #2~#7 상태를 "제안됨"→"유효"로 �
 - [ ] **Step 4: Commit**
 
 ```bash
-cd main && git add -A && git commit -m "chore: M1 integration pass and tuning against prototype"
+git add -A && git commit -m "chore: M1 integration pass and tuning against prototype"
 ```
 
 ---
@@ -1204,5 +1261,6 @@ cd main && git add -A && git commit -m "chore: M1 integration pass and tuning ag
 - **Spec 커버리지:** 프로토타입의 이동/진형/평타/4패턴/2페이즈/DPS감소/승패/HUD/일시정지/재시작/연출 — 각각 Task 5·3/5·7·4&8·9·9·9·10·6·6·11에 매핑. **추가(결정 #8·#9):** 패턴·진형 데이터화(Task 2·3·4), 적 추상화·오더(Task 5.5), 우클릭 스마트 커맨드·어택땅(Task 6), 오더 기반 타겟 획득(Task 7·9). 대시는 M4. formation-spec의 NavMesh/FlowField/적푸시는 M2~M3(PLAN §4).
 - **타입 일관성:** `FormationSlots.Generate(def)`/`DangerShapeEval.InDanger(shape,…)`/`ShotSystem.Tick(units,registry,order,dt)`/`BossAttackSystem`(+`AttackSequence`)/`Dps`/`IsPhase2` 시그니처는 테스트와 구현에서 동일. 좌표는 전부 `(x→x, z→z)` 규약. `IEnemy.Pos`도 동일 규약.
 - **데이터↔코드 경계:** 패턴/진형의 **값**은 ScriptableObject 에셋(원본 1:1), **로직**은 범용 평가기. 1:1 보장은 평가기 EditMode 테스트 + 에셋 값. 새 패턴/진형 추가는 에셋 추가로(코드 무변경), 새 기하/모드는 평가기에 1종 추가.
+- **이름 충돌 회피:** 네임스페이스 `BoneSquadKiting.Bosses`(클래스 `Boss`와 분리), 클래스 `CombatMath`(네임스페이스 `BoneSquadKiting.Combat`과 분리). 폴더명은 `Scripts/Boss/`·`Scripts/Combat/` 그대로.
 - **M1 단일 보스 한계:** 어택땅·우클릭 타겟은 적이 보스뿐이라 체감은 제한적(두 명령 모두 보스 지향으로 수렴). 구조(레지스트리·오더·`IEnemy`)는 M2 잡몹에서 그대로 활성화.
 - **플레이스홀더:** 순수 로직(Task 2~9)은 완전한 C# 포함. Unity-에디터 의존(씬/카메라/Canvas/프리미티브/콜라이더·`EnemyRef` 바인딩, SO 에셋 작성)은 해당 unity 스킬을 따르는 구체 단계로 기술 — 실행 시 설치된 6000.3.28f1 API로 확정.
