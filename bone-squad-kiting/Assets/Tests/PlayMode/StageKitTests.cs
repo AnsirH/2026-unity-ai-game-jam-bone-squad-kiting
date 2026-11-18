@@ -98,6 +98,35 @@ public class StageKitTests
         Capture("stagekit-artist-map.png");
     }
 
+    [UnityTest]
+    public IEnumerator MoveTuningScene_HasWallsADummyAndNoEnemiesThatFightBack()
+    {
+        yield return Load("Assets/Scenes/MoveTuning.unity");
+        yield return null;
+        var start = Object.FindFirstObjectByType<StageStart>();
+        Assert.IsNotNull(start.Kit);
+        var director = start.Kit.Director; var grid = start.Kit.Setup.Grid;
+        Assert.IsFalse(grid.IsWalkable(new Vector2(-6f, 8f)), "inside the long wall");
+        Assert.IsTrue(grid.IsWalkable(new Vector2(19.5f, -10f)), "the narrow passage is open");
+        Assert.IsFalse(grid.IsWalkable(new Vector2(-34f, -24f)), "beyond the slanted edge");
+        Assert.IsNull(director.Waves); Assert.IsFalse(director.HasBoss);
+
+        var dummy = Object.FindFirstObjectByType<BoneSquadKiting.Combat.TrainingDummy>();
+        director.Restart();
+        yield return null; yield return null;
+        CollectionAssert.Contains(director.Enemies.Enemies, dummy, "the dummy is a target");
+        director.IssueOrder(BoneSquadKiting.Combat.SquadOrder.Attack(dummy));
+        for (int i = 0; i < 900 && dummy.DamageTaken <= 0f; i++) director.Step(0.02f);
+        Assert.That(dummy.DamageTaken, Is.GreaterThan(0f), "the squad walks into range and shoots it");
+        for (int i = 0; i < 300; i++) director.Step(0.02f);
+        Assert.IsTrue(dummy.Alive, "it never dies");
+        Assert.AreEqual(GameConstants.SquadSize, director.AliveCount, "nothing hurts the squad here");
+        Assert.AreEqual(GamePhase.Play, director.Phase);
+        Capture("stagekit-movetuning.png");
+        foreach (var path in new[] { "Assets/Scenes/MoveTuning.unity", "Assets/Scenes/StageSetupGuide.unity" })
+            foreach (var b in UnityEditor.EditorBuildSettings.scenes) Assert.AreNotEqual(path, b.path, "test scenes stay out of the build");
+    }
+
     [Test]
     public void GroundHeight_IsZeroWithoutAMask_AndTheSurfaceWithOne()
     {

@@ -16,6 +16,11 @@ namespace BoneSquadKiting.Squad
         public bool Reviving;                      // busy bringing a dead unit back; cannot fire (see FireRules)
         public bool Moving;                        // true while still travelling to its slot (see FireRules)
         public float Cd, Flash, Anim;
+
+        // Movement feel. The formation copies its own values in every tick (see FormationController).
+        public float BaseSpeed = GameConstants.UnitBaseSpeed;
+        public float SpeedDistGain = GameConstants.UnitSpeedDistGain, SpeedDistCap = GameConstants.UnitSpeedDistCap;
+        public float Arrive = GameConstants.UnitArrive;
         public int ShotCount;
 
         /// <summary>
@@ -29,11 +34,10 @@ namespace BoneSquadKiting.Squad
             if (Dead) return;
             float ux = target.x - X, uz = target.y - Z;
             float dist = Mathf.Sqrt(ux * ux + uz * uz);
-            Moving = dist > GameConstants.UnitArrive;
+            Moving = dist > Arrive;
             if (Moving)
             {
-                float speed = GameConstants.UnitBaseSpeed
-                              + Mathf.Min(GameConstants.UnitSpeedDistCap, dist * GameConstants.UnitSpeedDistGain);
+                float speed = BaseSpeed + Mathf.Min(SpeedDistCap, dist * SpeedDistGain);
                 float step = Mathf.Min(dist, speed * dt);
                 Facing = new Vector2(ux, uz) / dist;
                 X += ux / dist * step;

@@ -261,6 +261,9 @@ namespace BoneSquadKiting.Game
                 Squad.RotationStepDegrees = Tuning.RotationStepDegrees;
                 Squad.RotationSpeed = Tuning.RotationSpeed;
                 Squad.SeatSize = Tuning.SeatSize;
+                Squad.AnchorSpeed = Tuning.AnchorSpeed; Squad.AnchorArrive = Tuning.AnchorArrive;
+                Squad.UnitBaseSpeed = Tuning.UnitBaseSpeed; Squad.UnitSpeedDistGain = Tuning.UnitSpeedDistGain;
+                Squad.UnitSpeedDistCap = Tuning.UnitSpeedDistCap; Squad.UnitArrive = Tuning.UnitArrive;
             }
             if (Shots != null) { Shots.ThreatRadius = Tuning.ThreatRadius; Shots.AttackMoveRadius = Tuning.AttackMoveRadius; }
             if (Revives != null) Revives.AppearRadius = Tuning.ReviveAppearRadius;
