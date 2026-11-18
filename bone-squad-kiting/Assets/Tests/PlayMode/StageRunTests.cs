@@ -133,7 +133,29 @@ public class StageRunTests
         Assert.AreEqual(1, run.Current);
         Assert.That(Vector2.Distance(director.Squad.Anchor, Flat(start2.transform.position)), Is.LessThan(1.5f));
 
+        // Stage 2 leads on to the boss stage map, in this same scene.
+        Assert.That(run.Stages.Count, Is.GreaterThanOrEqualTo(3), "the boss stage map follows stage 2");
+        director.Phase = GamePhase.Win;
+        director.Proceed();
+        until = Time.realtimeSinceStartup + 10f;
+        while ((run.Switching || run.Current != 2) && Time.realtimeSinceStartup < until) yield return null;
+        yield return null;
+        Assert.AreEqual(2, run.Current);
+        Assert.AreEqual("BossStage", run.Stages[2].Map.name);
+        Assert.IsTrue(run.Stages[2].Map.activeSelf); Assert.IsFalse(run.Stages[1].Map.activeSelf);
+        Assert.AreEqual(GamePhase.Play, director.Phase);
+        Assert.AreEqual(GameConstants.SquadSize, director.AliveCount);
+        var start3 = run.Stages[2].Map.GetComponentInChildren<StageStart>(true);
+        Assert.That(Vector2.Distance(director.Squad.Anchor, Flat(start3.transform.position)), Is.LessThan(1.5f), "squad on the boss stage's start point");
+        Assert.IsTrue(director.Squad.Grid.IsWalkable(director.Squad.Anchor));
+        Assert.IsNotNull(start3.EndPoint, "the boss stage has an end point");
+        Assert.IsTrue(director.Squad.Grid.IsWalkable(Flat(start3.EndPoint.position)), "which is inside its walk area");
+        Assert.AreSame(run.Stages[2].Volume, run.StageVolume.sharedProfile, "the boss stage's look is on");
+        var unit3 = Object.FindFirstObjectByType<BoneSquadKiting.Squad.SquadView>().transform.GetChild(3);
+        Assert.That(unit3.position.y, Is.EqualTo(GroundHeight.Y(unit3.position.x, unit3.position.z)).Within(0.05f), "units stand on the boss stage's floor");
+
         // The last map leads on to the arena scene.
+        Assert.IsTrue(run.IsLast);
         Assert.IsFalse(director.IsFinalStage);
         director.Phase = GamePhase.Win;
         director.Proceed();
