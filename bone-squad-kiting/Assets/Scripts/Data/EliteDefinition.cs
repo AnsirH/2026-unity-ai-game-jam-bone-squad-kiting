@@ -20,6 +20,7 @@ namespace BoneSquadKiting.Data
         public float FirstAttackDelay = 3f;   // seconds after appearing before the first cast
         public float AttackGap = 4.5f;        // seconds between casts
         public float AttackGapRandom = 0f;    // up to this many extra seconds, picked anew for each gap (irregular fire)
+        public float ZoneRotationSpeed = 0f;  // degrees per second its zones turn; sign = direction (+ = clockwise), 0 = no turning
         public float AttackRange = 16f;       // only casts while the squad's anchor is this close; 0 = any distance
 
         [Header("Intro / death moments (game is frozen, camera goes to the mini boss)")]

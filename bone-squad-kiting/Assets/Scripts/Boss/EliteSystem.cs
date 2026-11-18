@@ -30,6 +30,7 @@ namespace BoneSquadKiting.Bosses
                 TrackSquad = false,          // the zone stays where it was announced, so it can be walked out of
                 FixedGap = def.AttackGap,
                 FixedGapRandom = def.AttackGapRandom,
+                RotationSpeed = def.ZoneRotationSpeed,
             };
             e.Attacks.OnStart += p => OnPatternStarted?.Invoke(e, p);
             e.Attacks.OnResolved += (hit, lost) => OnPatternResolved?.Invoke(e, hit, lost);

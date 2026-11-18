@@ -21,6 +21,9 @@ namespace BoneSquadKiting.Cameras
         /// <summary>Extra world-space offset added on top of the scrolled position (screen shake).</summary>
         [System.NonSerialized] public Vector3 ShakeOffset;
 
+        /// <summary>Lines the view may not be scrolled past while their mini bosses live. Set by StageSetup.</summary>
+        [System.NonSerialized] public BoneSquadKiting.Stage.CameraGate[] Gates;
+
         bool _mouseSeen;
 
         // Temporary look at a point (mini boss intro / death): go there, hold, come back.
@@ -94,6 +97,8 @@ namespace BoneSquadKiting.Cameras
         public void Apply()
         {
             LookAt = new Vector2(Mathf.Clamp(LookAt.x, BoundsMin.x, BoundsMax.x), Mathf.Clamp(LookAt.y, BoundsMin.y, BoundsMax.y));
+            if (Gates != null && !Focusing)   // a directed look (mini boss intro) may go past a closed gate
+                foreach (var gate in Gates) if (gate != null) LookAt = gate.Clamp(LookAt);
             transform.position = new Vector3(LookAt.x, 0f, LookAt.y) - transform.forward * Distance + ShakeOffset;
         }
 

@@ -3,6 +3,9 @@ using BoneSquadKiting.Core;
 
 namespace BoneSquadKiting.Data
 {
+    /// <summary>Burst: goes off once when the telegraph ends. Sustained: then stays and damages at intervals.</summary>
+    public enum PatternKind { Burst, Sustained }
+
     /// <summary>One boss attack: telegraph time, the formation that dodges it, and its danger geometry.</summary>
     [CreateAssetMenu(menuName = "BoneSquadKiting/Pattern")]
     public class PatternDefinition : ScriptableObject
@@ -15,5 +18,11 @@ namespace BoneSquadKiting.Data
         // When set, the shape shrinks with the squad (alive / full), the same way the ring formation does,
         // so the formation that dodges it keeps dodging it as units are lost.
         public bool ScaleWithSquad;
+
+        [Header("Sustained patterns only")]
+        public PatternKind Kind = PatternKind.Burst;
+        public float SustainSeconds = 4f;   // how long the zone stays live after the telegraph
+        public float TickInterval = 0.5f;   // seconds between damage ticks while it is live
+        public float TickDamage = 15f;      // damage per tick to each unit inside
     }
 }

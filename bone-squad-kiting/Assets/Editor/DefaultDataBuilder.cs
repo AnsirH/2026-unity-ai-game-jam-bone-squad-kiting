@@ -58,19 +58,36 @@ namespace BoneSquadKiting.EditorTools
             Elite("DarkFlameMage", "검정불꽃마법사", seq.Patterns[3]);
             Elite("SpearThrower", "창투척병", seq.Patterns[1]);
             Elite("ShadowSwordsman", "그림자검사", seq.Patterns[2]);
-            Elite("TelekineticMage", "염동력 마법사", seq.Patterns[1]);
+            // The telekinetic mage's zones turn (ZoneRotationSpeed on the mini boss). Three variants so every
+            // kind of rotating zone can be tried; which mini boss uses which is a placeholder choice.
+            var sustainedGate = Upsert<PatternDefinition>(Root + "/Patterns/Gate_Sustained.asset");
+            CopyPattern(seq.Patterns[1], sustainedGate);
+            sustainedGate.DisplayName = "쌍벽 회전 (지속)"; sustainedGate.Detail = "벽이 돌면서 계속 휩씁니다. 일자로 따라 도세요!";
+            sustainedGate.Kind = PatternKind.Sustained; sustainedGate.SustainSeconds = 4f; sustainedGate.TickInterval = 0.5f; sustainedGate.TickDamage = 15f;
+            EditorUtility.SetDirty(sustainedGate);
+
+            Elite("TelekineticMage", "염동력 마법사", sustainedGate, rotation: 30f);                 // sustained, turning gate
+            Elite("TelekineticMageGate", "염동력 마법사", seq.Patterns[1], rotation: 40f);            // burst, turning gate
+            Elite("TelekineticMageQuadrant", "염동력 마법사", seq.Patterns[2], rotation: -40f);       // burst, turning quadrants, the other way
 
             AssetDatabase.SaveAssets();
             Debug.Log("DefaultDataBuilder: wrote 4 formations, 8 patterns, 1 sequence.");
         }
 
-        static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false)
+        static void CopyPattern(PatternDefinition from, PatternDefinition to)
+        {
+            to.Id = from.Id; to.DisplayName = from.DisplayName; to.Advice = from.Advice; to.Detail = from.Detail;
+            to.Recommend = from.Recommend; to.Time = from.Time; to.Shape = from.Shape; to.ScaleWithSquad = from.ScaleWithSquad;
+        }
+
+        static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false, float rotation = 0f)
         {
             var seq = Upsert<AttackSequence>($"{Root}/Sequences/Elite_{file}.asset");
             seq.Patterns = new[] { pattern };
             EditorUtility.SetDirty(seq);
             var e = Upsert<EliteDefinition>($"{Root}/Elites/{file}.asset");
             e.DisplayName = name; e.Patterns = seq;
+            e.ZoneRotationSpeed = rotation;
             if (cannon)
             {
                 // A fixed emplacement: does not walk, fires irregularly, weaker than a walking mini boss.

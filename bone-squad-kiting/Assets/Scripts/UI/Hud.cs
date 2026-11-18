@@ -146,9 +146,18 @@ namespace BoneSquadKiting.UI
             {
                 recommend = a.Pattern.Recommend;
                 WarningTitle.text = $"{a.Pattern.DisplayName}   →   {a.Pattern.Advice}";
-                WarningDetail.text = $"{a.Pattern.Detail}   {a.Remaining:0.0}s";
-                SetFill(WarningFill, a.Pattern.Time > 0 ? a.Remaining / a.Pattern.Time : 0);
-                WarningFillImage.color = a.Remaining <= GameConstants.CastTrackLockTime ? Locked : Tracking;
+                if (a.Sustaining)
+                {
+                    WarningDetail.text = $"지속 중 — 범위 밖에 머무르세요   {Mathf.Max(0f, a.SustainRemaining):0.0}s";
+                    SetFill(WarningFill, a.Pattern.SustainSeconds > 0 ? a.SustainRemaining / a.Pattern.SustainSeconds : 0);
+                    WarningFillImage.color = Locked;
+                }
+                else
+                {
+                    WarningDetail.text = $"{a.Pattern.Detail}   {a.Remaining:0.0}s";
+                    SetFill(WarningFill, a.Pattern.Time > 0 ? a.Remaining / a.Pattern.Time : 0);
+                    WarningFillImage.color = a.Remaining <= GameConstants.CastTrackLockTime ? Locked : Tracking;
+                }
             }
 
             var formations = Director.Squad.Formations;

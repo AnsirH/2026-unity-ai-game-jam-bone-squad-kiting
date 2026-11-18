@@ -74,6 +74,7 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public bool InCutscene => _cutsceneRemaining > 0f;
         float _cutsceneRemaining;
+        int _aliveLastStep;
         MiniBossSpawn[] _miniBosses = new MiniBossSpawn[0];
 
         /// <summary>Whether the end point currently counts (for rules that open it only after the mini boss).</summary>
@@ -130,6 +131,7 @@ namespace BoneSquadKiting.Game
             _miniBosses = found.ToArray();
             foreach (var m in _miniBosses) m.ResetSpawn();
             _cutsceneRemaining = 0f;
+            _aliveLastStep = GameConstants.SquadSize;
             Telegraphs.Clear();
             Revives = new ReviveSystem();
             Revives.OnStarted += (a, b) => ReviveStarted?.Invoke(a, b);
@@ -351,6 +353,11 @@ namespace BoneSquadKiting.Game
                     PhaseTwoStarted?.Invoke();
                 }
             }
+
+            // Whatever just killed units (a burst, a sustained tick, a mob), close the formation up.
+            int aliveNow = AliveCount;
+            if (aliveNow < _aliveLastStep) Squad.Reform();
+            _aliveLastStep = aliveNow;
 
             if (AliveCount == 0) Phase = GamePhase.Lose;
             else if (StageCleared()) Phase = GamePhase.Win;
