@@ -52,9 +52,40 @@ namespace BoneSquadKiting.EditorTools
                     new Vector2(-6, -6), new Vector2(6, -6), new Vector2(6, 6), new Vector2(-6, 6)), MarkerDir + "/Walk Area (Include).prefab");
                 PrefabUtility.SaveAsPrefabAsset(Outline("Blocked Area (Exclude)", WalkOutlineMode.Exclude, Vector3.zero,
                     new Vector2(-1.5f, -1.5f), new Vector2(1.5f, -1.5f), new Vector2(1.5f, 1.5f), new Vector2(-1.5f, 1.5f)), MarkerDir + "/Blocked Area (Exclude).prefab");
+                BuildMarkerSet();
             });
             AssetDatabase.SaveAssets();
             Debug.Log("StageKitBuilder: wrote " + KitPath + " and the marker prefabs in " + MarkerDir);
+        }
+
+        /// <summary>
+        /// The whole marker set as one prefab: drop it into a map, move the points, and the map is playable.
+        /// Delete it and the map is plain art again.
+        /// </summary>
+        [MenuItem("BoneSquadKiting/Rebuild Stage Markers Prefab")]
+        public static void BuildMarkerSetMenu()
+        {
+            A.EnsureFolder("Assets", "Prefabs"); A.EnsureFolder("Assets/Prefabs", "Stage");
+            InTempScene(_ => BuildMarkerSet());
+            AssetDatabase.SaveAssets();
+            Debug.Log("StageKitBuilder: wrote " + MarkerDir + "/Stage Markers.prefab");
+        }
+
+        static void BuildMarkerSet()
+        {
+            var set = new GameObject("Stage Markers");
+            var start = new GameObject("Stage Start");
+            start.transform.SetParent(set.transform, false);
+            start.transform.localPosition = new Vector3(0f, 0f, 8f);
+            var end = new GameObject("End Point");
+            end.transform.SetParent(set.transform, false);
+            end.transform.localPosition = new Vector3(0f, 0f, -8f);
+            start.AddComponent<StageStart>().EndPoint = end.transform;
+            Outline("Walk Area (Include)", WalkOutlineMode.Include, Vector3.zero,
+                new Vector2(-8, 12), new Vector2(8, 12), new Vector2(8, -12), new Vector2(-8, -12)).transform.SetParent(set.transform, false);
+            Outline("Blocked Area (Exclude)", WalkOutlineMode.Exclude, Vector3.zero,
+                new Vector2(-1.5f, -1.5f), new Vector2(1.5f, -1.5f), new Vector2(1.5f, 1.5f), new Vector2(-1.5f, 1.5f)).transform.SetParent(set.transform, false);
+            PrefabUtility.SaveAsPrefabAsset(set, MarkerDir + "/Stage Markers.prefab");
         }
 
         // The game, minus any level: everything under one root.
@@ -320,7 +351,7 @@ namespace BoneSquadKiting.EditorTools
             scaler.referenceResolution = new Vector2(1280, 720); scaler.matchWidthOrHeight = 1f;
             var root = canvasGo.GetComponent<RectTransform>();
 
-            var panel = HudBuilder.Panel(root, "Steps", new Color(0f, 0f, 0f, 0.72f), new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-222, 10), new Vector2(424, 500));
+            var panel = HudBuilder.Panel(root, "Steps", new Color(0f, 0f, 0f, 0.72f), new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-222, 0), new Vector2(424, 560));
             panel.raycastTarget = false;
             var title = HudBuilder.Label(panel.rectTransform, "Title", 20, TextAnchor.UpperLeft, new Vector2(0, 1), new Vector2(1, 1), new Vector2(14, -40), new Vector2(-14, -10), bold: true, stretch: true);
             title.text = "맵 씬을 플레이 가능하게 만드는 법";
@@ -328,7 +359,8 @@ namespace BoneSquadKiting.EditorTools
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
             body.lineSpacing = 1.12f;
             body.text =
-                "프리팹 위치: Assets/Prefabs/Stage\n\n" +
+                "프리팹 위치: Assets/Prefabs/Stage\n" +
+                "<b>가장 쉬운 방법:</b> Stage Markers 프리팹 하나를 끌어다 놓으면 아래 1~3이 세트로 들어옵니다. 점만 옮기면 되고, 지우면 원래 맵으로 돌아갑니다.\n\n" +
                 "<b>1. 시작 지점</b>\n" +
                 "Stage Start 프리팹을 씬에 끌어다 놓고, 분대가 시작할 곳으로 옮깁니다. 씬에 하나만 둡니다.\n\n" +
                 "<b>2. 이동 가능한 영역 (초록 선)</b>\n" +

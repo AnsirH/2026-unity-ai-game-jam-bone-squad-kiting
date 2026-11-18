@@ -127,6 +127,26 @@ public class StageKitTests
             foreach (var b in UnityEditor.EditorBuildSettings.scenes) Assert.AreNotEqual(path, b.path, "test scenes stay out of the build");
     }
 
+    [UnityTest]
+    public IEnumerator StageMarkersPrefab_DroppedOnABareMap_MakesItPlayable()
+    {
+        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Stage/Stage Markers.prefab");
+        Assert.IsNotNull(prefab, "the one-piece marker set exists");
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        ground.transform.localScale = new Vector3(10f, 1f, 10f);
+        var set = Object.Instantiate(prefab, new Vector3(5f, 0f, 3f), Quaternion.identity);
+        yield return null; yield return null;
+
+        var start = set.GetComponentInChildren<StageStart>();
+        Assert.IsNotNull(start.Kit, "the game came in");
+        Assert.IsNotNull(start.Kit.Setup.EndPoint, "the set's end point is wired");
+        var grid = start.Kit.Setup.Grid;
+        Assert.That(Vector2.Distance(start.Kit.Director.Squad.Anchor, new Vector2(5f, 11f)), Is.LessThan(1f), "squad on the set's start point");
+        Assert.IsTrue(grid.IsWalkable(new Vector2(5f, -6f)), "inside the set's area");
+        Assert.IsFalse(grid.IsWalkable(new Vector2(5f, 3f)), "the set's blocked square");
+        Assert.IsFalse(grid.IsWalkable(new Vector2(20f, 3f)), "outside the set's area");
+    }
+
     [Test]
     public void GroundHeight_IsZeroWithoutAMask_AndTheSurfaceWithOne()
     {

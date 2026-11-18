@@ -14,6 +14,8 @@ Shader "Bone Squad/Background PBR"
 
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull Mode", Float) = 2
 
+        [Toggle(_TREE_ROOT_VISIBILITY)] _TreeRootVisibility("Fade at object base", Float) = 0
+
         [Header(Transparency)]
         [Toggle(_DITHER_FADE)] _UseDitherFade("Dithered Opacity", Float) = 0
         _Opacity("Opacity", Range(0, 1)) = 1
@@ -37,7 +39,11 @@ Shader "Bone Squad/Background PBR"
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForwardOnly" }
 
+            // Bit 0 identifies the visible root-faded surface for the stage overlay.
+            Stencil { Ref [_TreeRootVisibility] ReadMask 1 WriteMask 1 Comp Always Pass Replace }
+
             HLSLPROGRAM
+            #pragma shader_feature_local_fragment _TREE_ROOT_VISIBILITY
             #pragma vertex LitPassVertex
             #pragma fragment BackgroundForwardFragment
             #pragma shader_feature_local _NORMALMAP
@@ -66,6 +72,23 @@ Shader "Bone Squad/Background PBR"
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
+            #if defined(_TREE_ROOT_VISIBILITY)
+            #include "StageVisibility.hlsl"
+            TEXTURE2D(_StageTreeMask);
+            SAMPLER(sampler_StageTreeMask);
+            float4 _StageTreeU, _StageTreeV;
+            half _StageTreeDarkness;
+
+            half TreeRootBrightness()
+            {
+                float4 root = float4(TransformObjectToWorld(float3(0, 0, 0)), 1);
+                float2 uv = float2(dot(_StageTreeU, root), dot(_StageTreeV, root)) + 0.5;
+                half mask = SAMPLE_TEXTURE2D_LOD(_StageTreeMask, sampler_StageTreeMask, uv, 0).r;
+                bool onMap = all(uv >= 0.0) && all(uv <= 1.0);
+                return StageBrightness(mask, onMap ? _StageTreeDarkness : 0.0h);
+            }
+            #endif
+
             void BackgroundForwardFragment(Varyings input, out half4 color : SV_Target0
             #ifdef _WRITE_RENDERING_LAYERS
                 , out uint renderingLayers : SV_Target1
@@ -78,6 +101,10 @@ Shader "Bone Squad/Background PBR"
                     , renderingLayers
                 #endif
                 );
+            #if defined(_TREE_ROOT_VISIBILITY)
+                UNITY_SETUP_INSTANCE_ID(input);
+                color.rgb *= TreeRootBrightness();
+            #endif
             }
             ENDHLSL
         }
