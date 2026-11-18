@@ -22,6 +22,9 @@ namespace BoneSquadKiting.Squad
         public SquadOrder Order;
         public readonly List<SquadUnit> Units = new();
 
+        /// <summary>True while the anchor has not yet reached its destination.</summary>
+        public bool IsMoving => (Destination - Anchor).magnitude > GameConstants.AnchorArrive;
+
         public FormationDefinition Find(string id) => Formations.Find(f => f != null && f.Id == id);
 
         /// <summary>Reset to the prototype's starting layout: dense formation at z = 3.4.</summary>

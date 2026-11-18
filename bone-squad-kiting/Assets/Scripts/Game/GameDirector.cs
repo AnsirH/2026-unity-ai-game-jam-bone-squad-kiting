@@ -70,8 +70,8 @@ namespace BoneSquadKiting.Game
         }
 
         /// <summary>
-        /// Move / AttackMove walk the anchor to the point. AttackTarget advances only when the target
-        /// is out of range; in range the squad holds position and fires.
+        /// Move / AttackMove walk the anchor to the point (a Move does not fire on the way, see FireRules).
+        /// AttackTarget advances only when the target is out of range; in range the squad holds and fires.
         /// </summary>
         public void IssueOrder(SquadOrder o)
         {
@@ -93,7 +93,7 @@ namespace BoneSquadKiting.Game
             if (Phase != GamePhase.Play || Paused) return;
             Elapsed += dt;
             Squad.Tick(dt);
-            Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
+            Shots.Tick(Squad.Units, Enemies, Squad.Order, Squad.IsMoving, dt);
             Attacks.Tick(Squad, Boss, dt);
 
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);

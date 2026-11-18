@@ -45,8 +45,8 @@ namespace BoneSquadKiting.Core
         public const float Phase2HpFrac = 0.54f;
         public const float NextAttackPhase1 = 1.9f, NextAttackPhase2 = 1.45f;
         public const float FirstAttackDelay = 3.1f;
-        // Attack cadence switches at 0.55 while the phase flag switches at 0.54 (both as written in the M1 plan;
-        // not yet re-checked against the prototype source)
+        // Attack cadence switches at 0.55 while the phase flag switches at 0.54. The prototype really uses two
+        // different values here (resolvePattern vs update), so this is intentional.
         public const float FastAttackHpFrac = 0.55f;
 
         // Telegraph lock: last 0.38s the zone stops tracking the commander

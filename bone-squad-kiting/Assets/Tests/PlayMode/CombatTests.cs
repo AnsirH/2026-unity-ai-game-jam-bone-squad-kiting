@@ -23,7 +23,7 @@ public class CombatTests
 
     void Run(ShotSystem shots, EnemyRegistry reg, SquadOrder order, float seconds)
     {
-        for (float t = 0; t < seconds; t += 0.016f) { _fc.Tick(0.016f); shots.Tick(_fc.Units, reg, order, 0.016f); }
+        for (float t = 0; t < seconds; t += 0.016f) { _fc.Tick(0.016f); shots.Tick(_fc.Units, reg, order, _fc.IsMoving, 0.016f); }
     }
 
     [Test]
@@ -39,6 +39,25 @@ public class CombatTests
         Assert.That(boss.Hp, Is.LessThan(GameConstants.BossMax));
         Assert.That(GameConstants.BossMax - boss.Hp, Is.EqualTo(dealt).Within(0.01f));
         Assert.That(dealt % GameConstants.UnitDamage, Is.EqualTo(0f).Within(0.01f));
+    }
+
+    [Test]
+    public void MoveOrder_HoldsFireWhileMoving_ThenFiresOnArrival()
+    {
+        var boss = new Boss();
+        var reg = new EnemyRegistry(); reg.Register(boss);
+        var shots = new ShotSystem();
+        var order = SquadOrder.Move(new Vector2(6f, 3.4f)); // ~0.8s walk at anchor speed 7.4
+        _fc.Order = order; _fc.SetDestination(order.Point);
+
+        Run(shots, reg, order, 0.6f);
+        Assert.IsTrue(_fc.IsMoving);
+        Assert.AreEqual(0, shots.Shots.Count, "no shots while a Move is in progress");
+        Assert.AreEqual(GameConstants.BossMax, boss.Hp);
+
+        Run(shots, reg, order, 2f);
+        Assert.IsFalse(_fc.IsMoving);
+        Assert.That(boss.Hp, Is.LessThan(GameConstants.BossMax), "auto-fire resumes after arriving");
     }
 
     [Test]
