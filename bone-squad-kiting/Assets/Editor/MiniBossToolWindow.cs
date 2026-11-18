@@ -31,8 +31,26 @@ namespace BoneSquadKiting.EditorTools
         [MenuItem("BoneSquadKiting/Mini Boss Tool")]
         public static void Open() => GetWindow<MiniBossToolWindow>("Mini Boss Tool").Show();
 
-        void OnEnable() { SceneView.duringSceneGui += OnSceneGui; LoadLists(); }
-        void OnDisable() { SceneView.duringSceneGui -= OnSceneGui; }
+        void OnEnable()
+        {
+            SceneView.duringSceneGui += OnSceneGui;
+            Undo.undoRedoPerformed += Repaint;
+            autoRepaintOnSceneChange = true;   // a marker moved in the Scene view must refresh this window's warnings
+            LoadLists();
+        }
+        void OnDisable() { SceneView.duringSceneGui -= OnSceneGui; Undo.undoRedoPerformed -= Repaint; }
+
+        // Where every marker and outline point stood when the window was last drawn. The window is redrawn as
+        // soon as any of them moves, however it was moved (handle, gizmo, Inspector).
+        int _layoutHash;
+        static int LayoutHash(Transform root, List<MiniBossSpawn> markers)
+        {
+            int h = 17;
+            foreach (var m in markers) if (m != null) h = h * 31 + m.transform.position.GetHashCode();
+            var outlines = root != null ? root.GetComponentsInChildren<WalkOutline>(true) : FindObjectsByType<WalkOutline>(FindObjectsSortMode.None);
+            foreach (var o in outlines) foreach (var p in o.Points()) h = h * 31 + p.GetHashCode();
+            return h;
+        }
         void OnFocus() => LoadLists();
         void OnHierarchyChange() => Repaint();
         void OnInspectorUpdate() { if (EditorApplication.isPlaying) Repaint(); }
@@ -329,6 +347,8 @@ namespace BoneSquadKiting.EditorTools
             var run = Run();
             var root = run != null ? StageRoot(run, Mathf.Clamp(_stage, 0, Mathf.Max(0, run.Stages.Count - 1))) : null;
             var markers = Markers(root);
+            int hash = LayoutHash(root, markers);
+            if (hash != _layoutHash) { _layoutHash = hash; Repaint(); }
 
             for (int i = 0; i < markers.Count; i++)
             {
