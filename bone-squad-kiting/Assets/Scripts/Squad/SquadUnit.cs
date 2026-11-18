@@ -15,13 +15,16 @@ namespace BoneSquadKiting.Squad
         public float Cd, Flash, Anim;
         public int ShotCount;
 
-        /// <summary>Chase anchor + slot, faster the further behind the unit is (prototype update()).</summary>
-        public void MoveToward(Vector2 anchor, float dt)
+        /// <summary>
+        /// Walk toward a world position, faster the further away it is (prototype update()). The caller
+        /// decides the position — normally anchor + slot, pulled inside the playable area if needed.
+        /// <see cref="Moving"/> is judged against this position, so a unit pressed against a wall counts
+        /// as stopped once it reaches where it was actually sent.
+        /// </summary>
+        public void MoveToward(Vector2 target, float dt)
         {
             if (Dead) return;
-            float tx = Mathf.Clamp(anchor.x + Slot.x, GameConstants.LimitXMin, GameConstants.LimitXMax);
-            float tz = Mathf.Clamp(anchor.y + Slot.y, GameConstants.LimitZMin, GameConstants.LimitZMax);
-            float ux = tx - X, uz = tz - Z;
+            float ux = target.x - X, uz = target.y - Z;
             float dist = Mathf.Sqrt(ux * ux + uz * uz);
             Moving = dist > GameConstants.UnitArrive;
             if (Moving)

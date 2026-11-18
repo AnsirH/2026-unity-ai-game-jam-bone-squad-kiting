@@ -13,6 +13,7 @@ using BoneSquadKiting.Fx;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Input;
 using BoneSquadKiting.Squad;
+using BoneSquadKiting.Stage;
 using BoneSquadKiting.UI;
 
 namespace BoneSquadKiting.EditorTools
@@ -28,6 +29,7 @@ namespace BoneSquadKiting.EditorTools
         const string ScenePath = "Assets/Scenes/Arena.unity";
         const string MatDir = "Assets/Prototype/Materials";
         const string EnemyLayer = "Enemy";
+        const string GroundLayer = "Ground", ObstacleLayer = "Obstacle";
 
         // Camera framing. Tune here (or on the camera, once the scene is hand-authored).
         const float CameraPitch = 60f;      // degrees down from horizontal
@@ -64,6 +66,7 @@ namespace BoneSquadKiting.EditorTools
                 (GameConstants.LimitXMax - GameConstants.LimitXMin) / 10f, 1f,
                 (GameConstants.LimitZMax - GameConstants.LimitZMin) / 10f);
             plane.GetComponent<Renderer>().sharedMaterial = ground;
+            plane.layer = EnsureLayer(GroundLayer);   // its collider is the stage's walkable floor
 
             // Quarter view: a perspective camera looking down at a steep angle (framing modelled on
             // Shape of Dreams: ~60 degrees, narrow FOV, no Y turn). It sits on the +z side, so the boss
@@ -120,6 +123,30 @@ namespace BoneSquadKiting.EditorTools
             var scroll = camGo.AddComponent<EdgeScrollCamera>();
             scroll.Distance = CameraDistance; scroll.LookAt = CameraStartLookAt;
             scroll.Apply();
+
+            // Stage data: walkable grid from the floor collider, a no-go square around the boss, start point.
+            var stageGo = new GameObject("Stage");
+            var baker = stageGo.AddComponent<WalkGridBaker>();
+            baker.Size = new Vector2(GameConstants.LimitXMax - GameConstants.LimitXMin, GameConstants.LimitZMax - GameConstants.LimitZMin);
+            baker.GroundMask = 1 << EnsureLayer(GroundLayer); baker.ObstacleMask = 1 << EnsureLayer(ObstacleLayer);
+
+            var bossArea = new GameObject("Boss Area (Exclude)");
+            bossArea.transform.SetParent(stageGo.transform, false);
+            bossArea.AddComponent<WalkOutline>().Mode = WalkOutlineMode.Exclude;
+            const float keepOut = 1.7f;
+            foreach (var corner in new[] { new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1) })
+            {
+                var point = new GameObject("Point");
+                point.transform.SetParent(bossArea.transform, false);
+                point.transform.position = new Vector3(GameConstants.BossX + corner.x * keepOut, 0f, GameConstants.BossZ + corner.y * keepOut);
+            }
+
+            var startPoint = new GameObject("Start Point");
+            startPoint.transform.SetParent(stageGo.transform, false);
+            startPoint.transform.position = new Vector3(squad.Anchor.x, 0f, squad.Anchor.y);
+
+            var stage = stageGo.AddComponent<StageSetup>();
+            stage.Ground = baker; stage.Squad = squad; stage.Cam = scroll; stage.StartPoint = startPoint.transform;
 
             game.AddComponent<RangeGizmos>().Director = director; // Scene-view circles for tuning the two ranges
 

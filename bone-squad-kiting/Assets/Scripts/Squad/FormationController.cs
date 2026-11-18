@@ -13,11 +13,18 @@ namespace BoneSquadKiting.Squad
     public class FormationController : MonoBehaviour
     {
         public const string DefaultFormation = "dense";
-        static readonly Vector2 StartAnchor = new(0, 3.4f);
+        static readonly Vector2 DefaultStart = new(0, 3.4f);
 
         public List<FormationDefinition> Formations = new(); // assigned in the scene (or by tests)
-        public Vector2 Anchor = StartAnchor;                  // Vector2(x, z)
-        public Vector2 Destination = StartAnchor;
+        public Vector2 StartAnchor = DefaultStart;            // where Init() places the squad; a stage overrides it
+        public Vector2 Anchor = DefaultStart;                 // Vector2(x, z)
+        public Vector2 Destination = DefaultStart;
+
+        /// <summary>
+        /// The stage's walkable ground. When set, the anchor cannot leave it and slots that fall outside
+        /// are pulled back toward the anchor. When null the prototype arena's fixed limits apply.
+        /// </summary>
+        [System.NonSerialized] public WalkGrid Grid;
         public string Formation = DefaultFormation;
         public float RotationStepDegrees = 15f;              // one mouse-wheel notch (initial value, not final)
         public float RotationDegrees;                         // clockwise seen from above; 0 = as authored
@@ -53,7 +60,7 @@ namespace BoneSquadKiting.Squad
                 Units.Add(new SquadUnit
                 {
                     Id = i, Slot = slots[i],
-                    X = StartAnchor.x + slots[i].x, Z = StartAnchor.y + slots[i].y,
+                    X = SlotPosition(slots[i]).x, Z = SlotPosition(slots[i]).y,
                     Cd = Random.value * 0.65f, Anim = Random.value * 6.28f,
                 });
         }
@@ -78,6 +85,19 @@ namespace BoneSquadKiting.Squad
             if (def == null || clockwiseNotches == 0) return;
             RotationDegrees = Mathf.Repeat(RotationDegrees + clockwiseNotches * RotationStepDegrees, 360f);
             ApplySlots(def);
+        }
+
+        /// <summary>
+        /// World position for a slot. A slot outside the playable area is pressed in: the unit stands at the
+        /// last walkable point on the line from the anchor to the slot.
+        /// </summary>
+        public Vector2 SlotPosition(Vector2 slot)
+        {
+            var p = Anchor + slot;
+            if (Grid != null) return Grid.LastWalkableToward(Anchor, p);
+            return new Vector2(
+                Mathf.Clamp(p.x, GameConstants.LimitXMin, GameConstants.LimitXMax),
+                Mathf.Clamp(p.y, GameConstants.LimitZMin, GameConstants.LimitZMax));
         }
 
         /// <summary>Stop where the anchor is now.</summary>
@@ -109,9 +129,11 @@ namespace BoneSquadKiting.Squad
         /// <summary>Set where the anchor walks to, clamped to the commander's allowed area.</summary>
         public void SetDestination(Vector2 d)
         {
-            Destination = new Vector2(
-                Mathf.Clamp(d.x, -GameConstants.MoveClampX, GameConstants.MoveClampX),
-                Mathf.Clamp(d.y, GameConstants.MoveClampZMin, GameConstants.MoveClampZMax));
+            Destination = Grid != null
+                ? Grid.NearestWalkable(d)
+                : new Vector2(
+                    Mathf.Clamp(d.x, -GameConstants.MoveClampX, GameConstants.MoveClampX),
+                    Mathf.Clamp(d.y, GameConstants.MoveClampZMin, GameConstants.MoveClampZMax));
         }
 
         public void Tick(float dt)
@@ -119,8 +141,16 @@ namespace BoneSquadKiting.Squad
             Vector2 diff = Destination - Anchor;
             float dist = diff.magnitude;
             if (dist > GameConstants.AnchorArrive)
-                Anchor += diff / dist * Mathf.Min(dist, GameConstants.AnchorSpeed * dt);
-            foreach (var u in Units) u.MoveToward(Anchor, dt);
+            {
+                var next = Anchor + diff / dist * Mathf.Min(dist, GameConstants.AnchorSpeed * dt);
+                if (Grid != null)
+                {
+                    next = Grid.Slide(Anchor, next);      // walls are slid along, never entered
+                    if (next == Anchor) Halt();           // boxed in: give up rather than push forever
+                }
+                Anchor = next;
+            }
+            foreach (var u in Units) u.MoveToward(SlotPosition(u.Slot), dt);
         }
     }
 }

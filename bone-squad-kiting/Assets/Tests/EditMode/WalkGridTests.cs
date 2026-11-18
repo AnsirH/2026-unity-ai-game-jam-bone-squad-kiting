@@ -38,4 +38,22 @@ public class WalkGridTests
         Assert.AreEqual(new Vector2(0.5f, 0.5f), g.NearestWalkable(new Vector2(1.2f, 0.5f)), "blocked cell: nearest open center");
         Assert.AreEqual(new Vector2(2.5f, 0.5f), g.NearestWalkable(new Vector2(9f, 0.5f)), "off the grid: nearest open center");
     }
+
+    [Test]
+    public void LastWalkableToward_ReturnsTheTargetWhenTheWayIsOpen_OtherwiseStopsAtTheWall()
+    {
+        var g = WalkGrid.Open(Vector2.zero, new Vector2(10, 4), 1f);
+        for (int z = 0; z < 4; z++) g.Walkable[g.Index(6, z)] = false;   // a wall at x in [6,7)
+        var from = new Vector2(2.5f, 2.5f);
+
+        Assert.AreEqual(new Vector2(5.2f, 1.5f), g.LastWalkableToward(from, new Vector2(5.2f, 1.5f)));
+
+        var stopped = g.LastWalkableToward(from, new Vector2(8.5f, 2.5f));
+        Assert.That(stopped.x, Is.LessThan(6f)); Assert.That(stopped.x, Is.GreaterThan(5.5f), "right up against the wall");
+        Assert.That(stopped.y, Is.EqualTo(2.5f).Within(1e-4f), "stays on the line from the anchor");
+
+        var outside = g.LastWalkableToward(from, new Vector2(2.5f, 9f));
+        Assert.That(outside.y, Is.LessThan(4f)); Assert.That(outside.y, Is.GreaterThan(3.5f), "the grid edge works like a wall");
+        Assert.AreEqual(from, g.LastWalkableToward(from, from));
+    }
 }

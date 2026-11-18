@@ -133,4 +133,31 @@ public class WalkGridBakerTests
         Assert.IsFalse(grid.IsWalkable(new Vector2(305.5f, 300.5f)), "past the terrain's edge");
         Object.DestroyImmediate(data);
     }
+
+    [Test]
+    public void BumpyTerrain_StillCountsAsGround()
+    {
+        _root = new GameObject("stage");
+        _root.transform.position = new Vector3(400f, 0f, 400f);
+        var data = new TerrainData { heightmapResolution = 33, size = new Vector3(8, 6, 8) };
+        var heights = new float[33, 33];
+        for (int z = 0; z < 33; z++)
+            for (int x = 0; x < 33; x++)
+                heights[z, x] = 0.2f + 0.2f * Mathf.Sin(x * 0.7f) * Mathf.Cos(z * 0.5f);   // rolling bumps, up to 2.4 units high
+        data.SetHeights(0, 0, heights);
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.transform.SetParent(_root.transform, false);
+        terrain.transform.localPosition = new Vector3(-4, 0, -4);
+        terrain.layer = 20;
+
+        var baker = _root.AddComponent<WalkGridBaker>();
+        baker.Size = new Vector2(8, 8); baker.CellSize = 1f;
+        baker.GroundMask = 1 << 20; baker.ObstacleMask = 1 << 21;
+        var grid = baker.Bake();
+
+        for (int z = 0; z < grid.Height; z++)
+            for (int x = 0; x < grid.Width; x++)
+                Assert.IsTrue(grid.Walkable[grid.Index(x, z)], $"cell {x},{z} on bumpy terrain");
+        Object.DestroyImmediate(data);
+    }
 }

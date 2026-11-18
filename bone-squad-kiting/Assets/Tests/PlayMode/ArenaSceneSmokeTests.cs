@@ -36,6 +36,13 @@ public class ArenaSceneSmokeTests
         Assert.IsNotNull(Camera.main.GetComponent<BoneSquadKiting.Cameras.EdgeScrollCamera>(), "edge-scroll camera in scene");
         var camStart = Camera.main.transform.position;
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
+        var stage = Object.FindFirstObjectByType<BoneSquadKiting.Stage.StageSetup>();
+        Assert.IsNotNull(stage, "stage setup in scene");
+        Assert.IsNotNull(stage.Grid, "walkable grid baked at load");
+        Assert.AreSame(stage.Grid, director.Squad.Grid, "squad moves on the stage grid");
+        Assert.IsTrue(stage.Grid.IsWalkable(director.Squad.Anchor), "squad starts on walkable ground");
+        Assert.IsFalse(stage.Grid.IsWalkable(new Vector2(GameConstants.BossX, GameConstants.BossZ)), "the boss's spot is cut out");
+        Assert.IsFalse(stage.Grid.IsWalkable(new Vector2(30f, 0f)), "off the arena floor");
         var gizmos = Object.FindFirstObjectByType<RangeGizmos>();
         Assert.IsNotNull(gizmos, "range gizmos in scene");
         Assert.AreSame(director, gizmos.Director);

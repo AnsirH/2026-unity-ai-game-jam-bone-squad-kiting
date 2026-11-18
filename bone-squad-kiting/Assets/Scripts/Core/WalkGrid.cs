@@ -55,6 +55,26 @@ namespace BoneSquadKiting.Core
         }
 
         /// <summary>
+        /// Walk the straight line from <paramref name="from"/> (assumed walkable) toward <paramref name="to"/>
+        /// and return the last walkable point on it: <paramref name="to"/> itself when the whole way is open.
+        /// Used to pull a formation slot that falls outside the playable area back toward the squad anchor.
+        /// </summary>
+        public Vector2 LastWalkableToward(Vector2 from, Vector2 to)
+        {
+            float dist = (to - from).magnitude;
+            if (dist < 1e-5f) return from;
+            int steps = Mathf.CeilToInt(dist / (CellSize * 0.25f));
+            Vector2 last = from;
+            for (int i = 1; i <= steps; i++)
+            {
+                var p = Vector2.Lerp(from, to, i / (float)steps);
+                if (!IsWalkable(p)) break;
+                last = p;
+            }
+            return last;
+        }
+
+        /// <summary>
         /// The walkable point nearest to <paramref name="p"/>: p itself when it is walkable, otherwise the
         /// center of the closest walkable cell. Used to turn a click on blocked ground into a legal destination.
         /// </summary>
