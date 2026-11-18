@@ -246,9 +246,9 @@ namespace BoneSquadKiting.Game
         /// AttackTarget walks toward the target. Both attack orders stop once their enemy is within squad
         /// range of the anchor (see Step); an AttackTarget already in range never starts walking.
         /// </summary>
-        public void IssueOrder(SquadOrder o)
+        public bool IssueOrder(SquadOrder o)
         {
-            if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return false;
             Squad.Order = o;
             // Only a plain move turns a ring to put its leader in front. An attack order leaves the ring as it
             // stands (and stops a turn in progress): turning units cannot fire, and the point of the order is to.
@@ -260,6 +260,7 @@ namespace BoneSquadKiting.Game
                 Squad.SetDestination(inRange ? Squad.Anchor : o.Target.Pos);
             }
             else Squad.SetDestination(o.Point);
+            return true;
         }
 
         /// <summary>
