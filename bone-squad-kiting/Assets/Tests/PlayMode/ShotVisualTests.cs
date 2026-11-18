@@ -154,7 +154,9 @@ public class ShotVisualTests
         Assert.That(spearSeenAt - thrownAt, Is.EqualTo(0.933f / leaderVisual.AttackSpeed).Within(0.15f), "it left the hand at the animation's release point");
         Assert.That(leader.AttackDuration, Is.EqualTo(2f / leaderVisual.AttackSpeed).Within(0.05f), "and the next throw waits for the motion as it actually plays");
         var toDummy = (dummy.transform.position - spear.position); toDummy.y = 0f;
-        Assert.That(Vector3.Dot(spear.forward, toDummy.normalized), Is.GreaterThan(0.98f), "the holder points along the flight");
+        Assert.That(Vector3.Dot(Vector3.ProjectOnPlane(spear.forward, Vector3.up).normalized, toDummy.normalized),
+            Is.GreaterThan(0.98f), "the holder points horizontally toward the target");
+        Assert.That(spear.forward.y, Is.GreaterThan(0f), "the projectile starts by climbing along its arc");
         // The spear mesh's tip is its local +Z end (checked against the model: the head is on that side).
         var mesh = spear.GetComponentInChildren<MeshFilter>().transform;
         Assert.That(Vector3.Dot(mesh.forward, spear.forward), Is.GreaterThan(0.98f), "tip first");

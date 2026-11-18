@@ -17,7 +17,7 @@ MonoBehaviour:
   UnitStates:
     Idle: Idle
     Run: Soldier_MeshyAI_Run02
-    Attack: 
+    Attack: RunAndShoot_UpperBody
     Die: 
     Revive: 
     CrossFade: 0.1
@@ -33,6 +33,7 @@ MonoBehaviour:
   ModelYawOffset: 0
   TurnSpeed: 720
   ShotPrefab: {fileID: 7822528670591677059, guid: c6112f38edaf7473499fac52da164040, type: 3}
+  LaunchFxPrefab: {fileID: 381614570576816199, guid: a1dd39c39f7244fd8a1ca2de6e19caf8, type: 3}
   ShotScale: 0.5
   ShotRotation: {x: 0, y: 0, z: 0}
   LeaderShotPrefab: {fileID: 5103038034401474429, guid: caaf328b479ec427fad5784c318ab6c2, type: 3}

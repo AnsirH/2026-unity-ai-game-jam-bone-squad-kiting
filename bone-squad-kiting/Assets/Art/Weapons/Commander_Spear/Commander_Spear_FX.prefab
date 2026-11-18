@@ -4944,7 +4944,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &421459854845359608
 Transform:
   m_ObjectHideFlags: 0
@@ -5202,7 +5202,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectileTrailController
   trail: {fileID: 4167232867512197966}
-  startDelay: 0.04
+  startDelay: 0.08
 --- !u!1 &6045409534368579677
 GameObject:
   m_ObjectHideFlags: 0

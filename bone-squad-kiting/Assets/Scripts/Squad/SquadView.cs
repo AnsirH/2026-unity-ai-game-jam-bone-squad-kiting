@@ -29,6 +29,7 @@ namespace BoneSquadKiting.Squad
             public Transform Root;
             public Renderer Capsule;       // placeholder only
             public UnitVisual Visual;      // model only
+            public Transform SpawnPoint;   // projectile origin authored in the character prefab
             public int ShotsSeen;
             public int Index;
         }
@@ -83,7 +84,9 @@ namespace BoneSquadKiting.Squad
             }
             // The model's attack animation decides when the projectile leaves and how long the motion takes.
             u.AttackWindup = v.Visual.AttackEventTime; u.AttackDuration = v.Visual.AttackLength;
+            RegisterMuzzle(v, u);
             if (u.ShotCount != v.ShotsSeen) { v.ShotsSeen = u.ShotCount; v.Visual.PlayAttack(); }
+            if (u.Moving) v.Visual.CancelAttack();
             v.Visual.SetState(u.Moving ? VisualState.Run : u.Reviving && v.Visual.Has(VisualState.Revive) ? VisualState.Revive : VisualState.Idle);
         }
 
@@ -139,6 +142,7 @@ namespace BoneSquadKiting.Squad
             if (prefab != null && root.GetComponent<MeshFilter>() == null)   // a placed model, not a primitive capsule
             {
                 view.Visual = root.GetComponent<UnitVisual>();
+                view.SpawnPoint = FindChild(root, "SpawnPoint");
                 if (view.Visual == null)
                 {
                     view.Visual = root.gameObject.AddComponent<UnitVisual>();
@@ -147,17 +151,36 @@ namespace BoneSquadKiting.Squad
                 }
                 if (Application.isPlaying)
                 {
+                    view.Visual.SetLoopVariation(index);
                     // The animation's release event lets the shot go at the exact frame the hand opens.
                     view.Visual.AttackReleased = () =>
                     {
                         if (_director == null) _director = FindAnyObjectByType<BoneSquadKiting.Game.GameDirector>();
                         if (_director != null && _director.Shots != null && Squad != null && index < Squad.Units.Count)
+                        {
+                            RegisterMuzzle(view, Squad.Units[index]);
                             _director.Shots.ReleasePending(Squad.Units[index]);
+                        }
                     };
                 }
             }
             else view.Capsule = root.GetComponent<Renderer>();
             return view;
+        }
+
+        void RegisterMuzzle(View view, SquadUnit unit)
+        {
+            if (view.SpawnPoint == null) return;
+            if (_director == null) _director = FindAnyObjectByType<BoneSquadKiting.Game.GameDirector>();
+            if (_director != null && _director.Shots != null)
+                _director.Shots.SetMuzzlePosition(unit.Id, view.SpawnPoint.position);
+        }
+
+        static Transform FindChild(Transform root, string name)
+        {
+            foreach (var child in root.GetComponentsInChildren<Transform>(true))
+                if (child.name == name) return child;
+            return null;
         }
 
         /// <summary>

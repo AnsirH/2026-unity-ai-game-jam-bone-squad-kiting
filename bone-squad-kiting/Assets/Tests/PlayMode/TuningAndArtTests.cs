@@ -107,11 +107,18 @@ public class TuningAndArtTests
         Assert.IsNotNull(visual.Animator, "found the model's Animator");
         Assert.IsTrue(visual.Has(VisualState.Idle));
         Assert.IsTrue(visual.Has(VisualState.Run), "the run state name in the art set exists in the model");
-        Assert.IsFalse(visual.Has(VisualState.Attack), "shooting is an always-on upper-body layer, not a state");
+        Assert.IsTrue(visual.Has(VisualState.Attack), "shooting is an upper-body attack state");
         Assert.IsFalse(visual.Has(VisualState.Die), "no death animation has been made yet");
 
         visual.SetState(VisualState.Run); yield return null;
-        visual.PlayAttack(0.05f); yield return null;
+        visual.PlayAttack(0.2f);
+        yield return new WaitForSeconds(0.11f);
+        Assert.That(visual.Animator.GetLayerWeight(1), Is.EqualTo(1f), "attack enables the upper-body layer");
+        visual.SetState(VisualState.Idle); yield return null;
+        Assert.IsTrue(visual.Animator.GetCurrentAnimatorStateInfo(0).IsName(art.UnitStates.Idle)
+            || visual.Animator.GetNextAnimatorStateInfo(0).IsName(art.UnitStates.Idle), "the base layer can become Idle during an attack");
+        yield return new WaitForSeconds(0.21f);
+        Assert.That(visual.Animator.GetLayerWeight(1), Is.EqualTo(0f), "the upper-body layer is disabled after the attack");
         visual.SetState(VisualState.Die); yield return null;          // missing: must not throw or log an error
         visual.States = new AnimStates { Idle = "NoSuchState", Run = "", Attack = null, Die = "AlsoMissing" };
         visual.SetState(VisualState.Idle); visual.SetState(VisualState.Run); visual.PlayAttack(); visual.SetState(VisualState.Die);
