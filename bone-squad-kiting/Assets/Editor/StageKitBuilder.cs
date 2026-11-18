@@ -94,7 +94,7 @@ namespace BoneSquadKiting.EditorTools
         static GameObject BuildKitObjects()
         {
             int enemyLayer = A.EnsureLayer(A.EnemyLayer);
-            var unit = A.Lit("Unit", A.Hex("#35e0d0"), A.Hex("#35e0d0") * 0.6f);
+            var unit = A.Lit("Unit", A.Hex("#35e0d0"), A.Hex("#35e0d0") * 0.6f, faction: A.Faction.Ally);
             var shot = A.Lit("Shot", A.Hex("#ffe27a"), A.Hex("#ffd24a") * 2.5f);
             var telegraph = A.TelegraphMaterial();
             var particleMat = A.Upsert($"{A.MatDir}/Particle.mat", Shader.Find("Sprites/Default"));
@@ -155,10 +155,10 @@ namespace BoneSquadKiting.EditorTools
 
             var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>(); Under(eliteView.gameObject);
             eliteView.Director = director; eliteView.EnemyLayer = enemyLayer;
-            eliteView.EliteMaterial = A.Lit("MiniBoss", A.Hex("#c9722a"), A.Hex("#ff8a2a") * 1.4f);
+            eliteView.EliteMaterial = A.Lit("MiniBoss", A.Hex("#c9722a"), A.Hex("#ff8a2a") * 1.4f, faction: A.Faction.Enemy);
             var mobView = new GameObject("Mob View").AddComponent<MobView>(); Under(mobView.gameObject);
             mobView.Director = director;
-            mobView.MobMaterial = A.Lit("Mob", A.Hex("#8a3fd1"), A.Hex("#b455ff") * 0.9f);
+            mobView.MobMaterial = A.Lit("Mob", A.Hex("#8a3fd1"), A.Hex("#b455ff") * 0.9f, faction: A.Faction.Enemy);
 
             var testHud = game.AddComponent<TestHud>();
             testHud.Director = director; testHud.Input = input;
@@ -334,7 +334,7 @@ namespace BoneSquadKiting.EditorTools
                 dummy.name = "Training Dummy (cannot die)";
                 dummy.transform.position = new Vector3(-12f, 1f, 18f); dummy.transform.localScale = new Vector3(1.6f, 1f, 1.6f);
                 dummy.layer = A.EnsureLayer(A.EnemyLayer);
-                dummy.GetComponent<Renderer>().sharedMaterial = A.Lit("MiniBoss", A.Hex("#c9722a"), A.Hex("#ff8a2a") * 1.4f);
+                dummy.GetComponent<Renderer>().sharedMaterial = A.Lit("MiniBoss", A.Hex("#c9722a"), A.Hex("#ff8a2a") * 1.4f, faction: A.Faction.Enemy);
                 dummy.AddComponent<EnemyRef>();
                 dummy.AddComponent<TrainingDummy>();
 

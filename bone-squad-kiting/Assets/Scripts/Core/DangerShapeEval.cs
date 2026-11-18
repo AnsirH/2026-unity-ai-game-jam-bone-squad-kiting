@@ -26,6 +26,7 @@ namespace BoneSquadKiting.Core
             var grown = s;
             switch (s.Type)
             {
+                case DangerShapeType.ThreeLanes: grown.LaneHalfWidth += margin; grown.HalfZ += margin; break;
                 case DangerShapeType.Disc: grown.RMax += margin; break;
                 case DangerShapeType.Annulus: grown.RMin = Mathf.Max(0f, s.RMin - margin); grown.ROut += margin; break;
                 case DangerShapeType.CrossBandsX: grown.Inner = s.Inner - margin; grown.Outer += margin; grown.HalfZ += margin; break;
@@ -46,6 +47,8 @@ namespace BoneSquadKiting.Core
                 case DangerShapeType.Annulus:       return r > s.RMin && r < s.ROut;
                 case DangerShapeType.CrossBandsX:   return ax > s.Inner && ax < s.Outer && az < s.HalfZ;
                 case DangerShapeType.QuadrantBoxes: return ax > s.Inner && az > s.Inner && ax < s.Outer && az < s.Outer;
+                case DangerShapeType.ThreeLanes:
+                    return az < s.HalfZ && Mathf.Min(ax, Mathf.Abs(ax - s.LaneSpacing)) < s.LaneHalfWidth;
                 default: return false;
             }
         }

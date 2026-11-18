@@ -31,6 +31,9 @@ namespace BoneSquadKiting.Core
                     Box(v, t, uv, size, s.Inner, s.Outer, -s.HalfZ, s.HalfZ, maxStep);
                     Box(v, t, uv, size, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ, maxStep);
                     break;
+                case DangerShapeType.ThreeLanes:
+                    Box(v, t, uv, size, -s.ThreeLaneHalfSpan, s.ThreeLaneHalfSpan, -s.HalfZ, s.HalfZ, maxStep);
+                    break;
                 case DangerShapeType.QuadrantBoxes:
                     Box(v, t, uv, size, s.Inner, s.Outer, s.Inner, s.Outer, maxStep);
                     Box(v, t, uv, size, -s.Outer, -s.Inner, s.Inner, s.Outer, maxStep);
@@ -76,12 +79,12 @@ namespace BoneSquadKiting.Core
                 }
         }
 
-        // A box grows away from the center: along x when it sits to one side of it, along z otherwise.
+        // A box grows away from the center: along x when it sits to one side of it in x, along z otherwise.
         static void Box(List<Vector3> v, List<int> t, List<Vector2> uv, List<Vector2> size, float x0, float x1, float z0, float z1, float maxStep)
         {
             int nx = Steps(x1 - x0, maxStep), nz = Steps(z1 - z0, maxStep), row = nz + 1;
             int b = v.Count;
-            bool alongX = x0 * x1 > 0f || z0 * z1 <= 0f;
+            bool alongX = x0 * x1 >= 0f;
             bool outwardIsUp = alongX ? x0 + x1 >= 0f : z0 + z1 >= 0f;
             var extent = alongX ? new Vector2(Mathf.Abs(z1 - z0), Mathf.Abs(x1 - x0)) : new Vector2(Mathf.Abs(x1 - x0), Mathf.Abs(z1 - z0));
             for (int i = 0; i <= nx; i++)

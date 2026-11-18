@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed912701c61b41549a78099fb18827ba, type: 3}
+  m_Name: SovereignTripleSlash
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.PatternDefinition
+  Id: 4
+  DisplayName: Sovereign Triple Slash
+  Advice: Move clear of the three lanes.
+  Detail: Three parallel blades strike together.
+  Recommend: 
+  Time: 1.15
+  Shape:
+    Type: 4
+    RMax: 0
+    RMin: 0
+    ROut: 0
+    LaneSpacing: 3.6
+    LaneHalfWidth: 1.5
+    Inner: 0
+    Outer: 0
+    HalfZ: 7.5
+  ScaleWithSquad: 0
+  LethalTelegraph: 0
+  BurstEffect: {fileID: 4830382136033586205, guid: df4a5ad44ace74a8e88214c76d866ebe, type: 3}
+  LaneWarningMaterial: {fileID: 2100000, guid: 773e695560c224a92928c1990c14baf9, type: 2}
+  Kind: 0
+  SustainSeconds: 4
+  TickInterval: 0.5
+  TickDamage: 15

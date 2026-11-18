@@ -24,6 +24,8 @@ namespace BoneSquadKiting.Bosses
 
         class View
         {
+            public HitFlash Flash;
+            public EnemyHealthBar HealthBar;
             public GameObject Root;
             public EnemyRef Ref;
             public Renderer Cylinder;          // placeholder only
@@ -39,8 +41,6 @@ namespace BoneSquadKiting.Bosses
         readonly Dictionary<EliteDefinition, Stack<View>> _free = new();
         readonly List<Elite> _gone = new();
         MaterialPropertyBlock _block;
-        Color _baseEmission;
-        static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         /// <summary>How many mini bosses are being drawn right now.</summary>
         public int DrawnCount => _live.Count;
@@ -48,11 +48,11 @@ namespace BoneSquadKiting.Bosses
         void Awake()
         {
             _block = new MaterialPropertyBlock();
-            if (EliteMaterial != null && EliteMaterial.HasProperty(EmissionId)) _baseEmission = EliteMaterial.GetColor(EmissionId);
         }
 
         void LateUpdate()
         {
+            var camera = Camera.main;
             foreach (var v in _live.Values) v.Seen = false;
 
             var elites = Director != null && Director.Elites != null ? Director.Elites.Elites : null;
@@ -62,7 +62,7 @@ namespace BoneSquadKiting.Bosses
                     if (!e.Alive || e.Def == null) continue;
                     if (!_live.TryGetValue(e, out var v)) { v = Take(e); _live[e] = v; }
                     v.Seen = true;
-                    Draw(e, v);
+                    Draw(e, v, camera);
                 }
 
             _gone.Clear();
@@ -71,6 +71,7 @@ namespace BoneSquadKiting.Bosses
             {
                 var v = _live[e];
                 _live.Remove(e);
+                if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 v.Root.SetActive(false);
                 v.Ref.Enemy = null;
                 if (!_free.TryGetValue(e.Def, out var stack)) _free[e.Def] = stack = new Stack<View>();
@@ -78,24 +79,22 @@ namespace BoneSquadKiting.Bosses
             }
         }
 
-        void Draw(Elite e, View v)
+        void Draw(Elite e, View v, Camera camera)
         {
             v.Ref.Enemy = e;
             float y = GroundHeight.Y(e.X, e.Z);
+            if (v.HealthBar != null)
+                v.HealthBar.Draw(new Vector3(e.X, y + e.Def.HealthBarHeight, e.Z), camera, e.Health, e.Def.MaxHp);
 
             if (v.Visual == null)
             {
                 v.Root.transform.position = new Vector3(e.X, y + Height * 0.5f, e.Z);
                 v.Root.transform.localScale = new Vector3(e.Radius * 2f, Height * 0.5f, e.Radius * 2f);
-                if (e.Flash > 0f)
-                {
-                    _block.SetColor(EmissionId, Color.Lerp(_baseEmission, HitFlashColor, Mathf.Clamp01(e.Flash)));
-                    v.Cylinder.SetPropertyBlock(_block);
-                }
-                else if (v.Cylinder.HasPropertyBlock()) v.Cylinder.SetPropertyBlock(null);
+                v.Flash.Apply(v.Cylinder, _block, e.Flash, HitFlashColor);
                 return;
             }
 
+            v.Visual.SetHitFlash(e.Flash, _block);
             v.Root.transform.position = new Vector3(e.X, y, e.Z);
             var size = e.Def.Prefab.transform.localScale * e.Def.ModelScale;
             if (v.Model.localScale != size) v.Model.localScale = size;      // follows the definition, so it can be tuned while playing
@@ -127,7 +126,12 @@ namespace BoneSquadKiting.Bosses
                 v = stack.Pop();
                 v.Root.SetActive(true);
             }
-            else v = Create(e.Def);
+            else
+            {
+                v = Create(e.Def);
+                if (e.Def.HealthBarPrefab != null)
+                    v.HealthBar = Instantiate(e.Def.HealthBarPrefab, transform);
+            }
             v.LastPos = e.Pos; v.WasCasting = false;
             if (v.Visual != null)
             {

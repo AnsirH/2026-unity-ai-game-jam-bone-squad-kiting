@@ -115,8 +115,8 @@ namespace BoneSquadKiting.EditorTools
             EnsureFolder("Assets", "Prototype"); EnsureFolder("Assets/Prototype", "Materials");
 
             var ground = Lit("Ground", Hex("#0d2434"));
-            var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f);
-            var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f);
+            var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f, faction: Faction.Ally);
+            var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f, faction: Faction.Enemy);
             var shot = Lit("Shot", Hex("#ffe27a"), Hex("#ffd24a") * 2.5f);
             var telegraph = TelegraphMaterial();
 
@@ -401,11 +401,11 @@ namespace BoneSquadKiting.EditorTools
             var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();
             eliteView.Director = director;
             eliteView.EnemyLayer = EnsureLayer(EnemyLayer);
-            eliteView.EliteMaterial = Lit("MiniBoss", Hex("#c9722a"), Hex("#ff8a2a") * 1.4f);
+            eliteView.EliteMaterial = Lit("MiniBoss", Hex("#c9722a"), Hex("#ff8a2a") * 1.4f, faction: Faction.Enemy);
 
             var mobView = new GameObject("Mob View").AddComponent<MobView>();
             mobView.Director = director;
-            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
+            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f, faction: Faction.Enemy);
         }
 
         // The wave plan a rebuilt stage keeps: the one its scene pointed at before the rebuild, else the
@@ -443,14 +443,24 @@ namespace BoneSquadKiting.EditorTools
             return a;
         }
 
-        internal static Material Lit(string name, Color baseColor, Color? emission = null)
+        internal enum Faction { Ally, Enemy }
+
+        internal static Material Lit(string name, Color baseColor, Color? emission = null, Faction? faction = null)
         {
-            var m = Upsert($"{MatDir}/{name}.mat", Shader.Find("Universal Render Pipeline/Lit"));
+            Material parent = null;
+            if (faction.HasValue)
+            {
+                string example = faction == Faction.Ally ? "AllyMobExample" : "EnemyMobExample";
+                parent = Load<Material>($"Assets/Art/Material/MobExamples/{example}.mat");
+            }
+            var shader = parent != null ? parent.shader : Shader.Find("Universal Render Pipeline/Lit");
+            var m = Upsert($"{MatDir}/{name}.mat", shader);
+            if (parent != null && m.parent != parent) m.parent = parent;
             m.SetColor("_BaseColor", baseColor);
             m.SetFloat("_Smoothness", 0.1f);
             if (emission.HasValue)
             {
-                m.EnableKeyword("_EMISSION");
+                if (!faction.HasValue) m.EnableKeyword("_EMISSION");
                 m.SetColor("_EmissionColor", emission.Value);
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             }
@@ -469,7 +479,11 @@ namespace BoneSquadKiting.EditorTools
         internal static Material Upsert(string path, Shader shader)
         {
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m != null) { m.shader = shader; return m; }
+            if (m != null)
+            {
+                if (m.shader != shader) m.shader = shader;
+                return m;
+            }
             m = new Material(shader);
             AssetDatabase.CreateAsset(m, path);
             return m;

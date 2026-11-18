@@ -15,6 +15,7 @@ namespace BoneSquadKiting.Mobs
     public class MobView : MonoBehaviour
     {
         public GameDirector Director;
+        public ArtSet Art;
         public Material MobMaterial;
         public Color HitFlashColor = new(3f, 3f, 3f, 1f);
         public float TurnSpeed = 540f;     // degrees per second a model turns toward where it walks
@@ -23,6 +24,8 @@ namespace BoneSquadKiting.Mobs
 
         class View
         {
+            public HitFlash Flash;
+            public EnemyHealthBar HealthBar;
             public Transform Root;
             public Renderer Sphere;        // placeholder only
             public UnitVisual Visual;      // model only
@@ -36,11 +39,53 @@ namespace BoneSquadKiting.Mobs
         readonly List<Mob> _gone = new();
         readonly List<Transform> _shots = new();
         Material _shotMaterial;
+        readonly Dictionary<MobShot, Transform> _customShots = new();
+        readonly Dictionary<GameObject, Stack<Transform>> _shotPools = new();
+        readonly Dictionary<Transform, GameObject> _shotPrefabs = new();
+        readonly List<MobShot> _finishedShots = new();
+        MobSystem _hitSource;
+        AnimationEffectSpawner _hitEffects;
+
+        void Update()
+        {
+            var source = Director != null ? Director.Mobs : null;
+            if (source == _hitSource) return;
+            if (_hitSource != null) _hitSource.OnProjectileHit -= PlayProjectileHit;
+            _hitSource = source;
+            if (_hitSource != null) _hitSource.OnProjectileHit += PlayProjectileHit;
+        }
+
+        void OnDisable()
+        {
+            if (_hitSource != null) _hitSource.OnProjectileHit -= PlayProjectileHit;
+            _hitSource = null;
+        }
+
+        void PlayProjectileHit(MobShot shot, BoneSquadKiting.Squad.SquadUnit unit)
+        {
+            if (Art == null || Art.EnemyProjectiles == null || unit == null) return;
+            foreach (var entry in Art.EnemyProjectiles)
+            {
+                if (entry == null || entry.Enemy != shot.Def || entry.HitEffectPrefab == null) continue;
+                if (_hitEffects == null)
+                {
+                    var go = new GameObject("Enemy Projectile Hit Effects");
+                    go.transform.SetParent(transform, false);
+                    _hitEffects = go.AddComponent<AnimationEffectSpawner>();
+                }
+                _hitEffects.Effects = new[] { new AnimationEffectSpawner.EffectEntry
+                    { Name = "Projectile Hit", Prefab = entry.HitEffectPrefab, Lifetime = 4f } };
+                var position = new Vector3(unit.X, GroundHeight.Y(unit.X, unit.Z) + 0.8f, unit.Z);
+                var rotation = shot.Dir.sqrMagnitude > 1e-6f
+                    ? Quaternion.LookRotation(new Vector3(shot.Dir.x, 0f, shot.Dir.y)) : Quaternion.identity;
+                _hitEffects.SpawnEffectAt(0, position, rotation);
+                break;
+            }
+        }
 
         /// <summary>How many enemy shots are being drawn right now.</summary>
         public int ShotsDrawn { get; private set; }
         MaterialPropertyBlock _block;
-        Color _baseEmission;
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         /// <summary>How many mobs are being drawn right now.</summary>
@@ -49,11 +94,11 @@ namespace BoneSquadKiting.Mobs
         void Awake()
         {
             _block = new MaterialPropertyBlock();
-            if (MobMaterial != null && MobMaterial.HasProperty(EmissionId)) _baseEmission = MobMaterial.GetColor(EmissionId);
         }
 
         void LateUpdate()
         {
+            var camera = Camera.main;
             foreach (var v in _live.Values) v.Seen = false;
 
             var mobs = Director != null && Director.Mobs != null ? Director.Mobs.Mobs : null;
@@ -63,7 +108,7 @@ namespace BoneSquadKiting.Mobs
                     if (!m.Alive || m.Def == null) continue;
                     if (!_live.TryGetValue(m, out var v)) { v = Take(m); _live[m] = v; }
                     v.Seen = true;
-                    Draw(m, v);
+                    Draw(m, v, camera);
                 }
 
             DrawShots();
@@ -74,6 +119,7 @@ namespace BoneSquadKiting.Mobs
             {
                 var v = _live[m];
                 _live.Remove(m);
+                if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 v.Root.gameObject.SetActive(false);
                 if (!_free.TryGetValue(m.Def, out var stack)) _free[m.Def] = stack = new Stack<View>();
                 stack.Push(v);
@@ -82,7 +128,24 @@ namespace BoneSquadKiting.Mobs
 
         void DrawShots()
         {
+            if (Art == null)
+            {
+                var squad = FindAnyObjectByType<BoneSquadKiting.Squad.SquadView>();
+                if (squad != null) Art = squad.Art;
+            }
             var shots = Director != null && Director.Mobs != null ? Director.Mobs.Shots : null;
+            _finishedShots.Clear();
+            foreach (var pair in _customShots)
+                if (shots == null || !shots.Contains(pair.Key)) _finishedShots.Add(pair.Key);
+            foreach (var shot in _finishedShots)
+            {
+                var t = _customShots[shot];
+                t.gameObject.SetActive(false);
+                var prefab = _shotPrefabs[t];
+                if (!_shotPools.TryGetValue(prefab, out var pool)) _shotPools[prefab] = pool = new Stack<Transform>();
+                pool.Push(t);
+                _customShots.Remove(shot);
+            }
             int n = shots?.Count ?? 0;
             while (_shots.Count < n)
             {
@@ -105,6 +168,47 @@ namespace BoneSquadKiting.Mobs
                 if (_shots[i].gameObject.activeSelf != on) _shots[i].gameObject.SetActive(on);
                 if (!on) continue;
                 var s = shots[i];
+                ArtSet.EnemyProjectile look = null;
+                if (Art != null && Art.EnemyProjectiles != null)
+                    foreach (var entry in Art.EnemyProjectiles)
+                        if (entry != null && entry.Enemy == s.Def && entry.Prefab != null) { look = entry; break; }
+                if (look != null)
+                {
+                    _shots[i].gameObject.SetActive(false);
+                    bool fresh = !_customShots.TryGetValue(s, out var t);
+                    if (fresh)
+                    {
+                        if (_shotPools.TryGetValue(look.Prefab, out var pool) && pool.Count > 0) t = pool.Pop();
+                        else
+                        {
+                            var holder = new GameObject("Enemy Projectile");
+                            holder.SetActive(false);
+                            holder.transform.SetParent(transform, false);
+                            var model = Instantiate(look.Prefab, holder.transform);
+                            model.transform.localPosition = Vector3.zero;
+                            foreach (var col in model.GetComponentsInChildren<Collider>()) Destroy(col);
+                            t = holder.transform;
+                            holder.AddComponent<BoneSquadKiting.Visuals.ProjectileFade>();
+                            _shotPrefabs[t] = look.Prefab;
+                        }
+                        _customShots[s] = t;
+                    }
+                    t.position = new Vector3(s.X, GroundHeight.Y(s.X, s.Z) + ShotHeight, s.Z);
+                    if (s.Dir.sqrMagnitude > 1e-6f) t.rotation = Quaternion.LookRotation(new Vector3(s.Dir.x, 0f, s.Dir.y));
+                    var mesh = t.GetChild(0);
+                    mesh.localScale = look.Prefab.transform.localScale * look.Scale;
+                    mesh.localRotation = Quaternion.Euler(look.Rotation) * look.Prefab.transform.localRotation;
+                    if (fresh)
+                    {
+                        foreach (var trail in t.GetComponentsInChildren<TrailRenderer>(true)) trail.Clear();
+                        t.gameObject.SetActive(true);
+                        t.gameObject.BroadcastMessage("RestartTrail", SendMessageOptions.DontRequireReceiver);
+                    }
+                    float opacity = s.Def.ShotLifetime > 0f
+                        ? 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(s.Def.ShotFadeStart, 1f, s.Age / s.Def.ShotLifetime)) : 1f;
+                    t.GetComponent<BoneSquadKiting.Visuals.ProjectileFade>().SetFade(opacity);
+                    continue;
+                }
                 float d = s.Def.ShotRadius * 2f;
                 _shots[i].position = new Vector3(s.X, GroundHeight.Y(s.X, s.Z) + ShotHeight, s.Z);
                 _shots[i].localScale = new Vector3(d, d, d);
@@ -114,14 +218,17 @@ namespace BoneSquadKiting.Mobs
 
         void OnDestroy() { if (_shotMaterial != null) Destroy(_shotMaterial); }
 
-        void Draw(Mob m, View v)
+        void Draw(Mob m, View v, Camera camera)
         {
             float y = GroundHeight.Y(m.X, m.Z);
+            if (v.HealthBar != null)
+                v.HealthBar.Draw(new Vector3(m.X, y + m.Def.HealthBarHeight, m.Z), camera, m.Health, m.Def.Hp);
             var moved = m.Pos - v.LastPos;
             bool moving = moved.sqrMagnitude > 1e-8f;
 
             if (v.Visual != null)
             {
+                v.Visual.SetHitFlash(m.Flash, _block);
                 v.Root.position = new Vector3(m.X, y, m.Z);
                 var size = m.Def.Prefab.transform.localScale * m.Def.ModelScale;
                 if (v.Root.localScale != size) v.Root.localScale = size;      // follows the definition, so it can be tuned while playing
@@ -140,12 +247,7 @@ namespace BoneSquadKiting.Mobs
                 float d = m.Radius * 2f;
                 v.Root.position = new Vector3(m.X, y + m.Radius, m.Z);
                 v.Root.localScale = new Vector3(d, d, d);
-                if (m.Flash > 0f)
-                {
-                    _block.SetColor(EmissionId, Color.Lerp(_baseEmission, HitFlashColor, m.Flash));
-                    v.Sphere.SetPropertyBlock(_block);
-                }
-                else if (v.Sphere.HasPropertyBlock()) v.Sphere.SetPropertyBlock(null);
+                v.Flash.Apply(v.Sphere, _block, m.Flash, HitFlashColor);
             }
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
         }
@@ -159,7 +261,12 @@ namespace BoneSquadKiting.Mobs
                 v = stack.Pop();
                 v.Root.gameObject.SetActive(true);
             }
-            else v = Create(m.Def);
+            else
+            {
+                v = Create(m.Def);
+                if (m.Def.HealthBarPrefab != null)
+                    v.HealthBar = Instantiate(m.Def.HealthBarPrefab, transform);
+            }
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
             if (v.Visual != null)
             {

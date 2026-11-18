@@ -13,9 +13,11 @@ Shader "BoneSquad/Attack Telegraph"
         _FresnelStrength ("Fresnel Strength", Range(0, 4)) = 1.8
         [Enum(Rectangle,0,Disc,1,Donut,2)] _Shape ("Shape", Float) = 0
         _InnerRadius ("Donut Inner / Outer Radius", Range(0.05,0.95)) = 0.5
+        [HideInInspector] _Opacity ("Cast Opacity", Float) = 1
         _Progress ("Progress", Range(0,1)) = 0.5
         [Toggle] _Loop ("Loop Preview", Float) = 0
         _Duration ("Reveal Duration (s)", Float) = 0.25
+        _AfterFade ("Time Hidden After Fade (s)", Float) = 0
         _FadeDuration ("Fade Duration (s)", Float) = 0.4
         _Slack ("Ground slack (world units)", Float) = 0.35
     }
@@ -40,7 +42,7 @@ Shader "BoneSquad/Attack Telegraph"
                 half4 _FillColor, _EdgeColor, _LethalFill, _LethalRim;
                 float _LethalTelegraph;
                 float _CellSize, _Honeycomb, _RimWidth, _FresnelStrength;
-                float _Shape, _InnerRadius, _Progress, _Loop, _Duration, _FadeDuration;
+                float _Shape, _InnerRadius, _Progress, _Opacity, _Loop, _Duration, _FadeDuration, _AfterFade;
                 float _Slack;
             CBUFFER_END
 
@@ -95,15 +97,16 @@ Shader "BoneSquad/Attack Telegraph"
                 // The preview uses a unit XY quad. Its lower edge is the rectangle origin.
                 float distance01 = _Shape > 0.5 ? length(input.localXY) * 2.0 : input.localXY.y + 0.5;
                 float progress = saturate(_Progress);
-                float opacity = 1.0;
+                float opacity = _Opacity;
                 if (_Loop > 0.5)
                 {
                     float duration = max(_Duration, 0.01);
                     float fadeStart = duration + 0.5;
                     float fadeDuration = max(_FadeDuration, 0.01);
-                    float elapsed = fmod(_Time.y, fadeStart + fadeDuration);
+                    float fadeEnd = fadeStart + fadeDuration;
+                    float elapsed = fmod(_Time.y, fadeEnd + max(_AfterFade, 0.0));
                     progress = saturate(elapsed / duration);
-                    opacity = 1.0 - smoothstep(fadeStart, fadeStart + fadeDuration, elapsed);
+                    opacity = 1.0 - smoothstep(fadeStart, fadeEnd, elapsed);
                 }
                 bool donut = _Shape > 1.5;
                 float startRadius = donut ? _InnerRadius : 0.0;
