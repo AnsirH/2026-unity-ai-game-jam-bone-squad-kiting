@@ -8,10 +8,17 @@ namespace BoneSquadKiting.Fx
     {
         static readonly int VisibilityMap = Shader.PropertyToID("_VisibilityMap");
         static readonly int Darkness = Shader.PropertyToID("_Darkness");
-        static readonly int TreeMask = Shader.PropertyToID("_StageTreeMask");
-        static readonly int TreeDarkness = Shader.PropertyToID("_StageTreeDarkness");
-        static readonly int TreeU = Shader.PropertyToID("_StageTreeU");
-        static readonly int TreeV = Shader.PropertyToID("_StageTreeV");
+        // Adjacent maps in the art scene must bind independent root-position masks.
+        [SerializeField] bool secondaryMask;
+        static readonly int[] TreeMask = MaskIds("_StageTreeMask");
+        static readonly int[] TreeDarkness = MaskIds("_StageTreeDarkness");
+        static readonly int[] TreeU = MaskIds("_StageTreeU");
+        static readonly int[] TreeV = MaskIds("_StageTreeV");
+
+        int Slot => secondaryMask ? 1 : 0;
+
+        static int[] MaskIds(string name) =>
+            new[] { Shader.PropertyToID(name), Shader.PropertyToID(name + "2") };
 
         MeshRenderer overlay;
 
@@ -24,7 +31,7 @@ namespace BoneSquadKiting.Fx
         void OnDisable()
         {
             RenderPipelineManager.beginCameraRendering -= BindMask;
-            Shader.SetGlobalFloat(TreeDarkness, 0f);
+            Shader.SetGlobalFloat(TreeDarkness[Slot], 0f);
         }
 
         void BindMask(ScriptableRenderContext context, Camera camera)
@@ -33,16 +40,16 @@ namespace BoneSquadKiting.Fx
             if (!overlay.enabled || !material || camera.cameraType == CameraType.Preview ||
                 (camera.cullingMask & (1 << gameObject.layer)) == 0)
             {
-                Shader.SetGlobalFloat(TreeDarkness, 0f);
+                Shader.SetGlobalFloat(TreeDarkness[Slot], 0f);
                 return;
             }
 
             // The overlay quad maps local XY [-0.5, 0.5] onto the full mask.
             var worldToQuad = transform.worldToLocalMatrix;
-            Shader.SetGlobalVector(TreeU, worldToQuad.GetRow(0));
-            Shader.SetGlobalVector(TreeV, worldToQuad.GetRow(1));
-            Shader.SetGlobalTexture(TreeMask, material.GetTexture(VisibilityMap));
-            Shader.SetGlobalFloat(TreeDarkness, material.GetFloat(Darkness));
+            Shader.SetGlobalVector(TreeU[Slot], worldToQuad.GetRow(0));
+            Shader.SetGlobalVector(TreeV[Slot], worldToQuad.GetRow(1));
+            Shader.SetGlobalTexture(TreeMask[Slot], material.GetTexture(VisibilityMap));
+            Shader.SetGlobalFloat(TreeDarkness[Slot], material.GetFloat(Darkness));
         }
     }
 }

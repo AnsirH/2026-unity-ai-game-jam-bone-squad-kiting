@@ -11,6 +11,9 @@
 struct BackgroundDepthVaryings
 {
     float4 positionCS : SV_POSITION;
+#if defined(_CLIP_ABOVE_HEIGHT)
+    float worldY : TEXCOORD1;
+#endif
 #if defined(_DITHER_FADE)
     float2 uv : TEXCOORD0;
 #endif
@@ -26,8 +29,14 @@ BackgroundDepthVaryings BackgroundDepthVertex(Attributes input)
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 #if defined(BACKGROUND_SHADOW_PASS)
     output.positionCS = GetShadowPositionHClip(input);
+#if defined(_CLIP_ABOVE_HEIGHT)
+    output.worldY = TransformObjectToWorld(input.positionOS.xyz).y;
+#endif
 #else
     output.positionCS = TransformObjectToHClip(input.position.xyz);
+#if defined(_CLIP_ABOVE_HEIGHT)
+    output.worldY = TransformObjectToWorld(input.position.xyz).y;
+#endif
 #endif
 #if defined(_DITHER_FADE)
     output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
@@ -39,6 +48,9 @@ half BackgroundDepthFragment(BackgroundDepthVaryings input) : SV_Target
 {
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+#if defined(_CLIP_ABOVE_HEIGHT)
+    ClipAboveHeight(input.worldY);
+#endif
 #if defined(_DITHER_FADE)
     ApplyBackgroundCoverage(input.uv, input.positionCS.xy);
 #endif
