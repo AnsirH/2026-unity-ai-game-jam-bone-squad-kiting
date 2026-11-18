@@ -9,6 +9,8 @@ namespace BoneSquadKiting.Bosses
     /// <summary>
     /// Temporary telegraphs: draws the danger area of every pattern being cast (the boss's and each mini
     /// boss's) on the ground. A zone brightens once it locks, i.e. stops following the squad.
+    /// On uneven ground the zone is laid over the ground's shape (see GroundHeight), and its material
+    /// draws it above the ground but behind anything standing on it.
     /// </summary>
     public class TelegraphView : MonoBehaviour
     {
@@ -18,11 +20,15 @@ namespace BoneSquadKiting.Bosses
         public Color LockedColor = new(1f, 0.15f, 0.1f, 0.6f);
         public Color LiveColor = new(1f, 0.55f, 0.1f, 0.8f);   // a sustained zone that is dealing damage right now
         public float Height = 0.03f;
+        [Tooltip("On uneven ground the zone is cut into pieces about this long, each laid on the ground.")]
+        public float GroundStep = 1f;
 
         class Zone
         {
             public MeshFilter Filter; public MeshRenderer Renderer;
             public PatternDefinition Pattern; public DangerShape Shape;
+            public Vector3[] Flat, Laid;          // the mesh's points: as built, and lifted onto the ground
+            public Vector3 LaidAt; public float LaidAngle; public bool IsLaid;
         }
 
         readonly List<Zone> _zones = new();
@@ -44,11 +50,15 @@ namespace BoneSquadKiting.Bosses
                 if (z.Pattern != a.Pattern || !z.Shape.Equals(a.Shape))
                 {
                     if (z.Filter.sharedMesh != null) Destroy(z.Filter.sharedMesh);
-                    z.Filter.sharedMesh = DangerShapeMesh.Build(a.Shape);
+                    z.Filter.sharedMesh = DangerShapeMesh.Build(a.Shape, GroundStep);
+                    z.Filter.sharedMesh.MarkDynamic();
+                    z.Flat = z.Filter.sharedMesh.vertices; z.Laid = new Vector3[z.Flat.Length]; z.IsLaid = false;
                     z.Pattern = a.Pattern; z.Shape = a.Shape;
                 }
-                z.Filter.transform.position = new Vector3(a.Cx, Height, a.Cz);
-                z.Filter.transform.rotation = Quaternion.Euler(0f, a.Angle, 0f);   // +Y turns clockwise seen from above
+                var at = new Vector3(a.Cx, Height, a.Cz);
+                var turn = Quaternion.Euler(0f, a.Angle, 0f);                      // +Y turns clockwise seen from above
+                z.Filter.transform.SetPositionAndRotation(at, turn);
+                LayOnGround(z, at, turn, a.Angle);
                 bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
                 var color = a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor;
                 if (a.Pattern != null && a.Pattern.LethalTelegraph)
@@ -64,6 +74,28 @@ namespace BoneSquadKiting.Bosses
                 z.Renderer.SetPropertyBlock(_block);
                 z.Renderer.enabled = true;
             }
+        }
+
+        // Lift every point of the zone to the ground under it. Skipped on flat stages and while the zone stays put.
+        void LayOnGround(Zone z, Vector3 at, Quaternion turn, float angle)
+        {
+            bool uneven = BoneSquadKiting.Stage.GroundHeight.Mask.value != 0;
+            if (!uneven && !z.IsLaid) return;
+            if (uneven && z.IsLaid && z.LaidAt == at && z.LaidAngle == angle) return;
+            for (int i = 0; i < z.Flat.Length; i++)
+            {
+                var p = z.Flat[i];
+                if (uneven)
+                {
+                    var w = at + turn * p;
+                    p.y = BoneSquadKiting.Stage.GroundHeight.Y(w.x, w.z);
+                }
+                z.Laid[i] = p;
+            }
+            var mesh = z.Filter.sharedMesh;
+            mesh.vertices = z.Laid;
+            mesh.RecalculateBounds();
+            z.IsLaid = uneven; z.LaidAt = at; z.LaidAngle = angle;
         }
 
         Zone Create()
