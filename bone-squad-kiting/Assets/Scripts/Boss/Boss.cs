@@ -14,6 +14,9 @@ namespace BoneSquadKiting.Bosses
         public float HpFrac => Hp / GameConstants.BossMax;
         public Vector2 Pos => new(GameConstants.BossX, GameConstants.BossZ);
         public bool Alive => Hp > 0;
+        public float Radius => GameConstants.ShotHitRadius;
+        public EnemyKind Kind => EnemyKind.Elite;
+        float IEnemy.Hp => Hp;
 
         public void ApplyDamage(float amount)
         {
