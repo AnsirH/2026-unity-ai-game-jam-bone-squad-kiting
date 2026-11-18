@@ -63,11 +63,16 @@ public class ArenaSceneSmokeTests
         Assert.AreEqual(LayerMask.NameToLayer("Enemy"), director.BossView.gameObject.layer);
         Assert.IsNotNull(director.BossView.GetComponent<Collider>());
 
-        // Let auto-fire run, then wait for the first telegraph.
+        // The scene's ranges are short, so the squad has to be ordered onto the boss before it can fire.
+        Assert.That(director.UnitFireRange, Is.LessThan(10f), "scene uses the hand-tuned short ranges");
+        director.IssueOrder(SquadOrder.Attack(director.Boss));
+        Assert.IsTrue(director.Squad.IsMoving, "boss is outside squad range at the start");
+
+        // Let it close in and fire, then wait for the first telegraph.
         float timeout = Time.time + GameConstants.FirstAttackDelay + 3f;
         while (director.Attacks.Current == null && Time.time < timeout) yield return null;
         Assert.IsNotNull(director.Attacks.Current, "first pattern telegraphed");
-        Assert.That(director.Boss.Hp, Is.LessThan(GameConstants.BossMax), "squad auto-fire hit the boss");
+        Assert.That(director.Boss.Hp, Is.LessThan(GameConstants.BossMax), "the squad closed in and hit the boss");
         yield return null; // the HUD may have refreshed before the director started the pattern this frame
         Assert.IsTrue(hud.WarningPanel.activeSelf, "pattern warning shows during a telegraph");
         StringAssert.Contains("중앙 핵폭발", hud.WarningTitle.text);

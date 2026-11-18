@@ -37,6 +37,10 @@ namespace BoneSquadKiting.EditorTools
         // Start between the squad (z = 3.4) and the boss (z = -7.4) so both are in frame.
         static readonly Vector2 CameraStartLookAt = new(0f, -0.1f);
 
+        // Ranges as tuned by hand in the scene (2026-11-18). The squad has to close in on the boss to fire.
+        const float UnitFireRange = 5.5f;
+        const float SquadEngageRange = 5f;
+
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
         public static void Build()
         {
@@ -110,6 +114,7 @@ namespace BoneSquadKiting.EditorTools
             };
             var director = game.AddComponent<GameDirector>();
             director.Squad = squad;
+            director.UnitFireRange = UnitFireRange; director.SquadEngageRange = SquadEngageRange;
             director.Sequence = Load<AttackSequence>("Assets/Data/Sequences/BossMain.asset");
             // RTS camera: it does not follow the squad; the mouse at a screen edge slides it over the arena.
             var scroll = camGo.AddComponent<EdgeScrollCamera>();
