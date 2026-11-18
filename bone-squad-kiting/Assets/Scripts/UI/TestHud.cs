@@ -74,7 +74,7 @@ namespace BoneSquadKiting.UI
         {
             var squad = Director.Squad;
             int alive = squad != null ? Director.AliveCount : 0;
-            GUI.Box(new Rect(12, 12, 230, 132), GUIContent.none, _box);
+            GUI.Box(new Rect(12, 12, 250, 156), GUIContent.none, _box);
             var prev = GUI.color;
             if (alive < 10) GUI.color = new Color(1f, 0.45f, 0.4f);
             GUI.Label(new Rect(22, 16, 220, 24), $"생존  {alive} / {GameConstants.SquadSize}", _label);
@@ -84,6 +84,7 @@ namespace BoneSquadKiting.UI
             GUI.Label(new Rect(22, 64, 220, 24), $"진형  {squad.Formation}  ({squad.RotationDegrees:0}°)", _label);
             GUI.Label(new Rect(22, 88, 220, 24), $"오더  {OrderText(squad.Order.Kind)}{(squad.IsMoving ? "  · 이동 중" : "")}", _label);
             GUI.Label(new Rect(22, 112, 220, 24), $"시간  {Director.Elapsed:0.0}s", _label);
+            GUI.Label(new Rect(22, 136, 220, 24), $"사거리  유닛 {Director.UnitFireRange:0.#} / 분대 {Director.SquadEngageRange:0.#}", _label);
         }
 
         void DrawPattern(float w)
@@ -116,7 +117,7 @@ namespace BoneSquadKiting.UI
                 var prev = GUI.color;
                 if (f.Id == recommend) GUI.color = new Color(1f, 0.85f, 0.3f);
                 else if (f.Id == squad.Formation) GUI.color = new Color(0.4f, 1f, 0.9f);
-                if (GUI.Button(new Rect(x + i * (bw + gap), y, bw, 34), $"{i + 1}  {f.DisplayName}"))
+                if (GUI.Button(new Rect(x + i * (bw + gap), y, bw, 34), $"{f.HotKey}  {f.DisplayName}"))
                     Director.ChangeFormation(f.Id);
                 GUI.color = prev;
             }
@@ -124,7 +125,7 @@ namespace BoneSquadKiting.UI
 
         void DrawHints(float w, float h)
         {
-            string hint = "우클릭: 이동 / 적 공격   A+좌클릭: 어택땅   1~4·QWER: 진형   휠: 회전   P: 일시정지";
+            string hint = "우클릭: 이동 / 적 공격   A+좌클릭: 어택땅   Q·W·E·R: 진형   휠: 회전   P: 일시정지";
             if (Input != null && Input.AttackMovePending) hint = "어택땅 대기 — 좌클릭으로 지점 지정 (Esc/우클릭 취소)";
             GUI.Label(new Rect(0, h - 24, w, 22), hint, _center);
         }

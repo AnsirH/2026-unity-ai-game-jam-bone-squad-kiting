@@ -20,15 +20,16 @@ namespace BoneSquadKiting.Squad
 
         public readonly List<Shot> Shots = new();
         public System.Action<float> OnHit; // damage dealt to an enemy
+        public float FireRange = GameConstants.FireRange; // per-unit range; the director keeps it in sync
 
         /// <summary>An AttackTarget order's living, in-range target wins; otherwise the nearest enemy in range.</summary>
-        public static IEnemy Acquire(SquadUnit u, EnemyRegistry registry, SquadOrder order)
+        public static IEnemy Acquire(SquadUnit u, EnemyRegistry registry, SquadOrder order, float fireRange)
         {
             var p = new Vector2(u.X, u.Z);
             if (order.Kind == OrderKind.AttackTarget && order.Target is { Alive: true } t
-                && (t.Pos - p).magnitude < GameConstants.FireRange)
+                && (t.Pos - p).magnitude < fireRange)
                 return t;
-            return registry.NearestInRange(p, GameConstants.FireRange);
+            return registry.NearestInRange(p, fireRange);
         }
 
         public void Tick(IList<SquadUnit> units, EnemyRegistry registry, SquadOrder order, float dt)
@@ -36,7 +37,7 @@ namespace BoneSquadKiting.Squad
             foreach (var u in units)
             {
                 if (u.Dead || u.Cd > 0 || !FireRules.CanFire(u, order)) continue;
-                var target = Acquire(u, registry, order);
+                var target = Acquire(u, registry, order, FireRange);
                 if (target == null) continue;
                 u.Cd = GameConstants.UnitCdMin + Random.value * GameConstants.UnitCdRand;
                 float ang = Mathf.Atan2(target.Pos.y - u.Z, target.Pos.x - u.X);

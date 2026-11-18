@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.FormationDefinition
   Id: dense
   DisplayName: "\uBC00\uC9D1"
-  HotKey: 41
+  HotKey: 31
   Mode: 0
   Spacing: 0.53
   Stagger: 0

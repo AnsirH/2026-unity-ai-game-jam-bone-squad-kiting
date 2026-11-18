@@ -20,10 +20,10 @@ namespace BoneSquadKiting.EditorTools
         {
             EnsureFolder(Root, "Patterns"); EnsureFolder(Root, "Formations"); EnsureFolder(Root, "Sequences");
 
-            Formation("dense", "밀집", Key.Digit1, FormationMode.Grid, spacing: 0.53f);
-            Formation("line", "일자", Key.Digit2, FormationMode.Line, spacing: 0.49f, stagger: 0.12f);
-            Formation("ring", "원형", Key.Digit3, FormationMode.Ring, radius: 3.7f);
-            Formation("cross", "십자가", Key.Digit4, FormationMode.Cross, spacing: 0.61f);
+            Formation("dense", "밀집", Key.Q, FormationMode.Grid, spacing: 0.53f);
+            Formation("line", "일자", Key.W, FormationMode.Line, spacing: 0.49f, stagger: 0.12f);
+            Formation("ring", "원형", Key.E, FormationMode.Ring, radius: 3.7f);
+            Formation("cross", "십자가", Key.R, FormationMode.Cross, spacing: 0.61f);
 
             var seq = Upsert<AttackSequence>(Root + "/Sequences/BossMain.asset");
             seq.Patterns = new[]

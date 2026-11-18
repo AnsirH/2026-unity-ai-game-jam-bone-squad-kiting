@@ -10,7 +10,7 @@ namespace BoneSquadKiting.Data
     public class FormationDefinition : ScriptableObject
     {
         public string Id, DisplayName;
-        public Key HotKey;
+        public Key HotKey;      // Q / W / E / R in the shipped assets
         public FormationMode Mode;
         public float Spacing;  // Grid cell size / Cross arm step / Line z step
         public float Stagger;  // Line x zig-zag width

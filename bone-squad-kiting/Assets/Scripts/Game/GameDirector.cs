@@ -19,6 +19,11 @@ namespace BoneSquadKiting.Game
         public AttackSequence Sequence;     // boss pattern sequence asset
         public BossView BossView;           // optional scene visual (collider + EnemyRef)
 
+        [Header("Tuning (editable while playing)")]
+        [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
+        [Min(0f)] public float SquadEngageRange = GameConstants.SquadEngageRange;  // from the anchor: attack orders stop here
+
+        [Header("State")]
         public GamePhase Phase = GamePhase.Menu;
         public bool Paused;
         public float Elapsed, LastDps, TotalDamage;
@@ -89,7 +94,7 @@ namespace BoneSquadKiting.Game
             Squad.Order = o;
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
-                bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < GameConstants.SquadEngageRange;
+                bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
                 Squad.SetDestination(inRange ? Squad.Anchor : o.Target.Pos);
             }
             else Squad.SetDestination(o.Point);
@@ -104,10 +109,10 @@ namespace BoneSquadKiting.Game
             switch (order.Kind)
             {
                 case OrderKind.AttackMove:
-                    return Enemies.NearestInRange(Squad.Anchor, GameConstants.SquadEngageRange) != null;
+                    return Enemies.NearestInRange(Squad.Anchor, SquadEngageRange) != null;
                 case OrderKind.AttackTarget:
                     return order.Target is { Alive: true }
-                           && (order.Target.Pos - Squad.Anchor).magnitude < GameConstants.SquadEngageRange;
+                           && (order.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
                 default: return false;
             }
         }
@@ -129,6 +134,7 @@ namespace BoneSquadKiting.Game
             if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
 
             Squad.Tick(dt);
+            Shots.FireRange = UnitFireRange;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             Attacks.Tick(Squad, Boss, dt);
 

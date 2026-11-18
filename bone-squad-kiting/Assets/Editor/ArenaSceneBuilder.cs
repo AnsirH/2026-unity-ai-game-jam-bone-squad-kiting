@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using BoneSquadKiting.Bosses;
+using BoneSquadKiting.Cameras;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
@@ -31,8 +32,8 @@ namespace BoneSquadKiting.EditorTools
         const float CameraPitch = 50f;      // degrees down from horizontal
         const float CameraYaw = 25f;        // degrees turned around Y, away from straight-on
         const float CameraFov = 35f;        // vertical field of view
-        const float CameraDistance = 45f;   // from the look-at point
-        static readonly Vector3 CameraTarget = new(0f, 0f, 0.8f);
+        const float CameraDistance = 34f;   // from the squad anchor it follows
+        const float CameraSmoothTime = 0.35f;
 
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
         public static void Build()
@@ -69,7 +70,6 @@ namespace BoneSquadKiting.EditorTools
             cam.backgroundColor = Hex("#050d17");
             cam.nearClipPlane = 0.3f; cam.farClipPlane = 200f;
             camGo.transform.rotation = Quaternion.Euler(CameraPitch, 180f + CameraYaw, 0f);
-            camGo.transform.position = CameraTarget - camGo.transform.forward * CameraDistance;
             camGo.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
 
             var lightGo = new GameObject("Directional Light");
@@ -108,6 +108,11 @@ namespace BoneSquadKiting.EditorTools
             var director = game.AddComponent<GameDirector>();
             director.Squad = squad;
             director.Sequence = Load<AttackSequence>("Assets/Data/Sequences/BossMain.asset");
+            // The camera eases after the formation anchor; it starts already centered on the squad.
+            var follow = camGo.AddComponent<QuarterViewCamera>();
+            follow.Squad = squad; follow.Distance = CameraDistance; follow.SmoothTime = CameraSmoothTime;
+            camGo.transform.position = follow.DesiredPosition;
+
             var input = game.AddComponent<SquadInputController>();
             input.Cam = cam; input.Director = director; input.EnemyMask = 1 << enemyLayer;
 

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.FormationDefinition
   Id: ring
   DisplayName: "\uC6D0\uD615"
-  HotKey: 43
+  HotKey: 19
   Mode: 2
   Spacing: 0
   Stagger: 0

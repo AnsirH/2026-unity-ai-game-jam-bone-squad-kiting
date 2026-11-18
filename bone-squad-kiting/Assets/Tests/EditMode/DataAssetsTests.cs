@@ -81,9 +81,9 @@ public class DataAssetsTests
         Assert.AreEqual(FormationMode.Ring, ring.Mode);   Assert.That(ring.Radius, Is.EqualTo(3.7f).Within(1e-4f));
         Assert.AreEqual(FormationMode.Cross, cross.Mode); Assert.That(cross.Spacing, Is.EqualTo(0.61f).Within(1e-4f));
 
-        Assert.AreEqual("dense", dense.Id); Assert.AreEqual(Key.Digit1, dense.HotKey);
-        Assert.AreEqual("line", line.Id);   Assert.AreEqual(Key.Digit2, line.HotKey);
-        Assert.AreEqual("ring", ring.Id);   Assert.AreEqual(Key.Digit3, ring.HotKey);
-        Assert.AreEqual("cross", cross.Id); Assert.AreEqual(Key.Digit4, cross.HotKey);
+        Assert.AreEqual("dense", dense.Id); Assert.AreEqual(Key.Q, dense.HotKey);
+        Assert.AreEqual("line", line.Id);   Assert.AreEqual(Key.W, line.HotKey);
+        Assert.AreEqual("ring", ring.Id);   Assert.AreEqual(Key.E, ring.HotKey);
+        Assert.AreEqual("cross", cross.Id); Assert.AreEqual(Key.R, cross.HotKey);
     }
 }

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.FormationDefinition
   Id: cross
   DisplayName: "\uC2ED\uC790\uAC00"
-  HotKey: 44
+  HotKey: 32
   Mode: 3
   Spacing: 0.61
   Stagger: 0

@@ -33,6 +33,9 @@ public class ArenaSceneSmokeTests
         Assert.AreEqual(GamePhase.Menu, director.Phase);
         Assert.AreEqual(GameConstants.SquadSize, director.AliveCount, "squad stands on the field before the match starts");
         Assert.IsFalse(Camera.main.orthographic, "quarter view uses a perspective camera");
+        var follow = Camera.main.GetComponent<BoneSquadKiting.Cameras.QuarterViewCamera>();
+        Assert.IsNotNull(follow, "camera follows the squad");
+        Assert.AreSame(director.Squad, follow.Squad);
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
         Capture("arena-0-menu.png");
 

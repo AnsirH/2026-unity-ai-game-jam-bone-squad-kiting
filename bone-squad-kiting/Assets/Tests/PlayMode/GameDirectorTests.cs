@@ -181,4 +181,22 @@ public class GameDirectorTests
         Assert.That(dist, Is.LessThan(GameConstants.SquadEngageRange));
         Assert.That(dist, Is.GreaterThan(GameConstants.SquadEngageRange - 0.5f), "stops as soon as it is in range");
     }
+
+    [Test]
+    public void Ranges_AreTunableAtRuntime()
+    {
+        _dir.Restart();
+        _dir.UnitFireRange = 1f;                       // boss is ~10.8 away: nobody can reach it
+        Run(1.5f);
+        Assert.AreEqual(GameConstants.BossMax, _dir.Boss.Hp);
+
+        _dir.SquadEngageRange = 5f;                    // boss no longer inside squad range
+        _dir.IssueOrder(SquadOrder.Attack(_dir.Boss));
+        Assert.IsTrue(_fc.IsMoving, "attack-target now has to walk toward the boss");
+
+        _dir.UnitFireRange = GameConstants.FireRange;  // restoring the range brings the fire back
+        _dir.IssueOrder(SquadOrder.Move(_fc.Anchor));
+        Run(1.5f);
+        Assert.That(_dir.Boss.Hp, Is.LessThan(GameConstants.BossMax));
+    }
 }
