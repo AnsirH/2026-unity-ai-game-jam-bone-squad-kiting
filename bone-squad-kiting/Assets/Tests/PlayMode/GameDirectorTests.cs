@@ -60,7 +60,7 @@ public class GameDirectorTests
         Assert.AreEqual(new Vector2(4f, 1f), _fc.Destination);
         Assert.AreEqual(OrderKind.Move, _fc.Order.Kind);
 
-        _dir.IssueOrder(SquadOrder.Attack(_dir.Boss)); // boss is always in range inside the M1 arena
+        _dir.IssueOrder(SquadOrder.Attack(_dir.Boss)); // boss is always within squad range in the M1 arena
         Assert.AreEqual(OrderKind.AttackTarget, _fc.Order.Kind);
         Assert.AreEqual(_fc.Anchor, _fc.Destination, "in range: hold position instead of walking to the boss");
     }
@@ -157,5 +157,28 @@ public class GameDirectorTests
         _dir.RotateFormation(2);
         Assert.AreEqual(30f, _fc.RotationDegrees);
         Assert.AreEqual(30f, reported);
+    }
+
+    class FarEnemy : IEnemy
+    {
+        public Vector2 Pos { get; set; }
+        public bool Alive => true;
+    }
+
+    [Test]
+    public void AttackTarget_WalksTowardFarEnemy_AndStopsAtSquadRange()
+    {
+        _dir.Restart();
+        _dir.Enemies.Unregister(_dir.Boss);
+        var far = new FarEnemy { Pos = new Vector2(_fc.Anchor.x - 20f, _fc.Anchor.y) }; // 20 > squad range 15.9
+        _dir.Enemies.Register(far);
+
+        _dir.IssueOrder(SquadOrder.Attack(far));
+        Assert.IsTrue(_fc.IsMoving, "out of squad range: walk toward the target");
+        Run(3f);
+        Assert.IsFalse(_fc.IsMoving);
+        float dist = (far.Pos - _fc.Anchor).magnitude;
+        Assert.That(dist, Is.LessThan(GameConstants.SquadEngageRange));
+        Assert.That(dist, Is.GreaterThan(GameConstants.SquadEngageRange - 0.5f), "stops as soon as it is in range");
     }
 }

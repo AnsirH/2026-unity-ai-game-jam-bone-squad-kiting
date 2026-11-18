@@ -80,7 +80,8 @@ namespace BoneSquadKiting.Game
 
         /// <summary>
         /// Move / AttackMove walk the anchor to the point (units do not fire while moving, see FireRules).
-        /// AttackTarget advances only when the target is out of range; in range the squad holds and fires.
+        /// AttackTarget walks toward the target. Both attack orders stop once their enemy is within squad
+        /// range of the anchor (see Step); an AttackTarget already in range never starts walking.
         /// </summary>
         public void IssueOrder(SquadOrder o)
         {
@@ -88,10 +89,33 @@ namespace BoneSquadKiting.Game
             Squad.Order = o;
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
-                bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < GameConstants.FireRange;
+                bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < GameConstants.SquadEngageRange;
                 Squad.SetDestination(inRange ? Squad.Anchor : o.Target.Pos);
             }
             else Squad.SetDestination(o.Point);
+        }
+
+        /// <summary>
+        /// Squad range is measured from the formation anchor. An attack-move squad stops for any enemy
+        /// inside it; an attack-target squad stops for its ordered enemy.
+        /// </summary>
+        bool EnemyWithinSquadRange(SquadOrder order)
+        {
+            switch (order.Kind)
+            {
+                case OrderKind.AttackMove:
+                    return Enemies.NearestInRange(Squad.Anchor, GameConstants.SquadEngageRange) != null;
+                case OrderKind.AttackTarget:
+                    return order.Target is { Alive: true }
+                           && (order.Target.Pos - Squad.Anchor).magnitude < GameConstants.SquadEngageRange;
+                default: return false;
+            }
+        }
+
+        void Start()
+        {
+            // Stand the squad on the field before the match starts, so the menu is not an empty arena.
+            if (Squad != null && Squad.Units.Count == 0) Squad.Init();
         }
 
         void Update() => Step(Mathf.Min(MaxDt, Time.deltaTime));
@@ -102,10 +126,7 @@ namespace BoneSquadKiting.Game
             if (Phase != GamePhase.Play || Paused) return;
             Elapsed += dt;
 
-            // An attack-move squad stops as soon as an enemy is within squad range of the anchor.
-            if (Squad.Order.Kind == OrderKind.AttackMove && Squad.IsMoving
-                && Enemies.NearestInRange(Squad.Anchor, GameConstants.SquadEngageRange) != null)
-                Squad.Halt();
+            if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
 
             Squad.Tick(dt);
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
