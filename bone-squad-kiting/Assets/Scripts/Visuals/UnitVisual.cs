@@ -17,12 +17,37 @@ namespace BoneSquadKiting.Visuals
         public AnimStates States = new();
         public Animator Animator;          // found in children when left empty
 
+        /// <summary>Name an animation event must call for the attack to let go of its projectile.</summary>
+        public const string AttackEventName = "AttackRelease";
+
+        /// <summary>Seconds into the attack animation at which its AttackRelease event sits; 0 when it has none.</summary>
+        public float AttackEventTime { get; private set; }
+        /// <summary>Length of the attack animation that has the event; 0 when there is none.</summary>
+        public float AttackLength { get; private set; }
+        /// <summary>Raised when the attack animation reaches its AttackRelease event.</summary>
+        public System.Action AttackReleased;
+
         VisualState _current = (VisualState)(-1);
         float _attackUntil;
+
+        /// <summary>Called by the animation event in the attack clip (see <see cref="AttackEventName"/>).</summary>
+        public void AttackRelease() => AttackReleased?.Invoke();
+
+        // Look through the model's clips for the attack event, to learn when the projectile leaves.
+        void ReadAttackTiming()
+        {
+            AttackEventTime = AttackLength = 0f;
+            var controller = Animator != null ? Animator.runtimeAnimatorController : null;
+            if (controller == null) return;
+            foreach (var clip in controller.animationClips)
+                foreach (var e in clip.events)
+                    if (e.functionName == AttackEventName) { AttackEventTime = e.time; AttackLength = clip.length; return; }
+        }
 
         void Awake()
         {
             if (Animator == null) Animator = GetComponentInChildren<Animator>();
+            ReadAttackTiming();
         }
 
         /// <summary>The state currently requested (Attack shows briefly, then falls back).</summary>
@@ -31,6 +56,7 @@ namespace BoneSquadKiting.Visuals
         /// <summary>Show a one-off attack, then return to whatever SetState asks for.</summary>
         public void PlayAttack(float holdSeconds = 0.35f)
         {
+            if (AttackLength > 0f) holdSeconds = AttackLength;   // a full motion with a release point plays to its end
             _attackUntil = Time.time + holdSeconds;
             Apply(VisualState.Attack, restart: true);
         }

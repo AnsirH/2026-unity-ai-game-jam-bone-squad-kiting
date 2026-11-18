@@ -30,9 +30,11 @@ namespace BoneSquadKiting.Squad
             public Renderer Capsule;       // placeholder only
             public UnitVisual Visual;      // model only
             public int ShotsSeen;
+            public int Index;
         }
 
         readonly List<View> _views = new();
+        BoneSquadKiting.Game.GameDirector _director;
         MaterialPropertyBlock _block;
         Color _baseEmission;
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
@@ -79,6 +81,8 @@ namespace BoneSquadKiting.Squad
                 var want = Quaternion.LookRotation(new Vector3(u.Facing.x, 0f, u.Facing.y)) * Quaternion.Euler(0f, Art.ModelYawOffset, 0f);
                 v.Root.rotation = Quaternion.RotateTowards(v.Root.rotation, want, Art.TurnSpeed * Time.deltaTime);
             }
+            // The model's attack animation decides when the projectile leaves and how long the motion takes.
+            u.AttackWindup = v.Visual.AttackEventTime; u.AttackDuration = v.Visual.AttackLength;
             if (u.ShotCount != v.ShotsSeen) { v.ShotsSeen = u.ShotCount; v.Visual.PlayAttack(); }
             v.Visual.SetState(u.Moving ? VisualState.Run : u.Reviving && v.Visual.Has(VisualState.Revive) ? VisualState.Revive : VisualState.Idle);
         }
@@ -140,6 +144,16 @@ namespace BoneSquadKiting.Squad
                     view.Visual = root.gameObject.AddComponent<UnitVisual>();
                     view.Visual.States = leader && Art.LeaderPrefab != null ? Art.LeaderStates : Art.UnitStates;
                     view.Visual.Animator = root.GetComponentInChildren<Animator>();
+                }
+                if (Application.isPlaying)
+                {
+                    // The animation's release event lets the shot go at the exact frame the hand opens.
+                    view.Visual.AttackReleased = () =>
+                    {
+                        if (_director == null) _director = FindAnyObjectByType<BoneSquadKiting.Game.GameDirector>();
+                        if (_director != null && _director.Shots != null && Squad != null && index < Squad.Units.Count)
+                            _director.Shots.ReleasePending(Squad.Units[index]);
+                    };
                 }
             }
             else view.Capsule = root.GetComponent<Renderer>();

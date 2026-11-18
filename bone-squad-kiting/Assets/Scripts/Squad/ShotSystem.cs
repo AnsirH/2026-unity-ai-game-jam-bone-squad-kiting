@@ -10,6 +10,8 @@ namespace BoneSquadKiting.Squad
         public float X, Z, Life;
         public int Owner;
         public IEnemy Target;
+        public bool Heavy;      // thrown by the squad leader: drawn as its own projectile
+        public Vector2 Dir;     // which way it is flying
     }
 
     /// <summary>
@@ -63,19 +65,24 @@ namespace BoneSquadKiting.Squad
         {
             foreach (var u in units)
             {
+                if (u.PendingTarget != null)
+                {
+                    // Mid wind-up: the shot leaves when the time is up (or earlier, when the model's
+                    // animation event calls ReleasePending). Moving, dying or losing the target calls it off.
+                    if (u.Dead || !FireRules.CanFire(u, order) || u.PendingTarget is not { Alive: true }) CancelPending(u);
+                    else if ((u.WindupLeft -= dt) <= 0f) ReleasePending(u);
+                    continue;
+                }
                 if (u.Dead || u.Cd > 0 || !FireRules.CanFire(u, order)) continue;
                 var target = Acquire(u, registry, order, FireRange, ThreatRadius, AttackMoveRadius);
                 if (target == null) continue;
-                u.Cd = GameConstants.UnitCdMin + Random.value * GameConstants.UnitCdRand;
-                var dir = (target.Pos - new Vector2(u.X, u.Z)).normalized;
-                Shots.Add(new Shot
-                {
-                    X = u.X + dir.x * MuzzleOffset, Z = u.Z + dir.y * MuzzleOffset,
-                    Life = GameConstants.ShotLife, Owner = u.Id, Target = target,
-                });
+                u.Cd = Mathf.Max(GameConstants.UnitCdMin + Random.value * GameConstants.UnitCdRand, u.AttackDuration);
                 target.Reserved += GameConstants.UnitDamage;
-                u.Facing = dir;   // turn to face what it shoots
-                u.ShotCount++;
+                u.Facing = (target.Pos - new Vector2(u.X, u.Z)).normalized;   // turn to face what it shoots
+                u.ShotCount++;                                               // the view starts the attack motion on this
+                u.PendingTarget = target;
+                u.WindupLeft = u.AttackWindup;
+                if (u.AttackWindup <= 0f) ReleasePending(u);
             }
 
             for (int i = Shots.Count - 1; i >= 0; i--)
@@ -98,9 +105,39 @@ namespace BoneSquadKiting.Squad
                     continue;
                 }
                 var dir = to / dist;
+                s.Dir = dir;
                 s.X += dir.x * step; s.Z += dir.y * step;
                 Shots[i] = s;
             }
+        }
+
+        /// <summary>
+        /// Let go of the shot a unit is winding up, now. Called when the wind-up time runs out, or by the
+        /// model's attack animation event at the moment the hand opens. Does nothing without a pending shot.
+        /// </summary>
+        public void ReleasePending(SquadUnit u)
+        {
+            var target = u.PendingTarget;
+            if (target == null) return;
+            u.PendingTarget = null;
+            if (u.Dead || target is not { Alive: true }) { ReleaseReserve(target); return; }
+            var dir = (target.Pos - new Vector2(u.X, u.Z)).normalized;
+            Shots.Add(new Shot
+            {
+                X = u.X + dir.x * MuzzleOffset, Z = u.Z + dir.y * MuzzleOffset,
+                Life = GameConstants.ShotLife, Owner = u.Id, Target = target, Heavy = u.IsLeader, Dir = dir,
+            });
+        }
+
+        void CancelPending(SquadUnit u)
+        {
+            ReleaseReserve(u.PendingTarget);
+            u.PendingTarget = null;
+        }
+
+        static void ReleaseReserve(IEnemy target)
+        {
+            if (target != null) target.Reserved = Mathf.Max(0f, target.Reserved - GameConstants.UnitDamage);
         }
 
         static void Release(Shot s)

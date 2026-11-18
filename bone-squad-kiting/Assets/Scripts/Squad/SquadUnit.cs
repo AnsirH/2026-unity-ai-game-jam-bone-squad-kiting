@@ -23,6 +23,13 @@ namespace BoneSquadKiting.Squad
         public float Arrive = GameConstants.UnitArrive;
         public int ShotCount;
 
+        // An attack with a wind-up (the leader's throw): the shot leaves this long after the attack starts,
+        // and the unit cannot start another until the whole motion is over. Both are 0 for instant shots.
+        // The view sets them from the model's attack animation.
+        public float AttackWindup, AttackDuration;
+        public BoneSquadKiting.Combat.IEnemy PendingTarget;   // what the attack in progress is aimed at
+        public float WindupLeft;
+
         /// <summary>
         /// Walk toward a world position, faster the further away it is (prototype update()). The caller
         /// decides the position — normally anchor + slot, pulled inside the playable area if needed.
