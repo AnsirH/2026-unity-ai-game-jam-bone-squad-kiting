@@ -46,6 +46,7 @@ namespace BoneSquadKiting.UI
         public Button OverlayButton;
 
         float _toastUntil;
+        bool _wasPlaying;
 
         void Start()
         {
@@ -57,7 +58,7 @@ namespace BoneSquadKiting.UI
                 FormationButtons[i].onClick.AddListener(() => Director.ChangeFormation(id));
                 if (i < FormationLabels.Length) FormationLabels[i].text = $"{formations[i].HotKey}  {formations[i].DisplayName}";
             }
-            if (OverlayButton != null) OverlayButton.onClick.AddListener(Director.Restart);
+            if (OverlayButton != null) OverlayButton.onClick.AddListener(OnOverlayButton);
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
             Director.WaveStarted += OnWaveStarted;
@@ -78,6 +79,12 @@ namespace BoneSquadKiting.UI
 
         void OnCutscene(Vector2 focus, float seconds, string title, GameObject fx) { if (!string.IsNullOrEmpty(title)) ShowToast(title, seconds); }
         void OnMiniBossDefeated(Elite elite) => ShowToast(Director.EndOpen ? "끝 지점이 열렸습니다" : $"{elite.Def.DisplayName} 처치", 3f);
+        void OnOverlayButton()
+        {
+            if (Director.Phase == GamePhase.Win) Director.Proceed();
+            else Director.Restart();
+        }
+
         void OnWaveStarted(int wave, int mobs) => ShowToast($"웨이브 {wave}  (+{mobs})");
 
         void OnResolved(int hit, int lost) => ShowToast(hit == 0 ? "PERFECT DODGE!" : $"피격 {hit}명 · 전사 {lost}명");
@@ -100,6 +107,8 @@ namespace BoneSquadKiting.UI
         public void Refresh()
         {
             bool playing = Director.Phase == GamePhase.Play;
+            if (playing && !_wasPlaying && !string.IsNullOrEmpty(Director.StageTitle)) ShowToast(Director.StageTitle, 2f);
+            _wasPlaying = playing;
 
             // The bar shows the boss, or on a stage without one, the mini boss currently in play.
             Elite elite = Director.Elites != null && Director.Elites.Elites.Count > 0 ? Director.Elites.Elites[0] : null;
@@ -152,13 +161,19 @@ namespace BoneSquadKiting.UI
             Overlay.SetActive(!playing);
             if (!playing)
             {
+                string stage = string.IsNullOrEmpty(Director.StageTitle) ? "" : Director.StageTitle + "  ";
                 OverlayTitle.text = Director.Phase switch
                 {
-                    GamePhase.Win => "승리",
-                    GamePhase.Lose => "전멸",
+                    GamePhase.Win => Director.IsFinalStage ? "게임 클리어" : stage + "클리어",
+                    GamePhase.Lose => stage + "전멸",
                     _ => "KITE SQUAD 25",
                 };
-                OverlayButtonText.text = Director.Phase == GamePhase.Menu ? "시작 (Enter)" : "다시 시작 (Enter)";
+                OverlayButtonText.text = Director.Phase switch
+                {
+                    GamePhase.Menu => "시작 (Enter)",
+                    GamePhase.Win => Director.IsFinalStage ? "처음으로 (Enter)" : "다음 스테이지 (Enter)",
+                    _ => "다시 시작 (Enter)",
+                };
             }
         }
 

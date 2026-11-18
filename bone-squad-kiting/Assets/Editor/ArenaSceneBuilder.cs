@@ -44,19 +44,44 @@ namespace BoneSquadKiting.EditorTools
         const float UnitFireRange = 5.5f;
         const float SquadEngageRange = 5f;
 
-        const string StageProtoPath = "Assets/Scenes/StageProto.unity";
+        /// <summary>
+        /// A placeholder progress stage: a corridor with a few obstacles, a start and an end point, endless
+        /// waves that grow toward the end and, on most stages, a mini boss near the end. Every number here is
+        /// a starting value, not a tuned one. Real maps will replace these scenes.
+        /// </summary>
+        class StageSpec
+        {
+            public string Name, Title, Next;
+            public float Width = 18f, Length = 64f;
+            public bool MiniBoss = true;
+            public float Interval0 = 12f, Interval1 = 5f;   // seconds between waves at the start / at the end
+            public float Count0 = 8f, Count1 = 30f;         // mobs per wave at the start / at the end
+            public string Path => $"Assets/Scenes/{Name}.unity";
+        }
+
+        // Stage order (decision #37): 1, 2, 4 = mobs + mini boss; 3 = no mini boss, break through to the end;
+        // 5 = the boss arena.
+        static readonly StageSpec[] Stages =
+        {
+            new() { Name = "Stage1", Title = "스테이지 1", Next = "Stage2", Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f },
+            new() { Name = "Stage2", Title = "스테이지 2", Next = "Stage3", Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f },
+            new() { Name = "Stage3", Title = "스테이지 3", Next = "Stage4", Length = 84f, MiniBoss = false, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f },
+            new() { Name = "Stage4", Title = "스테이지 4", Next = "Arena", Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f },
+        };
+        const string ArenaTitle = "스테이지 5";
 
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
-        public static void Build() => BuildScene(ScenePath, mobStage: false);
+        public static void Build() => BuildScene(ScenePath, null);
 
-        /// <summary>
-        /// A placeholder progress stage for trying out mobs: a long corridor with a few obstacles, a start
-        /// and an end point, and endless waves of mobs that grow toward the end. Same squad, camera and HUD as the arena, no boss.
-        /// </summary>
-        [MenuItem("BoneSquadKiting/Rebuild Stage Proto Scene")]
-        public static void BuildStageProto() => BuildScene(StageProtoPath, mobStage: true);
+        /// <summary>Stage 1 to 4 and then the arena (stage 5), in play order. The arena is left open.</summary>
+        [MenuItem("BoneSquadKiting/Rebuild All Stage Scenes")]
+        public static void BuildAllStages()
+        {
+            foreach (var spec in Stages) BuildScene(spec.Path, spec);
+            BuildScene(ScenePath, null);
+        }
 
-        static void BuildScene(string scenePath, bool mobStage)
+        static void BuildScene(string scenePath, StageSpec mobStage)
         {
             int enemyLayer = EnsureLayer(EnemyLayer);
             EnsureFolder("Assets", "Prototype"); EnsureFolder("Assets/Prototype", "Materials");
@@ -228,31 +253,37 @@ namespace BoneSquadKiting.EditorTools
             fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
             fx.HitParticles = particles; fx.Ring = ring;
 
-            if (mobStage) ConvertToMobStage(plane, baker, stage, director, squad, squadView, scroll, bossGo, bossArea, teleGo, startPoint);
+            if (mobStage != null) ConvertToMobStage(mobStage, plane, baker, stage, director, squad, squadView, scroll, bossGo, bossArea, teleGo, startPoint);
+            else { director.StageTitle = ArenaTitle; director.NextScene = ""; director.Stage = stage; }
 
             EditorSceneManager.SaveScene(scene, scenePath);
-            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene> { new(ScenePath, true) };
-            if (System.IO.File.Exists(StageProtoPath)) scenes.Add(new EditorBuildSettingsScene(StageProtoPath, true));
+
+            // Build order = play order: the stage scenes that exist, then the arena. The first one is the title screen.
+            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+            foreach (var spec in Stages)
+                if (System.IO.File.Exists(spec.Path)) scenes.Add(new EditorBuildSettingsScene(spec.Path, true));
+            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
             Debug.Log("ArenaSceneBuilder: wrote " + scenePath);
         }
 
         // Reshape the freshly built arena into a corridor stage fought against rounds of mobs.
-        static void ConvertToMobStage(GameObject plane, WalkGridBaker baker, StageSetup stage, GameDirector director,
+        static void ConvertToMobStage(StageSpec spec, GameObject plane, WalkGridBaker baker, StageSetup stage, GameDirector director,
             FormationController squad, SquadView squadView, EdgeScrollCamera scroll, GameObject bossGo, GameObject bossArea,
             GameObject teleGo, GameObject startPoint)
         {
-            const float width = 18f, length = 64f;
-            var start = new Vector2(0f, 26f);            // near end; the camera looks toward -z, so "forward" is up-screen
-            var end = new Vector2(0f, -26f);
+            float width = spec.Width, length = spec.Length;
+            var start = new Vector2(0f, length / 2f - 6f);   // near end; the camera looks toward -z, so "forward" is up-screen
+            var end = new Vector2(0f, -(length / 2f - 6f));
+            director.StageTitle = spec.Title; director.NextScene = spec.Next;
 
             plane.transform.localScale = new Vector3(width / 10f, 1f, length / 10f);
             baker.Size = new Vector2(width, length);
 
             Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea);   // the telegraph view stays: the mini boss uses it
             director.BossView = null; director.HasBoss = false;
-            director.ClearRule = StageClearRule.DefeatMiniBossThenReachEnd;
+            director.ClearRule = spec.MiniBoss ? StageClearRule.DefeatMiniBossThenReachEnd : StageClearRule.ReachEnd;
             director.Stage = stage;
 
             // Move the squad and its pre-placed units to the start point.
@@ -273,7 +304,9 @@ namespace BoneSquadKiting.EditorTools
             // A few blocks to walk (and path) around.
             var obstacleMat = Lit("Obstacle", Hex("#2b3d52"));
             int obstacleLayer = EnsureLayer(ObstacleLayer);
-            var blocks = new[] { new Vector4(-4.5f, 14f, 6f, 2f), new Vector4(5f, 4f, 5f, 2f), new Vector4(-3f, -6f, 8f, 2f), new Vector4(5.5f, -15f, 4f, 4f) };
+            // Laid out as fractions of the corridor's half-length so longer stages spread them out.
+            float h = length / 2f;
+            var blocks = new[] { new Vector4(-4.5f, h * 0.44f, 6f, 2f), new Vector4(5f, h * 0.12f, 5f, 2f), new Vector4(-3f, -h * 0.19f, 8f, 2f), new Vector4(5.5f, -h * 0.47f, 4f, 4f) };
             foreach (var b in blocks)   // x, z, size x, size z
             {
                 var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -288,15 +321,20 @@ namespace BoneSquadKiting.EditorTools
             // Endless waves that grow as the squad advances toward the end point.
             var waves = stage.gameObject.AddComponent<WaveSpawner>();
             waves.Mob = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
+            waves.Interval = AnimationCurve.Linear(0f, spec.Interval0, 1f, spec.Interval1);
+            waves.Count = AnimationCurve.Linear(0f, spec.Count0, 1f, spec.Count1);
             director.Waves = waves;
 
-            // A mini boss waits near the end; it appears when the squad comes within its trigger radius.
-            var miniBoss = new GameObject("Mini Boss Spawn");
-            miniBoss.transform.SetParent(stage.transform, false);
-            miniBoss.transform.position = new Vector3(0f, 0f, end.y + 8f);
-            var spawn = miniBoss.AddComponent<MiniBossSpawn>();
-            spawn.Definition = Load<EliteDefinition>("Assets/Data/Elites/Brute.asset");
-            spawn.TriggerRadius = 12f;
+            if (spec.MiniBoss)
+            {
+                // A mini boss waits near the end; it appears when the squad comes within its trigger radius.
+                var miniBoss = new GameObject("Mini Boss Spawn");
+                miniBoss.transform.SetParent(stage.transform, false);
+                miniBoss.transform.position = new Vector3(0f, 0f, end.y + 8f);
+                var spawn = miniBoss.AddComponent<MiniBossSpawn>();
+                spawn.Definition = Load<EliteDefinition>("Assets/Data/Elites/Brute.asset");
+                spawn.TriggerRadius = 12f;
+            }
 
             var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();
             eliteView.Director = director;
