@@ -116,6 +116,8 @@ namespace BoneSquadKiting.EditorTools
             scroll.Distance = CameraDistance; scroll.LookAt = CameraStartLookAt;
             scroll.Apply();
 
+            game.AddComponent<RangeGizmos>().Director = director; // Scene-view circles for tuning the two ranges
+
             var input = game.AddComponent<SquadInputController>();
             input.Cam = cam; input.Director = director; input.EnemyMask = 1 << enemyLayer;
 
