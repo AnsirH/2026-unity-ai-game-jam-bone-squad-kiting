@@ -55,6 +55,42 @@ namespace BoneSquadKiting.Core
         }
 
         /// <summary>
+        /// Like <see cref="Slide"/> but keeps the step's length: when the step is blocked it is turned left
+        /// and right in <paramref name="stepDegrees"/> increments up to <paramref name="maxDegrees"/> and the
+        /// first open direction is used. Following a slanted (stair-stepped) wall this keeps a steady pace
+        /// instead of stuttering on each step. Returns <paramref name="from"/> when nothing is open.
+        /// </summary>
+        public Vector2 Sweep(Vector2 from, Vector2 to, float maxDegrees = 75f, float stepDegrees = 15f)
+        {
+            if (IsWalkable(to)) return to;
+            var step = to - from;
+            for (float a = stepDegrees; a <= maxDegrees + 0.01f; a += stepDegrees)
+            {
+                var left = from + Turn(step, a);
+                if (IsWalkable(left)) return left;
+                var right = from + Turn(step, -a);
+                if (IsWalkable(right)) return right;
+            }
+            return from;
+        }
+
+        static Vector2 Turn(Vector2 v, float degrees)
+        {
+            float r = degrees * Mathf.Deg2Rad, c = Mathf.Cos(r), s = Mathf.Sin(r);
+            return new Vector2(v.x * c - v.y * s, v.x * s + v.y * c);
+        }
+
+        /// <summary>True when every point on the straight line between the two positions is walkable.</summary>
+        public bool LineOpen(Vector2 a, Vector2 b)
+        {
+            float dist = (b - a).magnitude;
+            int steps = Mathf.Max(1, Mathf.CeilToInt(dist / (CellSize * 0.25f)));
+            for (int i = 0; i <= steps; i++)
+                if (!IsWalkable(Vector2.Lerp(a, b, i / (float)steps))) return false;
+            return true;
+        }
+
+        /// <summary>
         /// Walk the straight line from <paramref name="from"/> (assumed walkable) toward <paramref name="to"/>
         /// and return the last walkable point on it: <paramref name="to"/> itself when the whole way is open.
         /// Used to pull a formation slot that falls outside the playable area back toward the squad anchor.

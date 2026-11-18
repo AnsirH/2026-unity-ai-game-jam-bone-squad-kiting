@@ -56,4 +56,33 @@ public class WalkGridTests
         Assert.That(outside.y, Is.LessThan(4f)); Assert.That(outside.y, Is.GreaterThan(3.5f), "the grid edge works like a wall");
         Assert.AreEqual(from, g.LastWalkableToward(from, from));
     }
+
+    [Test]
+    public void Sweep_KeepsTheStepLength_AndTurnsOnlyAsFarAsNeeded()
+    {
+        var g = WalkGrid.Open(Vector2.zero, new Vector2(10, 10), 1f);
+        for (int x = 0; x < 10; x++) g.Walkable[g.Index(x, 5)] = false;     // wall across z in [5,6)
+        var from = new Vector2(3.5f, 4.8f);
+
+        var free = g.Sweep(from, from + new Vector2(0.3f, -0.2f));
+        Assert.AreEqual(from + new Vector2(0.3f, -0.2f), free, "open step is taken as is");
+
+        var blocked = from + new Vector2(0.5f, 0.3f);                        // heading into the wall at a shallow angle
+        var swept = g.Sweep(from, blocked);
+        Assert.IsTrue(g.IsWalkable(swept));
+        Assert.That((swept - from).magnitude, Is.EqualTo((blocked - from).magnitude).Within(1e-4f), "same length");
+        Assert.That(swept.x, Is.GreaterThan(from.x), "still going the same way along the wall");
+
+        Assert.AreEqual(from, g.Sweep(from, from + new Vector2(0f, 0.5f), maxDegrees: 30f), "nothing open within the allowed turn");
+    }
+
+    [Test]
+    public void LineOpen_SeesWalls()
+    {
+        var g = WalkGrid.Open(Vector2.zero, new Vector2(10, 4), 1f);
+        g.Walkable[g.Index(5, 1)] = false;
+        Assert.IsTrue(g.LineOpen(new Vector2(1.5f, 3.5f), new Vector2(8.5f, 3.5f)));
+        Assert.IsFalse(g.LineOpen(new Vector2(1.5f, 1.5f), new Vector2(8.5f, 1.5f)), "through the pillar");
+        Assert.IsFalse(g.LineOpen(new Vector2(1.5f, 1.5f), new Vector2(20f, 1.5f)), "ends off the grid");
+    }
 }
