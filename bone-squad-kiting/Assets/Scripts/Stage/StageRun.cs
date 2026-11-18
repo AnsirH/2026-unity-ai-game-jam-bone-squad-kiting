@@ -33,6 +33,8 @@ namespace BoneSquadKiting.Stage
             public float CameraYaw = 0f;
             [Tooltip("Post-processing look of this stage (a Volume Profile). Empty = the project's default look.")]
             public VolumeProfile Volume;
+            [Tooltip("Keep the scene's Directional Light on for this stage. Off for an indoor map, or a map that brings its own light.")]
+            public bool UseSceneLight = true;
         }
 
         public List<Entry> Stages = new();
@@ -42,6 +44,8 @@ namespace BoneSquadKiting.Stage
         public string NextScene = "";
         [Tooltip("Seconds the screen takes to go dark, and again to come back.")]
         public float FadeSeconds = 0.35f;
+        [Tooltip("The scene's Directional Light that stages share. Empty = the directional lights outside the maps are found when play starts.")]
+        public Light SceneLight;
 
         /// <summary>
         /// Set by the main menu before it loads this scene: the stage to begin on, instead of StartStage.
@@ -120,7 +124,30 @@ namespace BoneSquadKiting.Stage
             var cam = Kit.Cam.transform;
             cam.rotation = Quaternion.Euler(cam.eulerAngles.x, entry.CameraYaw, 0f);
             WireVolume(entry);
+            WireLight(entry);
             WireWaves(entry);
+        }
+
+        Light[] _sceneLights;
+
+        // The scene's own directional light(s), not the ones that belong to a map, go on or off with the stage.
+        void WireLight(Entry entry)
+        {
+            if (_sceneLights == null)
+            {
+                var found = new List<Light>();
+                if (SceneLight != null) found.Add(SceneLight);
+                else
+                    foreach (var l in FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    {
+                        if (l.type != LightType.Directional || l.gameObject.scene != gameObject.scene) continue;
+                        bool inMap = false;
+                        foreach (var s in Stages) if (s.Map != null && l.transform.IsChildOf(s.Map.transform)) inMap = true;
+                        if (!inMap && (Kit == null || !l.transform.IsChildOf(Kit.transform))) found.Add(l);
+                    }
+                _sceneLights = found.ToArray();
+            }
+            foreach (var l in _sceneLights) if (l != null && l.enabled != entry.UseSceneLight) l.enabled = entry.UseSceneLight;
         }
 
         // One global volume for the whole run; each stage puts its own profile in it. Swapped while the

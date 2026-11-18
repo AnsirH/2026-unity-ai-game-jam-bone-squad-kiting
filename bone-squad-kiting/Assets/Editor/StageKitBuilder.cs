@@ -96,7 +96,7 @@ namespace BoneSquadKiting.EditorTools
             int enemyLayer = A.EnsureLayer(A.EnemyLayer);
             var unit = A.Lit("Unit", A.Hex("#35e0d0"), A.Hex("#35e0d0") * 0.6f);
             var shot = A.Lit("Shot", A.Hex("#ffe27a"), A.Hex("#ffd24a") * 2.5f);
-            var telegraph = A.Upsert($"{A.MatDir}/Telegraph.mat", Shader.Find("Sprites/Default"));
+            var telegraph = A.Upsert($"{A.MatDir}/Telegraph.mat", A.TelegraphShader());
             var particleMat = A.Upsert($"{A.MatDir}/Particle.mat", Shader.Find("Sprites/Default"));
             var tuning = AssetDatabase.LoadAssetAtPath<GameTuning>("Assets/Data/GameTuning.asset");
 
@@ -373,7 +373,7 @@ namespace BoneSquadKiting.EditorTools
                 SceneManager.MoveGameObjectToScene(go, scene);
                 go.transform.SetAsFirstSibling();
                 var run = go.AddComponent<StageRun>();
-                run.NextScene = "Arena";
+                run.NextScene = "";
                 for (int i = 0; i < maps.Count; i++)
                 {
                     run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd,
