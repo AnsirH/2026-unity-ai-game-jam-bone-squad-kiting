@@ -25,9 +25,10 @@ MonoBehaviour:
   Prefab: {fileID: 6834550672567396701, guid: 55397ca90934c47c5b23256db442b70d, type: 3}
   ModelScale: 0.85
   ModelYawOffset: 0
+  AttackAnimSeconds: 1.2
   States:
-    Idle: 
-    Run: 
+    Idle: Idle
+    Run: Run
     Attack: Cast
     Die: 
     Revive: 
