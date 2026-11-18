@@ -24,6 +24,8 @@
 - 스테이지 5개 연결(Stage1~4 + Arena)과 Windows 시험 빌드
 - 테스트: EditMode 143개, PlayMode 147개 통과
 
+- 웨이브 플랜 에셋과 웨이브 도구 창(sub-1 워크트리에서 구현). 안내: `docs/guides/wave-tool.md`
+
 ## 막힘
 
 - 시험 빌드를 실행해서 플레이해 보지 않았다. 셰이더가 빌드에서 제대로 나오는지 확인되지 않았다
@@ -37,6 +39,8 @@
 - 맵 제작 안내(`docs/guides/map-authoring.md`)에 미니 보스 표식, 씬 연결(Build Settings·Next Scene), 스크린샷이 없다
 
 ## 다음 할 일
+
+- 웨이브 값 잡기: Wave Tool로 버전을 나눠 플레이하며 비교. 그 전에 잡몹 속도 정하기(분대 3.66, 잡몹 3.2)
 
 - 진형 회전 속도를 플레이하며 정하기: `Assets/Data/GameTuning.asset`의 Rotation Speed(도/초, 0 = 즉시). 이 에셋 하나를 5개 씬이 함께 쓰고, 사거리·부활 시간·카메라 스크롤·잡몹 최대 수도 여기서 고친다. 플레이 중에 바꿔도 바로 적용되고 값이 남는다
 - 장판 회전 속도: `Assets/Data/Elites/*.asset`의 Zone Rotation Speed. 지속 피해 설정: `Assets/Data/Patterns/*.asset`의 Kind, Sustain Seconds, Tick Interval, Tick Damage. 지역 잠금: 씬의 Camera Gate 오브젝트
