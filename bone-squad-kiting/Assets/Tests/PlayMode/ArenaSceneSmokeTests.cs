@@ -86,7 +86,9 @@ public class ArenaSceneSmokeTests
         yield return new WaitForSeconds(0.6f);
         Capture("arena-1-telegraph-core.png");
 
-        // Dodge the first pattern (core -> ring), then show the second (gate) in line formation.
+        // Dodge the first pattern (core -> ring). Step back from the boss first: right next to it the ring
+        // overlaps the boss's keep-out area, and units pressed inward there can still be caught.
+        director.IssueOrder(SquadOrder.Move(new Vector2(0f, 3.4f)));
         director.ChangeFormation("ring");
         float resolveBy = Time.time + 4f;
         while (director.Attacks.Current != null && Time.time < resolveBy) yield return null;

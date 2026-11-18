@@ -25,6 +25,11 @@ namespace BoneSquadKiting.Squad
         /// are pulled back toward the anchor. When null the prototype arena's fixed limits apply.
         /// </summary>
         [System.NonSerialized] public WalkGrid Grid;
+        public float SeatSize = 0.5f;   // spacing of the seats pressed units take along a wall (about one unit spacing)
+
+        FlowField _route;               // path to the current destination, used when the straight line is blocked
+        readonly List<Vector2> _slotBuffer = new();
+        readonly List<SquadUnit> _aliveBuffer = new();
         public string Formation = DefaultFormation;
         public float RotationStepDegrees = 15f;              // one mouse-wheel notch (initial value, not final)
         public float RotationDegrees;                         // clockwise seen from above; 0 = as authored
@@ -129,11 +134,19 @@ namespace BoneSquadKiting.Squad
         /// <summary>Set where the anchor walks to, clamped to the commander's allowed area.</summary>
         public void SetDestination(Vector2 d)
         {
-            Destination = Grid != null
-                ? Grid.NearestWalkable(d)
-                : new Vector2(
-                    Mathf.Clamp(d.x, -GameConstants.MoveClampX, GameConstants.MoveClampX),
-                    Mathf.Clamp(d.y, GameConstants.MoveClampZMin, GameConstants.MoveClampZMax));
+            if (Grid != null)
+            {
+                // A click on blocked ground goes to the nearest walkable point. If there is no walkable route
+                // there at all, the squad stays where it is.
+                var target = Grid.NearestWalkable(d);
+                if (_route == null || _route.Grid != Grid) _route = new FlowField(Grid);
+                _route.Build(Grid.Cell(target));
+                Destination = _route.DistanceAt(Anchor) == FlowField.Unreachable ? Anchor : target;
+                return;
+            }
+            Destination = new Vector2(
+                Mathf.Clamp(d.x, -GameConstants.MoveClampX, GameConstants.MoveClampX),
+                Mathf.Clamp(d.y, GameConstants.MoveClampZMin, GameConstants.MoveClampZMax));
         }
 
         public void Tick(float dt)
@@ -142,15 +155,33 @@ namespace BoneSquadKiting.Squad
             float dist = diff.magnitude;
             if (dist > GameConstants.AnchorArrive)
             {
-                var next = Anchor + diff / dist * Mathf.Min(dist, GameConstants.AnchorSpeed * dt);
+                float step = Mathf.Min(dist, GameConstants.AnchorSpeed * dt);
+                var dir = diff / dist;
+                if (Grid != null && _route != null && !Grid.LineOpen(Anchor, Destination))
+                {
+                    // Something is in the way: follow the route around it until the destination is in sight.
+                    var routed = _route.DirectionAt(Anchor);
+                    if (routed != Vector2.zero) dir = routed;
+                }
+                var next = Anchor + dir * step;
                 if (Grid != null)
                 {
-                    next = Grid.Slide(Anchor, next);      // walls are slid along, never entered
+                    next = Grid.Sweep(Anchor, next);      // brush past wall corners without losing pace
                     if (next == Anchor) Halt();           // boxed in: give up rather than push forever
                 }
                 Anchor = next;
             }
-            foreach (var u in Units) u.MoveToward(SlotPosition(u.Slot), dt);
+
+            if (Grid == null)
+            {
+                foreach (var u in Units) u.MoveToward(SlotPosition(u.Slot), dt);
+                return;
+            }
+            // On a stage grid, units whose slot is outside the area take seats along the wall.
+            _aliveBuffer.Clear(); _slotBuffer.Clear();
+            foreach (var u in Units) if (!u.Dead) { _aliveBuffer.Add(u); _slotBuffer.Add(u.Slot); }
+            var targets = SquadSeating.Resolve(Grid, Anchor, _slotBuffer, SeatSize);
+            for (int i = 0; i < _aliveBuffer.Count; i++) _aliveBuffer[i].MoveToward(targets[i], dt);
         }
     }
 }

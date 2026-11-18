@@ -116,16 +116,96 @@ public class SquadBoundaryTests
     }
 
     [Test]
-    public void BoxedInAnchor_GivesUpInsteadOfPushingForever()
+    public void UnreachableDestination_IsRefused_TheSquadDoesNotSetOff()
     {
         var g = Room();
         for (int z = 0; z < 20; z++) g.Walkable[g.Index(10, z)] = false;   // a wall with no gap
         Place(new Vector2(5, 10));
-        _fc.SetDestination(new Vector2(15, 10));   // walkable, but on the far side
-        Run(4f);
-        Assert.IsFalse(_fc.IsMoving, "stopped at the wall");
-        Assert.That(_fc.Anchor.x, Is.LessThan(10f));
-        Assert.IsTrue(g.IsWalkable(_fc.Anchor));
+        _fc.SetDestination(new Vector2(15, 10));   // walkable ground, but no way to get there
+        Assert.IsFalse(_fc.IsMoving, "no route: it does not start walking");
+        Run(1f);
+        Assert.AreEqual(new Vector2(5, 10), _fc.Anchor);
+    }
+
+    [Test]
+    public void ClickBehindAWall_TheSquadWalksAroundIt()
+    {
+        var g = Room();
+        for (int z = 0; z < 16; z++) g.Walkable[g.Index(10, z)] = false;   // a wall with a gap at the top (z 16..20)
+        Place(new Vector2(5, 3));
+        _fc.SetFormation("dense");
+        _fc.SetDestination(new Vector2(15, 3));    // straight across is blocked; the way round is ~30 long
+        Assert.IsTrue(_fc.IsMoving);
+        float maxZ = 0;
+        for (float t = 0; t < 8f; t += 0.016f)
+        {
+            _fc.Tick(0.016f);
+            Assert.IsTrue(g.IsWalkable(_fc.Anchor), $"anchor entered the wall at {_fc.Anchor}");
+            maxZ = Mathf.Max(maxZ, _fc.Anchor.y);
+        }
+        Assert.That(Vector2.Distance(_fc.Anchor, new Vector2(15, 3)), Is.LessThan(0.1f), "arrived on the far side");
+        Assert.That(maxZ, Is.GreaterThan(15.5f), "by going up through the gap");
+        Assert.IsFalse(_fc.IsMoving);
+    }
+
+    [Test]
+    public void OpenGround_StillGoesInAStraightLine()
+    {
+        Room();
+        Place(new Vector2(3, 3));
+        _fc.SetDestination(new Vector2(15, 12));
+        var dir = (new Vector2(15, 12) - new Vector2(3, 3)).normalized;
+        for (int i = 0; i < 60; i++)
+        {
+            var before = _fc.Anchor;
+            _fc.Tick(0.016f);
+            var moved = _fc.Anchor - before;
+            if (moved.magnitude < 1e-4f) break;
+            Assert.That(Vector2.Dot(moved.normalized, dir), Is.GreaterThan(0.999f), "no detours when nothing is in the way");
+        }
+    }
+
+    [Test]
+    public void AlongASlantedWall_TheSquadKeepsItsPace()
+    {
+        var g = Room();
+        for (int z = 0; z < 20; z++) for (int x = 0; x < 20; x++) if (x + z >= 24) g.Walkable[g.Index(x, z)] = false; // diagonal wall
+        Place(new Vector2(5f, 17.5f));
+        _fc.SetDestination(new Vector2(17.5f, 5f));
+        float slowest = float.MaxValue; int steps = 0;
+        for (int i = 0; i < 100; i++)
+        {
+            var before = _fc.Anchor;
+            _fc.Tick(0.016f);
+            if (!_fc.IsMoving) break;
+            slowest = Mathf.Min(slowest, (_fc.Anchor - before).magnitude / 0.016f);
+            steps++;
+        }
+        Assert.That(steps, Is.GreaterThan(50));
+        Assert.That(slowest, Is.GreaterThan(GameConstants.AnchorSpeed * 0.95f), "never slows down on the wall's steps");
+    }
+
+    [Test]
+    public void LineFormationPushedIntoAWall_UnitsSpreadOut_InsteadOfStacking()
+    {
+        var g = Room();
+        Place(new Vector2(10, 1.2f));              // line runs along z: its lower half sticks out past z = 0
+        _fc.SetFormation("line");
+        Run(3f);
+
+        float closest = float.MaxValue;
+        for (int i = 0; i < _fc.Units.Count; i++)
+        {
+            var a = _fc.Units[i];
+            Assert.IsTrue(g.IsWalkable(new Vector2(a.X, a.Z)), $"unit {a.Id} on walkable ground");
+            Assert.IsFalse(a.Moving, $"unit {a.Id} has settled");
+            for (int j = i + 1; j < _fc.Units.Count; j++)
+            {
+                var b = _fc.Units[j];
+                closest = Mathf.Min(closest, Vector2.Distance(new Vector2(a.X, a.Z), new Vector2(b.X, b.Z)));
+            }
+        }
+        Assert.That(closest, Is.GreaterThan(0.1f), "no two units stand on the same spot");
     }
 
     [Test]
