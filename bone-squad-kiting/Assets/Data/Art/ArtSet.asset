@@ -22,7 +22,7 @@ MonoBehaviour:
     Revive: 
     CrossFade: 0.1
   LeaderPrefab: {fileID: 8713152118493524032, guid: 7ac79131680ca4d81a8c25c9c2dc237b, type: 3}
-  LeaderScale: 0.35
+  LeaderScale: 0.4
   LeaderStates:
     Idle: Idle
     Run: Soldier_MeshyAI_Run02
