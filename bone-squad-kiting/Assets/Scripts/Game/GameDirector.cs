@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using BoneSquadKiting.Audio;
 using BoneSquadKiting.Bosses;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
@@ -142,7 +143,11 @@ namespace BoneSquadKiting.Game
             Telegraphs.Clear();
             Revives = new ReviveSystem();
             Revives.OnStarted += (a, b) => ReviveStarted?.Invoke(a, b);
-            Revives.OnCompleted += (a, b) => ReviveCompleted?.Invoke(a, b);
+            Revives.OnCompleted += (a, b) =>
+            {
+                SoundManager.Current?.PlaySfx("squad.revive");
+                ReviveCompleted?.Invoke(a, b);
+            };
             Revives.OnCancelled += (a, b) => ReviveCancelled?.Invoke(a, b);
             Flow = Squad.Grid != null ? new FlowField(Squad.Grid) : null;
 
@@ -168,6 +173,9 @@ namespace BoneSquadKiting.Game
             if (BossView != null && Boss != null) BossView.Bind(Boss);
             ApplyTuning();
             Phase = GamePhase.Play;
+            var sound = SoundManager.Current;
+            if (sound != null && !sound.PlayBgm(HasBoss ? "bgm.boss" : "bgm.stage"))
+                sound.StopBgm();
             FormationChanged?.Invoke(Squad.Formation);
         }
 
@@ -402,6 +410,11 @@ namespace BoneSquadKiting.Game
 
             if (AliveCount == 0) Phase = GamePhase.Lose;
             else if (StageCleared()) Phase = GamePhase.Win;
+            if (Phase == GamePhase.Win || Phase == GamePhase.Lose)
+            {
+                SoundManager.Current?.StopBgm();
+                SoundManager.Current?.PlaySfx(Phase == GamePhase.Win ? "stage.clear" : "squad.defeat");
+            }
         }
     }
 }

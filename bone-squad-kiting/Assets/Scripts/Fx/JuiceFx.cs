@@ -47,6 +47,7 @@ namespace BoneSquadKiting.Fx
 
         void OnDisable()
         {
+            if (Cam != null) Cam.CombatShakeStrength = 0f;
             if (Director == null) return;
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
@@ -100,7 +101,7 @@ namespace BoneSquadKiting.Fx
 
             Shake *= Mathf.Exp(-ShakeDecay * dt);
             if (Shake < 0.002f) Shake = 0f;
-            if (Cam != null) Cam.ShakeOffset = Shake > 0f ? Random.insideUnitSphere * Shake : Vector3.zero;
+            if (Cam != null) Cam.CombatShakeStrength = Shake;
 
             Flash = Mathf.Max(0f, Flash - FlashDecay * dt);
             if (FlashImage != null)
