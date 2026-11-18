@@ -92,6 +92,8 @@ namespace BoneSquadKiting.Cameras
 
         void Start()
         {
+            // The squad that came with this camera (the same kit or scene object tree) first; any squad otherwise.
+            if (Squad == null) Squad = transform.root.GetComponentInChildren<BoneSquadKiting.Squad.FormationController>();
             if (Squad == null) Squad = FindAnyObjectByType<BoneSquadKiting.Squad.FormationController>();
             Apply();
         }

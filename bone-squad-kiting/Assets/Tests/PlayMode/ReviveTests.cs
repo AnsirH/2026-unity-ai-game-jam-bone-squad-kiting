@@ -73,6 +73,7 @@ public class ReviveTests
     public void Reviver_KeepsItsPlace_AndCannotFireWhileReviving()
     {
         Kill(3);
+        Run(1.5f);   // the formation closes up around the gap first; the reviver is picked at random and might be one that moves
         SquadUnit reviver = null; _dir.ReviveStarted += (r, d) => reviver = r;
         _dir.TryRevive();
         Assert.IsNotNull(reviver);
