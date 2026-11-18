@@ -3,7 +3,12 @@ using UnityEngine;
 
 namespace BoneSquadKiting.Core
 {
-    /// <summary>Flat XZ mesh covering the danger area of a shape, centered on the origin. Used to draw telegraphs.</summary>
+    /// <summary>
+    /// Flat XZ mesh covering the danger area of a shape, centered on the origin. Used to draw telegraphs.
+    /// For the telegraph shader (BoneSquad/Attack Telegraph) every piece also says where each point is inside
+    /// it: UV0 = the point on a unit square (a disc or ring: the square around it; a box: across, then along
+    /// the way it grows, which is away from the center), UV1 = that square's size in metres.
+    /// </summary>
     public static class DangerShapeMesh
     {
         const int Segments = 64;
@@ -16,27 +21,31 @@ namespace BoneSquadKiting.Core
         {
             var v = new List<Vector3>();
             var t = new List<int>();
+            var uv = new List<Vector2>();
+            var size = new List<Vector2>();
             switch (s.Type)
             {
-                case DangerShapeType.Disc: Ring(v, t, 0f, s.RMax, maxStep); break;
-                case DangerShapeType.Annulus: Ring(v, t, s.RMin, s.ROut, maxStep); break;
+                case DangerShapeType.Disc: Ring(v, t, uv, size, 0f, s.RMax, maxStep); break;
+                case DangerShapeType.Annulus: Ring(v, t, uv, size, s.RMin, s.ROut, maxStep); break;
                 case DangerShapeType.CrossBandsX:
-                    Box(v, t, s.Inner, s.Outer, -s.HalfZ, s.HalfZ, maxStep);
-                    Box(v, t, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ, maxStep);
+                    Box(v, t, uv, size, s.Inner, s.Outer, -s.HalfZ, s.HalfZ, maxStep);
+                    Box(v, t, uv, size, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ, maxStep);
                     break;
                 case DangerShapeType.ThreeLanes:
-                    Box(v, t, -s.ThreeLaneHalfSpan, s.ThreeLaneHalfSpan, -s.HalfZ, s.HalfZ, maxStep);
+                    Box(v, t, uv, size, -s.ThreeLaneHalfSpan, s.ThreeLaneHalfSpan, -s.HalfZ, s.HalfZ, maxStep);
                     break;
                 case DangerShapeType.QuadrantBoxes:
-                    Box(v, t, s.Inner, s.Outer, s.Inner, s.Outer, maxStep);
-                    Box(v, t, -s.Outer, -s.Inner, s.Inner, s.Outer, maxStep);
-                    Box(v, t, s.Inner, s.Outer, -s.Outer, -s.Inner, maxStep);
-                    Box(v, t, -s.Outer, -s.Inner, -s.Outer, -s.Inner, maxStep);
+                    Box(v, t, uv, size, s.Inner, s.Outer, s.Inner, s.Outer, maxStep);
+                    Box(v, t, uv, size, -s.Outer, -s.Inner, s.Inner, s.Outer, maxStep);
+                    Box(v, t, uv, size, s.Inner, s.Outer, -s.Outer, -s.Inner, maxStep);
+                    Box(v, t, uv, size, -s.Outer, -s.Inner, -s.Outer, -s.Inner, maxStep);
                     break;
             }
             var m = new Mesh { name = "DangerShape " + s.Type };
             m.SetVertices(v);
             m.SetTriangles(t, 0);
+            m.SetUVs(0, uv);
+            m.SetUVs(1, size);
             m.RecalculateNormals();
             m.RecalculateBounds();
             return m;
@@ -45,7 +54,7 @@ namespace BoneSquadKiting.Core
         static int Steps(float length, float maxStep) =>
             maxStep <= 0f ? 1 : Mathf.Clamp(Mathf.CeilToInt(Mathf.Abs(length) / maxStep), 1, 64);
 
-        static void Ring(List<Vector3> v, List<int> t, float rIn, float rOut, float maxStep)
+        static void Ring(List<Vector3> v, List<int> t, List<Vector2> uv, List<Vector2> size, float rIn, float rOut, float maxStep)
         {
             int bands = Steps(rOut - rIn, maxStep), row = bands + 1;
             int b = v.Count;
@@ -57,6 +66,8 @@ namespace BoneSquadKiting.Core
                 {
                     float r = Mathf.Lerp(rIn, rOut, (float)k / bands);
                     v.Add(new Vector3(c * r, 0, sn * r));
+                    uv.Add(new Vector2(c * r, sn * r) / (2f * rOut) + new Vector2(0.5f, 0.5f));
+                    size.Add(new Vector2(2f * rOut, 2f * rOut));
                 }
             }
             for (int i = 0; i < Segments; i++)
@@ -68,13 +79,23 @@ namespace BoneSquadKiting.Core
                 }
         }
 
-        static void Box(List<Vector3> v, List<int> t, float x0, float x1, float z0, float z1, float maxStep)
+        // A box grows away from the center: along x when it sits to one side of it in x, along z otherwise.
+        static void Box(List<Vector3> v, List<int> t, List<Vector2> uv, List<Vector2> size, float x0, float x1, float z0, float z1, float maxStep)
         {
             int nx = Steps(x1 - x0, maxStep), nz = Steps(z1 - z0, maxStep), row = nz + 1;
             int b = v.Count;
+            bool alongX = x0 * x1 >= 0f;
+            bool outwardIsUp = alongX ? x0 + x1 >= 0f : z0 + z1 >= 0f;
+            var extent = alongX ? new Vector2(Mathf.Abs(z1 - z0), Mathf.Abs(x1 - x0)) : new Vector2(Mathf.Abs(x1 - x0), Mathf.Abs(z1 - z0));
             for (int i = 0; i <= nx; i++)
                 for (int k = 0; k <= nz; k++)
-                    v.Add(new Vector3(Mathf.Lerp(x0, x1, (float)i / nx), 0, Mathf.Lerp(z0, z1, (float)k / nz)));
+                {
+                    float fx = (float)i / nx, fz = (float)k / nz;
+                    v.Add(new Vector3(Mathf.Lerp(x0, x1, fx), 0, Mathf.Lerp(z0, z1, fz)));
+                    float along = alongX ? fx : fz, across = alongX ? fz : fx;
+                    uv.Add(new Vector2(across, outwardIsUp ? along : 1f - along));
+                    size.Add(extent);
+                }
             for (int i = 0; i < nx; i++)
                 for (int k = 0; k < nz; k++)
                 {

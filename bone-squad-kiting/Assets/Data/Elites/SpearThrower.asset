@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: SpearThrower
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
   DisplayName: "\uCC3D\uD22C\uCC99\uBCD1"
+  Armored: 1
+  CastSound: 2
   MaxHp: 4000
   Speed: 2
   Radius: 0.8
@@ -27,3 +29,5 @@ MonoBehaviour:
   DeathDuration: 1.5
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
+  HealthBarPrefab: {fileID: 6218836204645062609, guid: 854e94014f6744ce38ab12dcf4bb4799, type: 3}
+  HealthBarHeight: 2.65

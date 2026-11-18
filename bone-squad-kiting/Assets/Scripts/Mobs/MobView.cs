@@ -25,11 +25,13 @@ namespace BoneSquadKiting.Mobs
         class View
         {
             public HitFlash Flash;
+            public EnemyHealthBar HealthBar;
             public Transform Root;
             public Renderer Sphere;        // placeholder only
             public UnitVisual Visual;      // model only
             public Vector2 LastPos;
             public float LastCd;
+            public MobShot LastWindup;
             public bool Seen;
         }
 
@@ -97,6 +99,7 @@ namespace BoneSquadKiting.Mobs
 
         void LateUpdate()
         {
+            var camera = Camera.main;
             foreach (var v in _live.Values) v.Seen = false;
 
             var mobs = Director != null && Director.Mobs != null ? Director.Mobs.Mobs : null;
@@ -106,7 +109,7 @@ namespace BoneSquadKiting.Mobs
                     if (!m.Alive || m.Def == null) continue;
                     if (!_live.TryGetValue(m, out var v)) { v = Take(m); _live[m] = v; }
                     v.Seen = true;
-                    Draw(m, v);
+                    Draw(m, v, camera);
                 }
 
             DrawShots();
@@ -117,6 +120,7 @@ namespace BoneSquadKiting.Mobs
             {
                 var v = _live[m];
                 _live.Remove(m);
+                if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 v.Root.gameObject.SetActive(false);
                 if (!_free.TryGetValue(m.Def, out var stack)) _free[m.Def] = stack = new Stack<View>();
                 stack.Push(v);
@@ -215,9 +219,11 @@ namespace BoneSquadKiting.Mobs
 
         void OnDestroy() { if (_shotMaterial != null) Destroy(_shotMaterial); }
 
-        void Draw(Mob m, View v)
+        void Draw(Mob m, View v, Camera camera)
         {
             float y = GroundHeight.Y(m.X, m.Z);
+            if (v.HealthBar != null)
+                v.HealthBar.Draw(new Vector3(m.X, y + m.Def.HealthBarHeight, m.Z), camera, m.Health, m.Def.Hp);
             var moved = m.Pos - v.LastPos;
             bool moving = moved.sqrMagnitude > 1e-8f;
 
@@ -234,8 +240,12 @@ namespace BoneSquadKiting.Mobs
                     var want = Quaternion.Euler(0f, Mathf.Atan2(face.x, face.y) * Mathf.Rad2Deg + m.Def.ModelYawOffset, 0f);
                     v.Root.rotation = Quaternion.RotateTowards(v.Root.rotation, want, TurnSpeed * Time.deltaTime);
                 }
-                if (m.AttackCd > v.LastCd + 1e-4f) v.Visual.PlayAttack(m.Def.AttackAnimSeconds);     // the cooldown jumped back up: it just hit
+                bool newAttack = m.Def.JavelinThrowClip != null
+                    ? m.PendingJavelin != null && m.PendingJavelin != v.LastWindup
+                    : m.AttackCd > v.LastCd + 1e-4f;
+                if (newAttack) v.Visual.PlayAttack(m.Def.AttackAnimSeconds);
                 else v.Visual.SetState(moving ? VisualState.Run : VisualState.Idle);
+                v.LastWindup = m.PendingJavelin;
             }
             else
             {
@@ -256,10 +266,25 @@ namespace BoneSquadKiting.Mobs
                 v = stack.Pop();
                 v.Root.gameObject.SetActive(true);
             }
-            else v = Create(m.Def);
+            else
+            {
+                v = Create(m.Def);
+                if (m.Def.HealthBarPrefab != null)
+                    v.HealthBar = Instantiate(m.Def.HealthBarPrefab, transform);
+            }
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
             if (v.Visual != null)
             {
+                if (m.Def.JavelinThrowClip != null && v.Visual.Animator != null &&
+                    v.Visual.Animator.TryGetComponent<Audio.AnimationSound>(out var receiver))
+                {
+                    var system = Director.Mobs;
+                    m.HasThrowAnimator = true;
+                    if (m.PendingJavelin != null) m.WindupLeft = m.Def.AttackAnimSeconds;
+                    v.LastWindup = null;
+                    receiver.TryReleaseJavelin = () => Director.Mobs == system && Director.Phase == GamePhase.Play
+                        && !Director.Paused && !Director.Frozen && !Director.InCutscene && system.ReleaseJavelin(m);
+                }
                 // Face the squad from the start instead of whichever way the last owner was looking.
                 var squad = Director != null ? Director.Squad : null;
                 var to = squad != null ? squad.Anchor - m.Pos : Vector2.up;

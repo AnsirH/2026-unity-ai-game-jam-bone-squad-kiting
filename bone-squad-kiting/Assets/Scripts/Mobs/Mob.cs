@@ -11,6 +11,9 @@ namespace BoneSquadKiting.Mobs
         public float X, Z;
         public float Health;
         public float AttackCd;
+        public MobShot PendingJavelin;
+        public float WindupLeft;
+        public bool HasThrowAnimator;
         public float Flash;
 
         public Vector2 Pos => new(X, Z);

@@ -110,6 +110,7 @@ namespace BoneSquadKiting.Game
         // Stable hooks for HUD / FX: the systems above are recreated on every Restart.
         public event System.Action<PatternDefinition> PatternStarted;
         public event System.Action<int, int> PatternResolved; // units hit, units lost
+        public event System.Action DefaultRingRequested;
         public event System.Action<string> FormationChanged;
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
@@ -139,6 +140,7 @@ namespace BoneSquadKiting.Game
             Elites.OnPatternResolved += (e, hit, lost) =>
             {
                 if (lost > 0) Squad.Reform();
+                if (e.Attacks.OnImpact == null) DefaultRingRequested?.Invoke();
                 PatternResolved?.Invoke(hit, lost);
             };
             Elites.OnNearMiss += (e, near) => OnNearMiss(near);
@@ -154,12 +156,13 @@ namespace BoneSquadKiting.Game
             _aliveLastStep = GameConstants.SquadSize;
             Telegraphs.Clear();
             Revives = new ReviveSystem();
-            Revives.OnStarted += (a, b) => ReviveStarted?.Invoke(a, b);
-            Revives.OnCompleted += (a, b) =>
+            Revives.OnStarted += (a, b) =>
             {
-                SoundManager.Current?.PlaySfx("squad.revive");
-                ReviveCompleted?.Invoke(a, b);
+                SoundManager.Current?.PlaySfx("squad.revive.magic");
+                ReviveStarted?.Invoke(a, b);
             };
+            Revives.OnAssemblyStarted += () => SoundManager.Current?.PlayVolleySfx("squad.revive");
+            Revives.OnCompleted += (a, b) => ReviveCompleted?.Invoke(a, b);
             Revives.OnCancelled += (a, b) => ReviveCancelled?.Invoke(a, b);
             Flow = Squad.Grid != null ? new FlowField(Squad.Grid) : null;
 
@@ -168,10 +171,24 @@ namespace BoneSquadKiting.Game
             Attacks.OnNearMiss += OnNearMiss;
             Attacks.OnResolved += (hit, lost) =>
             {
+                DefaultRingRequested?.Invoke();
                 if (lost > 0) Squad.Reform(); // close the formation up around the survivors
                 PatternResolved?.Invoke(hit, lost);
             };
             Shots = new ShotSystem();
+            Shots.OnLaunched += shot =>
+            {
+                if (!shot.Heavy) SoundManager.Current?.PlayVolleySfx("squad.crossbow.fire");
+            };
+            Shots.OnTargetHit += shot =>
+            {
+                if (shot.Heavy) return;
+                bool metal;
+                if (shot.Target is Mob mob) metal = mob.Def.Armored;
+                else if (shot.Target is Elite elite) metal = elite.Def.Armored;
+                else return;
+                SoundManager.Current?.PlayVolleySfx(metal ? "squad.arrow.hit.armor" : "squad.arrow.hit.humanoid");
+            };
             Shots.OnHit += d => { _hits.Add((Elapsed, d)); TotalDamage += d; };
 
             _hits.Clear();
@@ -187,10 +204,16 @@ namespace BoneSquadKiting.Game
             if (BossView != null && Boss != null) BossView.Bind(Boss);
             ApplyTuning();
             Phase = GamePhase.Play;
-            var sound = SoundManager.Current;
-            if (sound != null && !sound.PlayBgm(HasBoss ? "bgm.boss" : "bgm.stage"))
-                sound.StopBgm();
+            PlayStageMusic();
             FormationChanged?.Invoke(Squad.Formation);
+        }
+
+        void PlayStageMusic()
+        {
+            var sound = SoundManager.Current;
+            string id = Run?.CurrentEntry?.BgmId ?? (HasBoss ? "bgm.boss" : "bgm.stage");
+            if (sound != null && !sound.PlayBgm(id))
+                sound.StopBgm();
         }
 
         /// <summary>
@@ -233,7 +256,11 @@ namespace BoneSquadKiting.Game
         public void ChangeFormation(string id)
         {
             if (Phase != GamePhase.Play || Paused || InCutscene) return;
-            if (Squad.SetFormation(id)) FormationChanged?.Invoke(id);
+            if (Squad.SetFormation(id))
+            {
+                SoundManager.Current?.PlaySfx("squad.formation.command");
+                FormationChanged?.Invoke(id);
+            }
         }
 
         /// <summary>
@@ -339,6 +366,7 @@ namespace BoneSquadKiting.Game
             // Stand the squad on the field before the match starts, so the menu is not an empty arena.
             if (Squad != null && Squad.Units.Count == 0) Squad.Init();
             if (_continueRun) { _continueRun = false; Restart(); }
+            else if (Run != null) PlayStageMusic();
         }
 
         // A mini boss appears, with its intro, when the squad's anchor comes within its trigger radius.
@@ -361,7 +389,9 @@ namespace BoneSquadKiting.Game
         public Elite SpawnMiniBoss(MiniBossSpawn m)
         {
             if (m == null || m.Triggered || m.Definition == null || Elites == null) return null;
-            var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
+            // One that never moves (a cannon) stands exactly on its marker, walkable ground or not: it has
+            // nowhere to walk, so it cannot get stuck. One that moves is put on the nearest walkable point.
+            var pos = Squad.Grid != null && !m.Definition.Fixed ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
             var route = m.PresentFromStart ? null : m.RoutePoints();
             if (route != null) route[route.Count - 1] = pos;
             var elite = Elites.Spawn(m.Definition, pos, Enemies, route, m.EntrySpeed);
@@ -485,11 +515,9 @@ namespace BoneSquadKiting.Game
             if (AliveCount == 0) Phase = GamePhase.Lose;
             else if (StageCleared()) Phase = GamePhase.Win;
             if (Phase == GamePhase.Win) SaveProgress();
+            if (Phase == GamePhase.Lose) SoundManager.Current?.StopBgm();
             if (Phase == GamePhase.Win || Phase == GamePhase.Lose)
-            {
-                SoundManager.Current?.StopBgm();
                 SoundManager.Current?.PlaySfx(Phase == GamePhase.Win ? "stage.clear" : "squad.defeat");
-            }
         }
     }
 }

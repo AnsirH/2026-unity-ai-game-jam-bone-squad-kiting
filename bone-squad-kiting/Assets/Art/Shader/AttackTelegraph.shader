@@ -19,6 +19,7 @@ Shader "BoneSquad/Attack Telegraph"
         _Duration ("Reveal Duration (s)", Float) = 0.25
         _AfterFade ("Time Hidden After Fade (s)", Float) = 0
         _FadeDuration ("Fade Duration (s)", Float) = 0.4
+        _Slack ("Ground slack (world units)", Float) = 0.35
     }
     SubShader
     {
@@ -26,18 +27,23 @@ Shader "BoneSquad/Attack Telegraph"
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha
+            // No depth test of its own, so bumps in the ground never cut holes in it. Each pixel is instead
+            // compared with what the camera already sees there (see Frag): above the ground, behind units.
+            ZTest Always
             ZWrite Off
             Cull Off
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _FillColor, _EdgeColor, _LethalFill, _LethalRim;
                 float _LethalTelegraph;
                 float _CellSize, _Honeycomb, _RimWidth, _FresnelStrength;
                 float _Shape, _InnerRadius, _Progress, _Opacity, _Loop, _Duration, _FadeDuration, _AfterFade;
+                float _Slack;
             CBUFFER_END
 
             struct Varyings
@@ -46,16 +52,24 @@ Shader "BoneSquad/Attack Telegraph"
                 float2 localXY : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
                 float2 sizeWS : TEXCOORD2;
+                float2 depthAndFlat : TEXCOORD3;   // x: distance from the camera, y: 1 when the mesh lies flat on the ground
             };
 
-            Varyings Vert(float3 positionOS : POSITION)
+            // Two kinds of mesh are drawn with this:
+            //  - the preview quad: a unit XY quad whose scale is the zone's size (no second UV set);
+            //  - a zone mesh built in code (DangerShapeMesh): lies in XZ at real size, may follow uneven ground.
+            //    It gives the same "unit quad" coordinates in UV0 and the zone's size in metres in UV1.
+            Varyings Vert(float3 positionOS : POSITION, float2 uv : TEXCOORD0, float2 size : TEXCOORD1)
             {
                 Varyings output;
+                bool zoneMesh = size.x > 0.0;
                 output.positionCS = TransformObjectToHClip(positionOS);
-                output.localXY = positionOS.xy;
+                output.localXY = zoneMesh ? uv - 0.5 : positionOS.xy;
                 output.positionWS = TransformObjectToWorld(positionOS);
-                output.sizeWS = float2(length(TransformObjectToWorldDir(float3(1, 0, 0), false)),
-                                       length(TransformObjectToWorldDir(float3(0, 1, 0), false)));
+                output.sizeWS = zoneMesh ? size
+                    : float2(length(TransformObjectToWorldDir(float3(1, 0, 0), false)),
+                             length(TransformObjectToWorldDir(float3(0, 1, 0), false)));
+                output.depthAndFlat = float2(-TransformWorldToView(output.positionWS).z, zoneMesh ? 1.0 : 0.0);
                 return output;
             }
 
@@ -73,6 +87,13 @@ Shader "BoneSquad/Attack Telegraph"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                // Hidden where something stands in front of it by more than _Slack (a unit, a wall);
+                // shown where the scene is about level with it (the ground).
+                float2 screenUV = input.positionCS.xy / _ScaledScreenParams.xy;
+                float rawDepth = SampleSceneDepth(screenUV);
+                float sceneDepth = unity_OrthoParams.w == 0 ? LinearEyeDepth(rawDepth, _ZBufferParams) : LinearDepthToEyeDepth(rawDepth);
+                clip(sceneDepth + _Slack - input.depthAndFlat.x);
+
                 // The preview uses a unit XY quad. Its lower edge is the rectangle origin.
                 float distance01 = _Shape > 0.5 ? length(input.localXY) * 2.0 : input.localXY.y + 0.5;
                 float progress = saturate(_Progress);
@@ -102,7 +123,7 @@ Shader "BoneSquad/Attack Telegraph"
                                           min(distance01, inside) * input.sizeWS.y);
                 float margin = _Shape > 0.5 ? boundary * input.sizeWS.x * 0.5 : min(rectMargin.x, rectMargin.y);
                 float rim = 1.0 - smoothstep(0.0, _RimWidth + fwidth(margin), margin);
-                float3 normalWS = TransformObjectToWorldNormal(float3(0, 0, -1));
+                float3 normalWS = input.depthAndFlat.y > 0.5 ? float3(0, 1, 0) : TransformObjectToWorldNormal(float3(0, 0, -1));
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float fresnel = pow(1.0 - saturate(abs(dot(normalWS, viewDir))), 2.0);
                 half4 fillColor = lerp(_FillColor, _LethalFill, _LethalTelegraph);

@@ -42432,7 +42432,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Bosses.TelegraphView
   Director: {fileID: 32514558}
-  Material: {fileID: 2100000, guid: d2f259c8f59251146b5d682457c43283, type: 2}
+  Material: {fileID: 2100000, guid: 773e695560c224a92928c1990c14baf9, type: 2}
   TrackingColor: {r: 1, g: 0.25, b: 0.2, a: 0.28}
   LockedColor: {r: 1, g: 0.15, b: 0.1, a: 0.6}
   LiveColor: {r: 1, g: 0.55, b: 0.1, a: 0.8}

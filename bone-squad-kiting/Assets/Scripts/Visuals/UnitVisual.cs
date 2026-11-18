@@ -136,10 +136,10 @@ namespace BoneSquadKiting.Visuals
         public VisualState Current => _current;
 
         /// <summary>Show a one-off attack, then return to whatever SetState asks for.</summary>
-        public void PlayAttack(float holdSeconds = 0.35f)
+        public void PlayAttack(float holdSeconds = -1f)
         {
             if (Animator != null) Animator.speed = Scale;        // a sped-up attack plays its whole motion in less time
-            if (AttackLength > 0f) holdSeconds = AttackLength;   // a full motion with a release point plays to its end
+            if (holdSeconds < 0f) holdSeconds = AttackLength > 0f ? AttackLength : 0.35f;
             _attackUntil = Time.time + holdSeconds;
             int layer = FindStateLayer(States.Attack);
             if (layer > 0)

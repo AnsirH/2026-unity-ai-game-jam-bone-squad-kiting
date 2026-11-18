@@ -13,13 +13,15 @@ MonoBehaviour:
   m_Name: Catapult
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
   DisplayName: "\uD22C\uC11D\uBCD1"
+  Armored: 1
+  CastSound: 0
   MaxHp: 1500
   Speed: 0
   Radius: 0.9
   StopDistance: 3
   Patterns: {fileID: 11400000, guid: 437202b9ecf3ae049a7e59fffbd3c281, type: 2}
   FirstAttackDelay: 3
-  AttackGap: 3.5
+  AttackGap: 3
   AttackGapRandom: 3
   ZoneRotationSpeed: 0
   AttackRange: 14
@@ -28,6 +30,8 @@ MonoBehaviour:
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
   Prefab: {fileID: 5736227486350466048, guid: 128bba935906c450f9906835be963833, type: 3}
+  HealthBarPrefab: {fileID: 6218836204645062609, guid: 854e94014f6744ce38ab12dcf4bb4799, type: 3}
+  HealthBarHeight: 3.65
   ModelScale: 3
   ModelYawOffset: 90
   ModelGroundOffset: 0.28

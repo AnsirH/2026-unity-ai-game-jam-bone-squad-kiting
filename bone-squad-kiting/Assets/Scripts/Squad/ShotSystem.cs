@@ -33,6 +33,7 @@ namespace BoneSquadKiting.Squad
         readonly Dictionary<int, Vector3> _muzzlePositions = new();
         public System.Action<float> OnHit; // damage dealt to an enemy
         public event System.Action<Shot> OnLaunched;
+        public event System.Action<Shot> OnTargetHit;
         public event System.Action<Vector2, float, Vector2> OnImpact;
 
         public float FireRange = GameConstants.FireRange; // per-unit range; the director keeps it in sync
@@ -101,7 +102,9 @@ namespace BoneSquadKiting.Squad
                 u.Facing = (target.Pos - new Vector2(u.X, u.Z)).normalized;   // turn to face what it shoots
                 u.ShotCount++;                                               // the view starts the attack motion on this
                 u.PendingTarget = target;
-                u.WindupLeft = u.AttackWindup;
+                // A visible model releases on its animation event. A culled Animator can
+                // skip events, so finish the wind-up at the end of that attack as a fallback.
+                u.WindupLeft = u.HasReleaseEvent ? u.AttackDuration : u.AttackWindup;
                 if (u.AttackWindup <= 0f) ReleasePending(u);
             }
 
@@ -121,6 +124,7 @@ namespace BoneSquadKiting.Squad
                     var impactDir = dist > 1e-6f ? to / dist : s.Dir;
                     var impactPosition = s.Target.Pos - impactDir * Mathf.Min(dist, s.Target.Radius);
                     OnImpact?.Invoke(impactPosition, s.Target.Radius, impactDir);
+                    OnTargetHit?.Invoke(s);
                     Release(s);
                     (s.Target as IDamageable)?.ApplyDamage(s.Damage);
                     OnHit?.Invoke(s.Damage);

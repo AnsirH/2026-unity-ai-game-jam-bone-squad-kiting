@@ -97,6 +97,7 @@ public class TuningAndArtTests
     [UnityTest]
     public IEnumerator UnitVisual_PlaysStatesByName_AndSilentlySkipsMissingOnes()
     {
+        if (Object.FindFirstObjectByType<AudioListener>() == null) _fc.gameObject.AddComponent<AudioListener>();
         var art = AssetDatabase.LoadAssetAtPath<ArtSet>("Assets/Data/Art/ArtSet.asset");
         if (art == null || art.UnitPrefab == null) Assert.Ignore("no unit model in the art set");
         var go = SquadView.BuildUnit(1, art, 0.34f, 1.4f, null);

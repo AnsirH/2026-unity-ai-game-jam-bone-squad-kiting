@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
 using BoneSquadKiting.Squad;
@@ -27,10 +28,12 @@ namespace BoneSquadKiting.Bosses
             public bool Sustaining;     // telegraph is over and a sustained pattern is dealing damage
             public float SustainRemaining, TickIn;
             public int Hits, Lost;      // totals so far, for sustained patterns
+            public bool StrikeThrown;   // the strike effect is on its way
             public bool Landed;         // the zone has gone off at least once (near misses are judged on that first moment only)
         }
 
         public AttackSequence Sequence;
+        public CastVoice CastSound;
         public Active? Current;
         public int Index;
         public float NextAttack = GameConstants.FirstAttackDelay;
@@ -39,8 +42,12 @@ namespace BoneSquadKiting.Bosses
         public float FixedGapRandom = 0f; // with FixedGap: up to this many extra seconds, rolled for every gap
         public float RotationSpeed = 0f;  // degrees per second the caster's zones turn; sign = direction (+ = clockwise), 0 = still
 
+        /// <summary>Where the caster stands, when it is known: effects that fly in from the caster start there.</summary>
+        public bool HasCaster; public float CasterX, CasterZ;
+
         public System.Action<PatternDefinition> OnStart;
         public System.Action<int, int> OnResolved; // units hit, units lost (totals, once the pattern is over)
+        public System.Action<Active> OnImpact; // optional caster-specific impact at its resolved position and size
         public System.Action<int, int> OnDamage;   // units hit, units lost, every time damage lands (each sustained tick too)
         /// <summary>
         /// A zone went off, caught nobody, and this many units stood within NearMissMargin of it. Judged
@@ -76,15 +83,28 @@ namespace BoneSquadKiting.Bosses
                 return;
             }
 
+            float previousRemaining = a.Remaining;
             a.Remaining = Mathf.Max(0, a.Pattern.Time - a.Elapsed);
+            float approach = Mathf.Min(GameConstants.CastTrackLockTime, a.Pattern.Time * 0.5f);
+            if (previousRemaining > approach && a.Remaining <= approach)
+                CastSounds.Approach(CastSound, a.Pattern.Id);
             if (a.Tracks && a.Remaining > GameConstants.CastTrackLockTime)
             {
                 float k = Mathf.Min(1, dt * TrackLerp);
                 a.Cx = Mathf.Lerp(a.Cx, squad.Anchor.x, k);
                 a.Cz = Mathf.Lerp(a.Cz, squad.Anchor.y, k);
             }
+            if (!a.StrikeThrown && a.Pattern.StrikeEffect != null && a.Pattern.Kind == PatternKind.Burst
+                && a.Remaining <= a.Pattern.StrikeFlightSeconds)
+            {
+                // Thrown early enough to land as the zone goes off. Without a known caster it drops from where the zone is.
+                a.StrikeThrown = true;
+                var caster = HasCaster ? new Vector2(CasterX, CasterZ) : boss != null ? boss.Pos : new Vector2(a.Cx, a.Cz);
+                BoneSquadKiting.Fx.ZoneStrikeFx.Play(a.Pattern, a.Shape, a.Cx, a.Cz, a.Angle, caster, a.Remaining);
+            }
             Current = a;
             if (a.Remaining > 0) return;
+            CastSounds.Land(CastSound, a.Pattern.Id);
 
             if (a.Pattern.Kind == PatternKind.Sustained && a.Pattern.SustainSeconds > 0f)
             {
@@ -100,6 +120,7 @@ namespace BoneSquadKiting.Bosses
                 var effect = Object.Instantiate(a.Pattern.BurstEffect, new Vector3(a.Cx, 0.03f, a.Cz), Quaternion.Euler(0f, a.Angle, 0f));
                 if (a.Pattern.ScaleWithSquad) effect.transform.localScale *= a.ShapeScale;
             }
+            BoneSquadKiting.Fx.ZoneFillFx.Play(a.Pattern, a.Shape, a.Cx, a.Cz, a.Angle);
             Damage(ref a, squad.Units, GameConstants.PatternUnitDamage);   // burst: once, at the angle it has reached
             Finish(a, boss);
         }
@@ -112,6 +133,7 @@ namespace BoneSquadKiting.Bosses
             float scale = p.ScaleWithSquad ? FormationSlots.SquadFraction(squad.AliveCount) : 1f;
             var shape = p.ScaleWithSquad ? p.Shape.Scaled(scale) : p.Shape;
             Current = new Active { Pattern = p, Shape = shape, ShapeScale = scale, Tracks = TrackSquad, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
+            CastSounds.Begin(CastSound, p.Id);
             OnStart?.Invoke(p);
         }
 
@@ -152,6 +174,7 @@ namespace BoneSquadKiting.Bosses
 
         void Finish(Active a, Boss boss)
         {
+            OnImpact?.Invoke(a);
             Current = null;
             NextAttack = FixedGap > 0f ? FixedGap + Random.value * FixedGapRandom
                 : (boss != null && boss.HpFrac < GameConstants.FastAttackHpFrac)

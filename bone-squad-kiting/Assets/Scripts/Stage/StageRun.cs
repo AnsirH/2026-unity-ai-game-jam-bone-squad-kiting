@@ -26,6 +26,8 @@ namespace BoneSquadKiting.Stage
             public GameObject Map;
             [Tooltip("Shown when the stage begins and on its clear screen.")]
             public string Title = "Stage";
+            [Tooltip("Music ID in the sound database for this stage.")]
+            public string BgmId = "bgm.stage";
             [Tooltip("This stage's waves. Empty = no waves.")]
             public WavePlan WavePlan;
             public StageClearRule ClearRule = StageClearRule.ReachEnd;
