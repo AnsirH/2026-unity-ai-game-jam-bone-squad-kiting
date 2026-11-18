@@ -15,21 +15,22 @@
 
 ## 3. 해결
 
-- 분대 중심점(FormationCenter) 1개를 우클릭으로 이동 → 유닛은 `중심 + 진형오프셋` 추종.
+- 분대 중심점(FormationCenter) 1개를 **우클릭 스마트 커맨드**(지면→이동, 적→그 적 공격)와 **어택땅(A+좌클릭)** 으로 지휘 → 유닛은 `중심 + 진형오프셋` 추종, 사거리 내 적 자동 평타.
 - 보스가 4종 장판(core/gate/quadrant/shell)을 예고 → 대응 진형(원형/일자/십자/밀집)으로 피해 인원 최소화.
 - 유닛이 죽을수록 DPS 영구 감소 → 회피 숙련이 곧 화력.
 
 ## 4. 기능 (마일스톤)
 
-- **M1 — 프로토타입 1:1 이식 (현재 목표):** 아레나·쿼터뷰 카메라, 분대 이동/진형 4종, 자동 평타, 보스(HP 24000)·4패턴·2페이즈, HUD(보스바/생존/DPS/진형패널/경고), 승패·일시정지·재시작, 임시 기하도형. 상세: `docs/plans/2026-11-18-m1-kite-squad-port.md`.
+- **M1 — 프로토타입 이식 + 조작/데이터 확장 (현재 목표):** 아레나·쿼터뷰 카메라, 분대 이동/진형 4종, 자동 평타 + **어택땅(A+좌클릭)·우클릭 타겟 공격**(적 레지스트리·오더 상태머신), 보스(HP 24000)·4패턴·2페이즈, **패턴·진형은 ScriptableObject 데이터 에셋**(결정 #8), HUD(보스바/생존/DPS/진형패널/경고), 승패·일시정지·재시작, 임시 기하도형. 수치는 프로토타입과 동일. 상세: `docs/plans/2026-11-18-m1-kite-squad-port.md`.
 - **M2 — 잡몹 떼 (이후):** 최대 ~200 잡몹. 직선추적+공간해시 분리(→ 필요시 Flow Field). 아군↔적 충돌(적이 밀려남, Rigidbody 없이 거리기반 푸시). 근거: `formation-movement-spec.md`.
 - **M3 — 자유형 맵 (이후):** NavMesh를 데이터로만 사용(Agent 미사용). 중심점 경계 클램프/슬라이딩, 유닛 벽 눌림 보정.
-- **M4 — 미구현 액션:** 대시(SPACE), 어택땅(A) 등.
+- **M4 — 미구현 액션:** 대시(SPACE) 등. (어택땅은 M1로 이동 — 결정 #9)
 
 ## 5. 구조
 
 - 게임플레이 좌표는 프로토타입과 동일한 (x, z) 월드를 Unity **XZ 평면**에 직접 매핑. 높이 `h`→Y. 투영 수식 대신 직교 카메라 사용.
-- 주요 모듈: GameDirector(상태머신) · FormationController(중심+진형) · SquadUnit(추종·평타) · ShotSystem(투사체) · Boss/BossAttackSystem(패턴) · DangerZones(판정) · Input · HUD(uGUI).
+- 주요 모듈: GameDirector(상태머신) · FormationController(중심+진형+**오더**) · SquadUnit(추종·평타) · ShotSystem(투사체·**타겟 획득**) · Boss/BossAttackSystem(패턴) · **EnemyRegistry/IEnemy·IDamageable**(적 추상화, M1=보스1) · DangerShape/FormationSlots 평가기 · Input(스마트 커맨드·어택땅) · HUD(uGUI).
+- 패턴·진형은 **데이터(ScriptableObject)** 로 분리: `PatternDefinition`(예고시간·추천진형·조언·DangerShape), `FormationDefinition`(슬롯 생성 규칙), `AttackSequence`(패턴 묶음). 코드는 범용 평가기만 — 패턴/진형 추가는 에셋 추가로.
 - 상세 파일 구조는 M1 플랜 문서 참고.
 
 ## 6. 데이터

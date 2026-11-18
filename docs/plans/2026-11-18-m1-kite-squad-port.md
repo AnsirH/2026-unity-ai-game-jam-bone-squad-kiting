@@ -4,7 +4,11 @@
 
 **Goal:** HTML 프로토타입 `KITE SQUAD 25`의 게임플레이를 Unity 6000.3.28f1 · URP로 수치까지 동일하게 1:1 재현한다(임시 기하도형).
 
-**Architecture:** 게임플레이는 프로토타입의 (x, z) 월드를 Unity **XZ 평면**에 직접 매핑하고, 2D 투영 수식 대신 **직교 쿼터뷰 카메라**로 렌더링한다. 결정론적 로직(진형 오프셋, 장판 판정, 수치)은 MonoBehaviour와 분리된 순수 C# 클래스로 두고 EditMode 테스트로 고정한다. 이동·평타·패턴·HUD는 PlayMode에서 통합 검증한다. 모든 상수는 원본과 동일.
+**Architecture:** 게임플레이는 프로토타입의 (x, z) 월드를 Unity **XZ 평면**에 직접 매핑하고, 2D 투영 수식 대신 **직교 쿼터뷰 카메라**로 렌더링한다. 결정론적 로직(진형 슬롯 생성, 장판 shape 판정, 수치)은 MonoBehaviour와 분리된 순수 C# 평가기로 두고 EditMode 테스트로 고정한다. 이동·평타·패턴·HUD는 PlayMode에서 통합 검증한다. 모든 상수는 원본과 동일.
+
+**데이터 구동(결정 #8):** 보스 패턴과 진형은 하드코딩하지 않고 **ScriptableObject 데이터 에셋**(`PatternDefinition`/`AttackSequence`/`FormationDefinition`)으로 둔다. 코드는 범용 평가기(`DangerShapeEval.InDanger(shape, …)`, `FormationSlots.Generate(def)`)만 갖고, 패턴·진형 추가/수정/밸런싱은 에셋 편집으로 한다. 1:1 수치는 에셋 값 + 평가기 EditMode 테스트로 핀 고정한다.
+
+**조작·전투(결정 #9):** 자동 평타(사거리 내 자동 사격)는 유지하되, 교전 지휘를 **분대 오더 상태머신**(`Move`/`AttackMove`/`AttackTarget`)으로 모델링한다. 적은 **`IEnemy`/`IDamageable` + `EnemyRegistry`** 로 추상화한다(M1은 보스 1개만 등록 → M2 잡몹 드롭인). 입력은 **우클릭 스마트 커맨드**(적 콜라이더 피킹→`AttackTarget`, 지면→`Move`)와 **어택땅 A+좌클릭**(→`AttackMove`). 타겟 획득은 `ShotSystem`이 현재 오더를 참조.
 
 **Tech Stack:** Unity 6000.3.28f1, URP, Unity Test Framework(EditMode/PlayMode), uGUI(HUD), TextMeshPro, unity-cli(헤드리스 빌드/테스트).
 
@@ -21,18 +25,25 @@
 | 파일 | 책임 |
 | --- | --- |
 | `Assets/Scripts/Core/GameConstants.cs` | 원본 상수 전부(수치 단일 출처) |
-| `Assets/Scripts/Core/AttackPattern.cs` | 패턴 데이터(id,name,time,recommend,advice,detail)와 ATTACKS 시퀀스 |
-| `Assets/Scripts/Core/Formations.cs` | `SlotsFor(formation)` — 진형별 오프셋(순수 함수) |
-| `Assets/Scripts/Core/DangerZones.cs` | `InDanger(id, cx,cz, x,z)` — 장판 피격 판정(순수 함수) |
+| `Assets/Scripts/Core/DangerShape.cs` | 장판 모양 데이터 타입(`Disc`/`Annulus`/`CrossBandsX`/`QuadrantBoxes` + 파라미터) |
+| `Assets/Scripts/Core/DangerShapeEval.cs` | `InDanger(shape, cx,cz, x,z)` — shape 범용 판정(순수 함수) |
+| `Assets/Scripts/Core/FormationSlots.cs` | `Generate(def)` — 진형 정의→25슬롯 오프셋(순수 함수) |
 | `Assets/Scripts/Core/Combat.cs` | DPS 윈도 계산·페이즈 임계 등 순수 수치 로직 |
-| `Assets/Scripts/Squad/FormationController.cs` | 중심점(anchor) 이동, 진형 전환, 유닛에 슬롯 배분 |
-| `Assets/Scripts/Squad/SquadUnit.cs` | 유닛 추종(center+offset, SmoothDamp), 평타 쿨/발사, hp, 사망 |
-| `Assets/Scripts/Squad/ShotSystem.cs` | 투사체 풀·이동·보스 명중·피해 |
-| `Assets/Scripts/Boss/Boss.cs` | 보스 hp/phase/flash 상태 |
-| `Assets/Scripts/Boss/BossAttackSystem.cs` | 패턴 스케줄·텔레그래프·resolve(장판 판정→유닛 피해) |
-| `Assets/Scripts/Boss/TelegraphView.cs` | 장판 시각화(임시 반투명 메시/디캘) |
+| `Assets/Scripts/Data/PatternDefinition.cs` | ScriptableObject: id·name·time·recommend·advice·detail·DangerShape |
+| `Assets/Scripts/Data/FormationDefinition.cs` | ScriptableObject: id·name·hotkey·슬롯 생성 규칙(grid/line/ring/cross+파라미터) |
+| `Assets/Scripts/Data/AttackSequence.cs` | ScriptableObject: `PatternDefinition[]` 순서(보스별 패턴 묶음) |
+| `Assets/Data/Patterns/*.asset`, `Assets/Data/Formations/*.asset`, `Assets/Data/Sequences/*.asset` | 실제 데이터 에셋(원본 값 1:1) |
+| `Assets/Scripts/Combat/IEnemy.cs`, `IDamageable.cs` | 적 추상화(위치·생존·피해). 보스/잡몹 공통 |
+| `Assets/Scripts/Combat/EnemyRegistry.cs` | 활성 적 목록·등록/해제·획득 질의(최근접/범위). M1=보스1 |
+| `Assets/Scripts/Combat/SquadOrder.cs` | `OrderKind{Move,AttackMove,AttackTarget}` + 대상점/타겟 |
+| `Assets/Scripts/Squad/FormationController.cs` | 중심점(anchor) 이동, 진형 전환, 유닛 슬롯 배분, **현재 오더 보유** |
+| `Assets/Scripts/Squad/SquadUnit.cs` | 유닛 추종(center+offset), 평타 쿨/발사, hp, 사망 |
+| `Assets/Scripts/Squad/ShotSystem.cs` | 투사체 풀·이동·명중·피해 + **오더 기반 타겟 획득** |
+| `Assets/Scripts/Boss/Boss.cs` | 보스 hp/phase/flash 상태 (`IEnemy`,`IDamageable` 구현) |
+| `Assets/Scripts/Boss/BossAttackSystem.cs` | `AttackSequence` 소비·스케줄·텔레그래프·resolve(shape 판정→유닛 피해) |
+| `Assets/Scripts/Boss/TelegraphView.cs` | 장판 시각화(임시 반투명 메시/디캘, DangerShape 기반) |
 | `Assets/Scripts/Game/GameDirector.cs` | 상태머신(menu/play/win/lose), 일시정지, 승패, 시스템 오케스트레이션 |
-| `Assets/Scripts/Input/SquadInputController.cs` | 우클릭/드래그 이동, 1~4 진형, P 일시정지, Enter 재시작 |
+| `Assets/Scripts/Input/SquadInputController.cs` | 우클릭 스마트 커맨드(이동/타겟), **A+좌클릭 어택땅**, 1~4 진형, P 일시정지, Enter 재시작 |
 | `Assets/Scripts/UI/Hud.cs` | 보스바·생존·DPS·진형패널·경고·토스트·오버레이 바인딩 |
 | `Assets/Scripts/Fx/JuiceFx.cs` | 플래시·파티클·스크린셰이크·링(임시) |
 | `Assets/Tests/EditMode/*` | 순수 로직 테스트 |
@@ -163,41 +174,65 @@ namespace KiteSquad.Core
 }
 ```
 
-- [ ] **Step 2: 패턴 데이터 작성(원본 ATTACKS 순서 동일)**
+- [ ] **Step 2: 장판 모양 데이터 타입(`Core/DangerShape.cs`)**
+
+장판을 **조립형 모양 데이터**로 표현한다(판정 로직은 Task 4 평가기). 패턴 추가 시 에셋에서 모양·파라미터만 바꾼다. 정말 새 기하가 필요할 때만 `DangerShapeType`에 1종 추가.
 
 ```csharp
-using System.Collections.Generic;
 namespace KiteSquad.Core
 {
     public enum PatternId { Core, Gate, Quadrant, Shell }
+    public enum DangerShapeType { Disc, Annulus, CrossBandsX, QuadrantBoxes }
 
-    public readonly struct AttackPattern
+    [System.Serializable]
+    public struct DangerShape
     {
-        public readonly PatternId Id;
-        public readonly string Name, Advice, Detail;
-        public readonly string Recommend; // "dense"|"line"|"ring"|"cross"
-        public readonly float Time;
-        public AttackPattern(PatternId id, string name, string advice, string recommend, string detail, float time)
-        { Id = id; Name = name; Advice = advice; Recommend = recommend; Detail = detail; Time = time; }
-    }
-
-    public static class AttackTable
-    {
-        // Order & times copied 1:1 from prototype ATTACKS[].
-        public static readonly IReadOnlyList<AttackPattern> Sequence = new List<AttackPattern>
-        {
-            new(PatternId.Core,     "중앙 핵폭발", "3 · 원형",  "ring",  "중앙이 폭발합니다. 원형으로 흩어지세요!", 2.15f),
-            new(PatternId.Gate,     "쌍벽 압착",   "2 · 일자",  "line",  "좌우가 휩쓸립니다. 일자로 줄이세요!",     2.05f),
-            new(PatternId.Quadrant, "사분면 폭격", "4 · 십자가", "cross", "십자 통로만 안전합니다!",               2.0f),
-            new(PatternId.Shell,    "외곽 소거",   "1 · 밀집",  "dense", "바깥부터 폭발합니다. 중심으로 모이세요!", 2.1f),
-            new(PatternId.Core,     "중앙 핵폭발", "3 · 원형",  "ring",  "중앙이 폭발합니다. 원형으로 흩어지세요!", 1.85f),
-            new(PatternId.Quadrant, "사분면 폭격", "4 · 십자가", "cross", "십자 통로만 안전합니다!",               1.8f),
-            new(PatternId.Gate,     "쌍벽 압착",   "2 · 일자",  "line",  "좌우가 휩쓸립니다. 일자로 줄이세요!",     1.8f),
-            new(PatternId.Shell,    "외곽 소거",   "1 · 밀집",  "dense", "바깥부터 폭발합니다. 중심으로 모이세요!", 1.8f),
-        };
+        public DangerShapeType Type;
+        public float RMax;        // Disc: 위험 반경 (r < RMax)
+        public float RMin, ROut;  // Annulus: RMin < r < ROut
+        public float Inner, Outer, HalfZ; // CrossBandsX: |dx|>Inner && |dx|<Outer && |dz|<HalfZ / QuadrantBoxes: |dx|,|dz| ∈ (Inner,Outer)
+        public static DangerShape Disc(float r) => new(){Type=DangerShapeType.Disc, RMax=r};
+        public static DangerShape Annulus(float rmin,float rout) => new(){Type=DangerShapeType.Annulus, RMin=rmin, ROut=rout};
+        public static DangerShape BandsX(float inner,float outer,float halfZ) => new(){Type=DangerShapeType.CrossBandsX, Inner=inner, Outer=outer, HalfZ=halfZ};
+        public static DangerShape Quadrants(float inner,float outer) => new(){Type=DangerShapeType.QuadrantBoxes, Inner=inner, Outer=outer};
     }
 }
 ```
+
+- [ ] **Step 3: PatternDefinition / AttackSequence ScriptableObject + 데이터 에셋(원본 1:1)**
+
+```csharp
+using UnityEngine; using KiteSquad.Core;
+namespace KiteSquad.Data
+{
+    [CreateAssetMenu(menuName="KiteSquad/Pattern")]
+    public class PatternDefinition : ScriptableObject
+    {
+        public PatternId Id;
+        public string DisplayName, Advice, Detail;
+        public string Recommend;        // "dense"|"line"|"ring"|"cross"
+        public float Time;
+        public DangerShape Shape;
+    }
+    [CreateAssetMenu(menuName="KiteSquad/AttackSequence")]
+    public class AttackSequence : ScriptableObject { public PatternDefinition[] Patterns; }
+}
+```
+
+`Assets/Data/Patterns/`에 **8개 에셋**(원본 `ATTACKS[]` 순서·값 1:1), `Assets/Data/Sequences/BossMain.asset`에 그 순서로 배열. 모양 파라미터는 원본 `inDanger`에서:
+
+| # | Id | name | advice | recommend | time | Shape |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | Core | 중앙 핵폭발 | 3 · 원형 | ring | 2.15 | `Disc(3.10)` |
+| 1 | Gate | 쌍벽 압착 | 2 · 일자 | line | 2.05 | `BandsX(0.83, 6.4, 7.1)` |
+| 2 | Quadrant | 사분면 폭격 | 4 · 십자가 | cross | 2.0 | `Quadrants(0.56, 5.7)` |
+| 3 | Shell | 외곽 소거 | 1 · 밀집 | dense | 2.1 | `Annulus(1.73, 6.05)` |
+| 4 | Core | 중앙 핵폭발 | 3 · 원형 | ring | 1.85 | `Disc(3.10)` |
+| 5 | Quadrant | 사분면 폭격 | 4 · 십자가 | cross | 1.8 | `Quadrants(0.56, 5.7)` |
+| 6 | Gate | 쌍벽 압착 | 2 · 일자 | line | 1.8 | `BandsX(0.83, 6.4, 7.1)` |
+| 7 | Shell | 외곽 소거 | 1 · 밀집 | dense | 1.8 | `Annulus(1.73, 6.05)` |
+
+> 같은 패턴이 time만 다르게 재등장하므로 **슬롯당 에셋 1개**(총 8개)로 둔다. 모양/문구 중복은 데이터 편집으로 흡수(코드 무변경). detail 문구는 원본 ATTACKS의 해당 안내문 사용.
 
 - [ ] **Step 3: 컴파일 확인**
 
@@ -212,45 +247,41 @@ cd main && git add KiteSquad/Assets/Scripts/Core && git commit -m "feat: add gam
 
 ---
 
-## Task 3: 진형 오프셋 (Formations) — 테스트 우선
+## Task 3: 진형 (FormationDefinition SO + 슬롯 생성기) — 테스트 우선
 
 **Files:**
-- Create: `Assets/Scripts/Core/Formations.cs`
-- Test: `Assets/Tests/EditMode/FormationsTests.cs`
+- Create: `Assets/Scripts/Core/FormationSlots.cs` (순수 생성기)
+- Create: `Assets/Scripts/Data/FormationDefinition.cs` (ScriptableObject)
+- Create: `Assets/Data/Formations/{dense,line,ring,cross}.asset`
+- Test: `Assets/Tests/EditMode/FormationSlotsTests.cs`
+
+진형을 **데이터(Mode+파라미터)** 로 두고 생성기는 범용. 진형 추가 = 에셋 추가(+필요시 Mode 1종).
 
 - [ ] **Step 1: 실패 테스트 작성**
 
-원본 `slotsFor`: dense=5×5(간격0.53), line=25개 `x=(i%3-1)*0.12, z=(i-12)*0.49`, ring=반경3.7 25개, cross=중심1+4방향×6=25.
+원본값: dense=5×5(간격0.53), line=25개 `x=(i%3-1)*0.12, z=(i-12)*0.49`, ring=반경3.7 25개, cross=중심1+4방향×6=25. 테스트는 `FormationDefinition`을 메모리 생성해 `FormationSlots.Generate`로 검증.
 
 ```csharp
-using NUnit.Framework;
-using UnityEngine;
-using KiteSquad.Core;
-
-public class FormationsTests
+using NUnit.Framework; using UnityEngine; using KiteSquad.Core; using KiteSquad.Data;
+public class FormationSlotsTests
 {
-    [TestCase("dense")][TestCase("line")][TestCase("ring")][TestCase("cross")]
-    public void SlotCount_Is25(string f) => Assert.AreEqual(25, Formations.SlotsFor(f).Length);
+    static FormationDefinition Def(FormationMode m, float p0=0,float p1=0,int c=0)
+    { var d = ScriptableObject.CreateInstance<FormationDefinition>(); d.Mode=m; d.Spacing=p0; d.Radius=p1; d.Count=c; return d; }
 
     [Test] public void Dense_IsCentered5x5()
     {
-        var s = Formations.SlotsFor("dense");
-        Assert.AreEqual(new Vector2(0,0), s[12]); // center index (iz=2,ix=2)
+        var s = FormationSlots.Generate(Def(FormationMode.Grid, p0:0.53f));
+        Assert.AreEqual(25, s.Length);
+        Assert.AreEqual(new Vector2(0,0), s[12]);
         Assert.That(s[0], Is.EqualTo(new Vector2(-1.06f,-1.06f)).Using(V2Cmp(1e-4f)));
     }
-
     [Test] public void Ring_RadiusIs3_7()
-    {
-        foreach (var p in Formations.SlotsFor("ring"))
-            Assert.That(p.magnitude, Is.EqualTo(3.7f).Within(1e-3f));
-    }
-
+    { foreach (var p in FormationSlots.Generate(Def(FormationMode.Ring, p1:3.7f)))
+        Assert.That(p.magnitude, Is.EqualTo(3.7f).Within(1e-3f)); }
     [Test] public void Cross_HasCenterAndArms()
-    {
-        var s = Formations.SlotsFor("cross");
-        Assert.AreEqual(new Vector2(0,0), s[0]);
-        Assert.That(s[^1], Is.EqualTo(new Vector2(0, 6*0.61f)).Using(V2Cmp(1e-4f)));
-    }
+    { var s = FormationSlots.Generate(Def(FormationMode.Cross, p0:0.61f));
+      Assert.AreEqual(new Vector2(0,0), s[0]);
+      Assert.That(s[^1], Is.EqualTo(new Vector2(0, 6*0.61f)).Using(V2Cmp(1e-4f))); }
 
     static System.Collections.Generic.IComparer<Vector2> V2Cmp(float eps) => new Cmp(eps);
     class Cmp : System.Collections.Generic.IComparer<Vector2>
@@ -261,51 +292,60 @@ public class FormationsTests
 
 - [ ] **Step 2: 실패 확인**
 
-Run: `unity:unity-cli` 스킬의 EditMode 테스트 실행(`unity run-tests --mode EditMode --project main/KiteSquad` 류 — 정확 커맨드는 스킬 참조).
-Expected: FAIL (`Formations` 미정의).
+Run: `unity:unity-cli` 스킬의 EditMode 테스트 실행(정확 커맨드는 스킬 참조).
+Expected: FAIL (`FormationSlots`/`FormationDefinition` 미정의).
 
-- [ ] **Step 3: 구현(원본 slotsFor 포팅)**
-
-오프셋은 `Vector2(x, z)`로 반환(x→Unity x, y필드→Unity z).
+- [ ] **Step 3: 구현(SO + 생성기, 원본 slotsFor 포팅)**
 
 ```csharp
+// Data/FormationDefinition.cs
 using UnityEngine;
+namespace KiteSquad.Data
+{
+    public enum FormationMode { Grid, Line, Ring, Cross }
+    [CreateAssetMenu(menuName="KiteSquad/Formation")]
+    public class FormationDefinition : ScriptableObject
+    {
+        public string Id, DisplayName; public KeyCode HotKey;
+        public FormationMode Mode;
+        public float Spacing;  // Grid 간격 / Cross 암 간격 / Line z간격
+        public float Radius;   // Ring 반경
+        public int Count;      // 예약(가변 인원)
+    }
+}
+```
+```csharp
+// Core/FormationSlots.cs — 오프셋 Vector2(x, z), 25개
+using UnityEngine; using System.Collections.Generic; using KiteSquad.Data;
 namespace KiteSquad.Core
 {
-    public static class Formations
+    public static class FormationSlots
     {
-        public static Vector2[] SlotsFor(string type)
+        public static Vector2[] Generate(FormationDefinition d)
         {
-            var outp = new System.Collections.Generic.List<Vector2>(25);
-            switch (type)
+            var o = new List<Vector2>(25);
+            switch (d.Mode)
             {
-                case "dense":
-                    for (int iz = 0; iz < 5; iz++)
-                        for (int ix = 0; ix < 5; ix++)
-                            outp.Add(new Vector2((ix-2)*0.53f, (iz-2)*0.53f));
-                    break;
-                case "line":
-                    for (int i = 0; i < 25; i++)
-                        outp.Add(new Vector2((i%3-1)*0.12f, (i-12)*0.49f));
-                    break;
-                case "ring":
-                    for (int i = 0; i < 25; i++)
-                    { float a = Mathf.PI*2f*i/25f; outp.Add(new Vector2(Mathf.Cos(a)*3.7f, Mathf.Sin(a)*3.7f)); }
-                    break;
-                case "cross":
-                    outp.Add(Vector2.zero);
-                    for (int i = 1; i <= 6; i++)
-                    { outp.Add(new Vector2(-i*0.61f,0)); outp.Add(new Vector2(i*0.61f,0));
-                      outp.Add(new Vector2(0,-i*0.61f)); outp.Add(new Vector2(0,i*0.61f)); }
-                    break;
+                case FormationMode.Grid: // dense: 간격 0.53
+                    for (int iz=0; iz<5; iz++) for (int ix=0; ix<5; ix++)
+                        o.Add(new Vector2((ix-2)*d.Spacing, (iz-2)*d.Spacing)); break;
+                case FormationMode.Line:
+                    for (int i=0; i<25; i++) o.Add(new Vector2((i%3-1)*0.12f, (i-12)*0.49f)); break;
+                case FormationMode.Ring:
+                    for (int i=0; i<25; i++){ float a=Mathf.PI*2f*i/25f; o.Add(new Vector2(Mathf.Cos(a)*d.Radius, Mathf.Sin(a)*d.Radius)); } break;
+                case FormationMode.Cross:
+                    o.Add(Vector2.zero);
+                    for (int i=1; i<=6; i++){ o.Add(new Vector2(-i*d.Spacing,0)); o.Add(new Vector2(i*d.Spacing,0));
+                        o.Add(new Vector2(0,-i*d.Spacing)); o.Add(new Vector2(0,i*d.Spacing)); } break;
             }
-            return outp.ToArray();
+            return o.ToArray();
         }
     }
 }
 ```
+에셋: `dense`(Grid, Spacing 0.53, HotKey Alpha1), `line`(Line, HotKey Alpha2), `ring`(Ring, Radius 3.7, HotKey Alpha3), `cross`(Cross, Spacing 0.61, HotKey Alpha4). 런타임은 이 에셋 목록을 `FormationController`/HUD/입력이 공유.
 
-> 주의: cross는 중심1 + 6×4=24 = 25. 인덱스 순서가 원본과 동일(`[-x,+x,-z,+z]` 반복)해야 유닛 슬롯 배분이 일관된다.
+> 주의: cross는 중심1 + 6×4=24 = 25. 인덱스 순서가 원본과 동일(`[-x,+x,-z,+z]` 반복)해야 유닛 슬롯 배분이 일관된다. line/ring/grid 기본값은 원본과 동일하게 에셋에 저장.
 
 - [ ] **Step 4: 통과 확인**
 
@@ -315,70 +355,74 @@ Expected: PASS (4 케이스 + 4 테스트).
 - [ ] **Step 5: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Core/Formations.cs KiteSquad/Assets/Tests/EditMode/FormationsTests.cs && git commit -m "feat: add formation slot offsets with tests"
+cd main && git add KiteSquad/Assets/Scripts/Core/FormationSlots.cs KiteSquad/Assets/Scripts/Data/FormationDefinition.cs KiteSquad/Assets/Data/Formations KiteSquad/Assets/Tests/EditMode/FormationSlotsTests.cs && git commit -m "feat: add formation definitions (SO) and slot generator with tests"
 ```
 
 ---
 
-## Task 4: 장판 판정 (DangerZones) — 테스트 우선
+## Task 4: 장판 판정 (DangerShapeEval, shape 범용) — 테스트 우선
 
 **Files:**
-- Create: `Assets/Scripts/Core/DangerZones.cs`
-- Test: `Assets/Tests/EditMode/DangerZonesTests.cs`
+- Create: `Assets/Scripts/Core/DangerShapeEval.cs` (`DangerShape.cs`는 Task 2에서 생성)
+- Test: `Assets/Tests/EditMode/DangerShapeEvalTests.cs`
 
-- [ ] **Step 1: 실패 테스트(원본 inDanger 진리표)**
+패턴 id가 아니라 **DangerShape 데이터**로 판정 → 패턴 추가 시 코드 무변경(에셋의 shape만 지정).
 
-원본: core `r<3.10`; gate `|dx|>0.83 && |dx|<6.4 && |dz|<7.1`; quadrant `|dx|>0.56 && |dz|>0.56 && |dx|<5.7 && |dz|<5.7`; shell `r>1.73 && r<6.05`. (dx=x-cx, dz=z-cz)
+- [ ] **Step 1: 실패 테스트(원본 inDanger 진리표 — shape로)**
+
+원본값 그대로: Disc `r<3.10`; BandsX `|dx|>0.83 && |dx|<6.4 && |dz|<7.1`; Quadrants `|dx|>0.56 && |dz|>0.56 && |dx|<5.7 && |dz|<5.7`; Annulus `1.73<r<6.05`. (dx=x-cx, dz=z-cz)
 
 ```csharp
-using NUnit.Framework;
-using KiteSquad.Core;
-
-public class DangerZonesTests
+using NUnit.Framework; using KiteSquad.Core;
+public class DangerShapeEvalTests
 {
-    [Test] public void Core_InsideRadiusIsDanger()
+    [Test] public void Disc_InsideRadiusIsDanger()
     {
-        Assert.IsTrue(DangerZones.InDanger(PatternId.Core, 0,0, 2.0f,0));
-        Assert.IsFalse(DangerZones.InDanger(PatternId.Core, 0,0, 3.2f,0));
+        var s = DangerShape.Disc(3.10f);
+        Assert.IsTrue (DangerShapeEval.InDanger(s, 0,0, 2.0f,0));
+        Assert.IsFalse(DangerShapeEval.InDanger(s, 0,0, 3.2f,0));
     }
-    [Test] public void Gate_CenterCorridorIsSafe()
+    [Test] public void BandsX_CenterCorridorIsSafe()
     {
-        Assert.IsFalse(DangerZones.InDanger(PatternId.Gate, 0,0, 0.5f,0));   // |dx|<0.83 safe
-        Assert.IsTrue (DangerZones.InDanger(PatternId.Gate, 0,0, 2.0f,0));
+        var s = DangerShape.BandsX(0.83f, 6.4f, 7.1f);
+        Assert.IsFalse(DangerShapeEval.InDanger(s, 0,0, 0.5f,0)); // |dx|<0.83 safe
+        Assert.IsTrue (DangerShapeEval.InDanger(s, 0,0, 2.0f,0));
     }
-    [Test] public void Quadrant_CrossCorridorSafe()
+    [Test] public void Quadrants_CrossCorridorSafe()
     {
-        Assert.IsFalse(DangerZones.InDanger(PatternId.Quadrant, 0,0, 0.0f, 3.0f)); // on axis safe
-        Assert.IsTrue (DangerZones.InDanger(PatternId.Quadrant, 0,0, 3.0f, 3.0f)); // diagonal danger
+        var s = DangerShape.Quadrants(0.56f, 5.7f);
+        Assert.IsFalse(DangerShapeEval.InDanger(s, 0,0, 0.0f, 3.0f)); // on axis safe
+        Assert.IsTrue (DangerShapeEval.InDanger(s, 0,0, 3.0f, 3.0f)); // diagonal danger
     }
-    [Test] public void Shell_CenterSafeOuterDanger()
+    [Test] public void Annulus_CenterSafeOuterDanger()
     {
-        Assert.IsFalse(DangerZones.InDanger(PatternId.Shell, 0,0, 1.0f,0)); // r<1.73 safe
-        Assert.IsTrue (DangerZones.InDanger(PatternId.Shell, 0,0, 4.0f,0));
-        Assert.IsFalse(DangerZones.InDanger(PatternId.Shell, 0,0, 7.0f,0)); // r>6.05 safe
+        var s = DangerShape.Annulus(1.73f, 6.05f);
+        Assert.IsFalse(DangerShapeEval.InDanger(s, 0,0, 1.0f,0)); // r<1.73 safe
+        Assert.IsTrue (DangerShapeEval.InDanger(s, 0,0, 4.0f,0));
+        Assert.IsFalse(DangerShapeEval.InDanger(s, 0,0, 7.0f,0)); // r>6.05 safe
     }
 }
 ```
 
-- [ ] **Step 2: 실패 확인** — Run EditMode 테스트. Expected: FAIL (`DangerZones` 미정의).
+- [ ] **Step 2: 실패 확인** — Run EditMode 테스트. Expected: FAIL (`DangerShapeEval` 미정의).
 
-- [ ] **Step 3: 구현(원본 포팅)**
+- [ ] **Step 3: 구현(shape 범용 평가)**
 
 ```csharp
 using UnityEngine;
 namespace KiteSquad.Core
 {
-    public static class DangerZones
+    public static class DangerShapeEval
     {
-        public static bool InDanger(PatternId id, float cx, float cz, float x, float z)
+        public static bool InDanger(DangerShape s, float cx, float cz, float x, float z)
         {
             float dx = x - cx, dz = z - cz, r = Mathf.Sqrt(dx*dx + dz*dz);
-            switch (id)
+            switch (s.Type)
             {
-                case PatternId.Core:     return r < 3.10f;
-                case PatternId.Gate:     return Mathf.Abs(dx) > 0.83f && Mathf.Abs(dx) < 6.4f && Mathf.Abs(dz) < 7.1f;
-                case PatternId.Quadrant: return Mathf.Abs(dx) > 0.56f && Mathf.Abs(dz) > 0.56f && Mathf.Abs(dx) < 5.7f && Mathf.Abs(dz) < 5.7f;
-                case PatternId.Shell:    return r > 1.73f && r < 6.05f;
+                case DangerShapeType.Disc:         return r < s.RMax;
+                case DangerShapeType.Annulus:      return r > s.RMin && r < s.ROut;
+                case DangerShapeType.CrossBandsX:  return Mathf.Abs(dx) > s.Inner && Mathf.Abs(dx) < s.Outer && Mathf.Abs(dz) < s.HalfZ;
+                case DangerShapeType.QuadrantBoxes:return Mathf.Abs(dx) > s.Inner && Mathf.Abs(dz) > s.Inner && Mathf.Abs(dx) < s.Outer && Mathf.Abs(dz) < s.Outer;
                 default: return false;
             }
         }
@@ -391,7 +435,7 @@ namespace KiteSquad.Core
 - [ ] **Step 5: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Core/DangerZones.cs KiteSquad/Assets/Tests/EditMode/DangerZonesTests.cs && git commit -m "feat: add danger-zone hit tests for 4 boss patterns"
+cd main && git add KiteSquad/Assets/Scripts/Core/DangerShape.cs KiteSquad/Assets/Scripts/Core/DangerShapeEval.cs KiteSquad/Assets/Tests/EditMode/DangerShapeEvalTests.cs && git commit -m "feat: add data-driven danger-shape evaluator with tests"
 ```
 
 ---
@@ -412,14 +456,26 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using KiteSquad.Squad;
+using KiteSquad.Squad; using KiteSquad.Data;
 
 public class SquadMovementTests
 {
-    [UnityTest] public IEnumerator Anchor_MovesTowardDestination()
+    // Shared helper: build a FormationController with in-memory formation defs assigned.
+    // Reused by CombatTests / PatternResolveTests (any test that calls fc.Init()).
+    public static FormationController MakeFc()
     {
         var go = new GameObject("fc"); var fc = go.AddComponent<FormationController>();
-        fc.Init(); fc.SetFormation("dense", silent:true);
+        FormationDefinition D(string id, FormationMode m, float sp=0, float r=0)
+        { var d = ScriptableObject.CreateInstance<FormationDefinition>(); d.Id=id; d.Mode=m; d.Spacing=sp; d.Radius=r; return d; }
+        fc.Formations = new() { D("dense",FormationMode.Grid,0.53f), D("line",FormationMode.Line),
+                                D("ring",FormationMode.Ring,r:3.7f), D("cross",FormationMode.Cross,0.61f) };
+        fc.Init();
+        return fc;
+    }
+
+    [UnityTest] public IEnumerator Anchor_MovesTowardDestination()
+    {
+        var fc = MakeFc(); fc.SetFormation("dense", silent:true);
         fc.SetDestination(new Vector2(5f, 2f));
         float t = 0; while (t < 2f) { fc.Tick(0.016f); t += 0.016f; yield return null; }
         Assert.That(Vector2.Distance(fc.Anchor, new Vector2(5f,2f)), Is.LessThan(0.2f));
@@ -427,8 +483,7 @@ public class SquadMovementTests
 
     [UnityTest] public IEnumerator Units_ConvergeToSlots()
     {
-        var go = new GameObject("fc"); var fc = go.AddComponent<FormationController>();
-        fc.Init(); fc.SetFormation("dense", silent:true);
+        var fc = MakeFc(); fc.SetFormation("dense", silent:true);
         float t = 0; while (t < 2f) { fc.Tick(0.016f); t += 0.016f; yield return null; }
         var u0 = fc.Units[0];
         Vector2 want = fc.Anchor + u0.Slot;
@@ -436,6 +491,8 @@ public class SquadMovementTests
     }
 }
 ```
+
+> 이후 `CombatTests`/`PatternResolveTests`에서도 `new GameObject...AddComponent<FormationController>()` 대신 `SquadMovementTests.MakeFc()`를 써서 진형 에셋이 주입된 상태로 `Init()`한다.
 
 - [ ] **Step 2: 실패 확인** — Run PlayMode 테스트. Expected: FAIL (타입 미정의).
 
@@ -479,7 +536,7 @@ namespace KiteSquad.Squad
 ```csharp
 using UnityEngine;
 using System.Collections.Generic;
-using KiteSquad.Core;
+using KiteSquad.Core; using KiteSquad.Combat; using KiteSquad.Data;
 namespace KiteSquad.Squad
 {
     public class FormationController : MonoBehaviour
@@ -487,12 +544,16 @@ namespace KiteSquad.Squad
         public Vector2 Anchor = new(0, 3.4f);
         public Vector2 Destination = new(0, 3.4f);
         public string Formation = "dense";
+        public List<FormationDefinition> Formations = new(); // 4 assets assigned in scene / tests
+        public SquadOrder Order;                              // current squad order (Task 5.5)
         public readonly List<SquadUnit> Units = new();
+
+        FormationDefinition Find(string id) => Formations.Find(f => f.Id == id);
 
         public void Init()
         {
             Units.Clear();
-            var slots = Formations.SlotsFor("dense");
+            var slots = FormationSlots.Generate(Find("dense"));
             for (int i = 0; i < GameConstants.SquadSize; i++)
                 Units.Add(new SquadUnit { Id = i, Slot = slots[i], X = slots[i].x, Z = 3.4f + slots[i].y,
                                           Cd = Random.value*0.65f, Anim = Random.value*6.28f });
@@ -500,7 +561,7 @@ namespace KiteSquad.Squad
 
         public void SetFormation(string id, bool silent = false)
         {
-            Formation = id; var slots = Formations.SlotsFor(id);
+            Formation = id; var slots = FormationSlots.Generate(Find(id));
             for (int i = 0; i < Units.Count; i++) Units[i].Slot = slots[i];
             // silent/toast/vfx handled by caller in play mode
         }
@@ -537,41 +598,162 @@ cd main && git add KiteSquad/Assets/Scripts/Squad KiteSquad/Assets/Tests/PlayMod
 
 ---
 
-## Task 6: 입력 — 우클릭 이동 / 진형 / 일시정지 / 재시작
+## Task 5.5: 적 추상화 + 분대 오더 (결정 #9) — 테스트 우선
+
+**Files:**
+- Create: `Assets/Scripts/Combat/IEnemy.cs`, `IDamageable.cs`
+- Create: `Assets/Scripts/Combat/EnemyRegistry.cs`
+- Create: `Assets/Scripts/Combat/SquadOrder.cs`
+- Test: `Assets/Tests/EditMode/EnemyRegistryTests.cs`
+
+어택땅·우클릭 타겟의 토대. M1엔 보스 1개만 등록되지만 M2 잡몹이 바로 드롭인된다.
+
+- [ ] **Step 1: 실패 테스트(레지스트리 획득)**
+
+```csharp
+using NUnit.Framework; using UnityEngine; using KiteSquad.Combat;
+public class EnemyRegistryTests
+{
+    class FakeEnemy : IEnemy { public Vector2 Pos{get;set;} public bool Alive{get;set;}=true; }
+    [Test] public void NearestInRange_PicksClosestAlive()
+    {
+        var reg = new EnemyRegistry();
+        var a = new FakeEnemy{Pos=new Vector2(2,0)}; var b = new FakeEnemy{Pos=new Vector2(5,0)};
+        reg.Register(a); reg.Register(b);
+        Assert.AreSame(a, reg.NearestInRange(Vector2.zero, 10f));
+        a.Alive = false;
+        Assert.AreSame(b, reg.NearestInRange(Vector2.zero, 10f)); // dead skipped
+        Assert.IsNull(reg.NearestInRange(Vector2.zero, 1f));      // out of range
+    }
+}
+```
+
+- [ ] **Step 2: 실패 확인** — Run EditMode. Expected: FAIL.
+
+- [ ] **Step 3: 구현**
+
+```csharp
+// Combat/IEnemy.cs
+using UnityEngine;
+namespace KiteSquad.Combat
+{
+    public interface IDamageable { void ApplyDamage(float amount); }
+    public interface IEnemy { Vector2 Pos { get; } bool Alive { get; } }
+}
+```
+```csharp
+// Combat/EnemyRegistry.cs
+using System.Collections.Generic; using UnityEngine;
+namespace KiteSquad.Combat
+{
+    public class EnemyRegistry
+    {
+        public readonly List<IEnemy> Enemies = new();
+        public void Register(IEnemy e){ if(!Enemies.Contains(e)) Enemies.Add(e); }
+        public void Unregister(IEnemy e){ Enemies.Remove(e); }
+        public IEnemy NearestInRange(Vector2 from, float range)
+        {
+            IEnemy best=null; float bd=range*range;
+            foreach (var e in Enemies){ if(!e.Alive) continue;
+                float d=(e.Pos-from).sqrMagnitude; if(d<=bd){bd=d; best=e;} }
+            return best;
+        }
+    }
+}
+```
+```csharp
+// Combat/SquadOrder.cs
+using UnityEngine;
+namespace KiteSquad.Combat
+{
+    public enum OrderKind { Move, AttackMove, AttackTarget }
+    public struct SquadOrder
+    {
+        public OrderKind Kind; public Vector2 Point; public IEnemy Target;
+        public static SquadOrder Move(Vector2 p)=>new(){Kind=OrderKind.Move, Point=p};
+        public static SquadOrder AttackMove(Vector2 p)=>new(){Kind=OrderKind.AttackMove, Point=p};
+        public static SquadOrder Attack(IEnemy t)=>new(){Kind=OrderKind.AttackTarget, Target=t};
+    }
+}
+```
+
+`FormationController`에 `public SquadOrder Order;` 추가. `SetDestination`은 `Order = SquadOrder.Move(p)` + anchor 목적지 지정으로 통합. `AttackMove(p)`도 anchor 목적지를 p로 두되 Kind만 다름(이동 중 자동사격은 기존대로, Task 7에서 타겟 획득이 오더를 참조). `AttackTarget(t)`는 타겟이 사거리 밖이면 anchor를 타겟 쪽으로(클램프 내) 전진.
+
+- [ ] **Step 4: 통과 확인** — Run EditMode. Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd main && git add KiteSquad/Assets/Scripts/Combat KiteSquad/Assets/Tests/EditMode/EnemyRegistryTests.cs && git commit -m "feat: enemy abstraction (IEnemy/registry) and squad order state"
+```
+
+---
+
+## Task 6: 입력 — 우클릭 스마트 커맨드 / 어택땅 / 진형 / 일시정지 / 재시작 (결정 #9)
 
 **Files:**
 - Create: `Assets/Scripts/Input/SquadInputController.cs`
 
-- [ ] **Step 1: 구현(원본 이벤트 포팅, 신규 Input System 또는 레거시)**
+- [ ] **Step 1: 구현(스마트 커맨드 + 어택땅)**
 
-우클릭/드래그 → 카메라 레이를 y=0 평면과 교차 → `FormationController.SetDestination(new Vector2(hit.x, hit.z))`. 키 `1/q→dense,2/w→line,3/e→ring,4/r→cross`, `p→pause`, `enter→restart`, `space→(예약)`. 우클릭 컨텍스트 메뉴 방지는 Unity에선 불필요.
+- **우클릭**: 카메라 레이를 먼저 **적 콜라이더**에 Raycast → 맞으면 그 `IEnemy`로 `AttackTarget`; 아니면 y=0 지면 교차점으로 `Move`.
+- **A → 좌클릭(어택땅)**: `A` 누르면 어택땅 대기모드(커서 피드백). 다음 좌클릭의 지면점으로 `AttackMove`(좌클릭이 적 위면 `AttackTarget`). Esc/우클릭으로 취소.
+- 진형 키 `1/q→dense,2/w→line,3/e→ring,4/r→cross`(에셋 HotKey 기반), `p→pause`, `enter→restart`, `space→(예약)`.
 
 ```csharp
 using UnityEngine;
-using KiteSquad.Squad; using KiteSquad.Game;
+using KiteSquad.Squad; using KiteSquad.Game; using KiteSquad.Combat;
 namespace KiteSquad.Input
 {
     public class SquadInputController : MonoBehaviour
     {
         public Camera Cam; public FormationController Squad; public GameDirector Director;
+        public LayerMask EnemyMask;
         static readonly Plane Ground = new(Vector3.up, Vector3.zero);
+        bool _attackMovePending;
 
         void Update()
         {
             if (Director.Phase == Phase.Play && !Director.Paused)
             {
-                // RMB held = move (click or drag), mirrors prototype draggingRight
-                if (UnityEngine.Input.GetMouseButton(1))
+                if (Key(KeyCode.A)) _attackMovePending = true;
+                if (Key(KeyCode.Escape)) _attackMovePending = false;
+
+                // LMB: resolve attack-move if armed
+                if (LmbDown() && _attackMovePending)
                 {
-                    var ray = Cam.ScreenPointToRay(UnityEngine.Input.mousePosition);
-                    if (Ground.Raycast(ray, out float e)) { var p = ray.GetPoint(e); Squad.SetDestination(new Vector2(p.x, p.z)); }
+                    _attackMovePending = false;
+                    if (PickEnemy(out var en)) Director.IssueOrder(SquadOrder.Attack(en));
+                    else if (PickGround(out var gp)) Director.IssueOrder(SquadOrder.AttackMove(gp));
                 }
+                // RMB: smart command — enemy → attack target, ground → move
+                else if (RmbDown())
+                {
+                    if (PickEnemy(out var en)) Director.IssueOrder(SquadOrder.Attack(en));
+                    else if (PickGround(out var gp)) Director.IssueOrder(SquadOrder.Move(gp));
+                }
+
                 HandleFormationKeys();
                 if (Key(KeyCode.P)) Director.TogglePause();
             }
             if (Key(KeyCode.Return) && Director.Phase is Phase.Menu or Phase.Win or Phase.Lose) Director.Restart();
         }
 
+        bool PickEnemy(out IEnemy enemy)
+        {
+            enemy = null;
+            var ray = Cam.ScreenPointToRay(MousePos());
+            if (Physics.Raycast(ray, out var hit, 500f, EnemyMask)
+                && hit.collider.TryGetComponent<EnemyRef>(out var r) && r.Enemy.Alive)
+            { enemy = r.Enemy; return true; }
+            return false;
+        }
+        bool PickGround(out Vector2 p)
+        {
+            p = default; var ray = Cam.ScreenPointToRay(MousePos());
+            if (Ground.Raycast(ray, out float e)) { var w = ray.GetPoint(e); p = new Vector2(w.x, w.z); return true; }
+            return false;
+        }
         void HandleFormationKeys()
         {
             if (Key(KeyCode.Alpha1)||Key(KeyCode.Q)) Director.ChangeFormation("dense");
@@ -580,18 +762,22 @@ namespace KiteSquad.Input
             if (Key(KeyCode.Alpha4)||Key(KeyCode.R)) Director.ChangeFormation("cross");
         }
         static bool Key(KeyCode k) => UnityEngine.Input.GetKeyDown(k);
+        static bool LmbDown() => UnityEngine.Input.GetMouseButtonDown(0);
+        static bool RmbDown() => UnityEngine.Input.GetMouseButtonDown(1);
+        static Vector3 MousePos() => UnityEngine.Input.mousePosition;
     }
 }
 ```
 
-> 프로젝트가 新 Input System 전용이면 `UnityEngine.Input` 대신 `Mouse.current`/`Keyboard.current`로 바꾼다(Task 0 템플릿 설정에 맞춤, unity-cli로 확인).
+> `EnemyRef`(MonoBehaviour)는 콜라이더가 붙은 적 오브젝트에서 자신의 `IEnemy`를 노출하는 작은 브리지. 보스 비주얼(Task 7)에 콜라이더+`EnemyRef` 부착. 신 Input System 전용이면 `Mouse.current`/`Keyboard.current`로 교체(Task 0 설정 확인).
+> 우클릭 지면 드래그 이동(원본 draggingRight 느낌)을 유지하려면 `GetMouseButton(1)` held일 때 적 비피킹 시 계속 `Move` 갱신하도록 확장 가능.
 
-- [ ] **Step 2: 수동 검증** — PlayMode에서 우클릭 이동·1~4 진형 전환이 되는지 확인(스크린샷/플레이).
+- [ ] **Step 2: 수동 검증** — PlayMode에서 우클릭 지면 이동·우클릭 보스 공격명령·A+좌클릭 어택땅·1~4 진형 전환 확인(스크린샷/플레이).
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd main && git add KiteSquad/Assets/Scripts/Input && git commit -m "feat: squad input (rmb move, formation keys, pause, restart)"
+cd main && git add KiteSquad/Assets/Scripts/Input && git commit -m "feat: squad input (rmb smart command, attack-move, formation keys, pause, restart)"
 ```
 
 ---
@@ -607,18 +793,19 @@ cd main && git add KiteSquad/Assets/Scripts/Input && git commit -m "feat: squad 
 
 ```csharp
 using System.Collections; using NUnit.Framework; using UnityEngine; using UnityEngine.TestTools;
-using KiteSquad.Squad; using KiteSquad.Boss; using KiteSquad.Core;
+using KiteSquad.Squad; using KiteSquad.Boss; using KiteSquad.Core; using KiteSquad.Combat;
 
 public class CombatTests
 {
     [UnityTest] public IEnumerator Boss_TakesDamageOverTime()
     {
-        var fcGo = new GameObject("fc"); var fc = fcGo.AddComponent<FormationController>();
-        fc.Init(); fc.Anchor = new Vector2(0, 3.4f);
+        var fc = SquadMovementTests.MakeFc(); fc.Anchor = new Vector2(0, 3.4f);
         var boss = new Boss();
+        var reg = new EnemyRegistry(); reg.Register(boss);
         var shots = new ShotSystem();
+        var order = SquadOrder.AttackMove(fc.Anchor); // auto-fire at in-range enemies
         float start = boss.Hp, t = 0;
-        while (t < 3f) { fc.Tick(0.016f); shots.Tick(fc.Units, boss, 0.016f); t += 0.016f; yield return null; }
+        while (t < 3f) { fc.Tick(0.016f); shots.Tick(fc.Units, reg, order, 0.016f); t += 0.016f; yield return null; }
         Assert.That(boss.Hp, Is.LessThan(start));
     }
 }
@@ -626,58 +813,70 @@ public class CombatTests
 
 - [ ] **Step 2: 실패 확인** — Run PlayMode. Expected: FAIL.
 
-- [ ] **Step 3: Boss 구현**
+- [ ] **Step 3: Boss 구현 (`IEnemy`,`IDamageable`)**
 
 ```csharp
-using KiteSquad.Core;
+using UnityEngine; using KiteSquad.Core; using KiteSquad.Combat;
 namespace KiteSquad.Boss
 {
-    public class Boss
+    public class Boss : IEnemy, IDamageable
     {
         public float Hp = GameConstants.BossMax; public int Phase = 1; public float Flash;
         public float HpFrac => Hp / GameConstants.BossMax;
+        // Boss is fixed at arena position; M2 enemies will carry their own moving Pos.
+        public Vector2 Pos => new(GameConstants.BossX, GameConstants.BossZ);
+        public bool Alive => Hp > 0;
+        public void ApplyDamage(float amount) { Hp = Mathf.Max(0, Hp - amount); Flash = 0.8f; }
     }
 }
 ```
 
-- [ ] **Step 4: ShotSystem 구현(원본 발사/명중 포팅)**
+> `GameDirector.Restart`에서 `EnemyRegistry.Register(Boss)`. 보스 비주얼(Step 6)에 콜라이더+`EnemyRef{ Enemy = boss }` 부착해 우클릭 피킹 가능하게.
 
-유닛 평타: 보스 거리<15.9 & cd<=0 → 쿨 `0.76+rand*0.16`, 투사체 생성(보스 방향, 속도22). 투사체: 보스 반경1.15 명중 시 33 피해, totalDamage·hitEvents 기록. 반환으로 명중 여부/피해를 Director에 전달(DPS·플래시용).
+- [ ] **Step 4: ShotSystem 구현(오더 기반 타겟 획득 + 원본 발사/명중)**
+
+유닛 평타: **타겟 선택** — 오더가 `AttackTarget`이고 그 적이 생존·사거리 내면 그 적, 아니면 `registry.NearestInRange(유닛, 15.9)`. 타겟 있고 cd<=0 → 쿨 `0.76+rand*0.16`, 투사체 생성(타겟 방향, 속도22). 투사체는 **생성 시점 타겟**을 추적 보관(`TargetRef`); 명중(반경1.15) 시 `IDamageable.ApplyDamage(33)`, hit 콜백(DPS·플래시). M1은 타겟이 보스뿐이라 결과는 원본과 동일하되, 구조는 다중 적 대응.
 
 ```csharp
-using System.Collections.Generic; using UnityEngine; using KiteSquad.Core; using KiteSquad.Squad;
-namespace KiteSquad.Boss { /* placed here for brevity; or KiteSquad.Squad */ }
+using System.Collections.Generic; using UnityEngine;
+using KiteSquad.Core; using KiteSquad.Combat;
 namespace KiteSquad.Squad
 {
-    public struct Shot { public float X, Z, Vx, Vz, Life; public int Owner; }
+    public struct Shot { public float X, Z, Vx, Vz, Life; public int Owner; public IEnemy Target; }
     public class ShotSystem
     {
         public readonly List<Shot> Shots = new();
-        public System.Action<float> OnBossHit; // damage dealt
+        public System.Action<float> OnBossHit; // damage dealt (name kept; = any enemy hit)
 
-        public void Tick(IList<SquadUnit> units, KiteSquad.Boss.Boss boss, float dt)
+        static IEnemy Acquire(SquadUnit u, EnemyRegistry reg, SquadOrder order)
         {
-            float bx = GameConstants.BossX, bz = GameConstants.BossZ;
+            var p = new Vector2(u.X, u.Z);
+            if (order.Kind == OrderKind.AttackTarget && order.Target is { Alive: true } t
+                && (t.Pos - p).magnitude < GameConstants.FireRange) return t;
+            return reg.NearestInRange(p, GameConstants.FireRange);
+        }
+
+        public void Tick(IList<SquadUnit> units, EnemyRegistry reg, SquadOrder order, float dt)
+        {
             foreach (var u in units)
             {
-                if (u.Dead) continue;
-                float db = Mathf.Sqrt((u.X-bx)*(u.X-bx) + (u.Z-bz)*(u.Z-bz));
-                if (db < GameConstants.FireRange && u.Cd <= 0)
-                {
-                    u.Cd = GameConstants.UnitCdMin + Random.value*GameConstants.UnitCdRand;
-                    float ang = Mathf.Atan2(bz-u.Z, bx-u.X);
-                    Shots.Add(new Shot { X = u.X+Mathf.Cos(ang)*0.29f, Z = u.Z+Mathf.Sin(ang)*0.29f,
-                                         Vx = Mathf.Cos(ang)*GameConstants.ShotSpeed, Vz = Mathf.Sin(ang)*GameConstants.ShotSpeed,
-                                         Life = GameConstants.ShotLife, Owner = u.Id });
-                    u.ShotCount++;
-                }
+                if (u.Dead || u.Cd > 0) continue;
+                var tgt = Acquire(u, reg, order);
+                if (tgt == null) continue;
+                u.Cd = GameConstants.UnitCdMin + Random.value*GameConstants.UnitCdRand;
+                float ang = Mathf.Atan2(tgt.Pos.y-u.Z, tgt.Pos.x-u.X);
+                Shots.Add(new Shot { X = u.X+Mathf.Cos(ang)*0.29f, Z = u.Z+Mathf.Sin(ang)*0.29f,
+                                     Vx = Mathf.Cos(ang)*GameConstants.ShotSpeed, Vz = Mathf.Sin(ang)*GameConstants.ShotSpeed,
+                                     Life = GameConstants.ShotLife, Owner = u.Id, Target = tgt });
+                u.ShotCount++;
             }
             for (int i = Shots.Count-1; i >= 0; i--)
             {
                 var b = Shots[i]; b.X += b.Vx*dt; b.Z += b.Vz*dt; b.Life -= dt;
-                if (Mathf.Sqrt((b.X-bx)*(b.X-bx)+(b.Z-bz)*(b.Z-bz)) < GameConstants.ShotHitRadius)
+                var tp = b.Target is { Alive: true } ? b.Target.Pos : new Vector2(float.NaN, float.NaN);
+                if (b.Target is { Alive: true } && Mathf.Sqrt((b.X-tp.x)*(b.X-tp.x)+(b.Z-tp.y)*(b.Z-tp.y)) < GameConstants.ShotHitRadius)
                 {
-                    boss.Hp = Mathf.Max(0, boss.Hp - GameConstants.UnitDamage); boss.Flash = 0.8f;
+                    (b.Target as IDamageable)?.ApplyDamage(GameConstants.UnitDamage);
                     OnBossHit?.Invoke(GameConstants.UnitDamage); Shots.RemoveAt(i);
                 }
                 else if (b.Life <= 0 || Mathf.Abs(b.X) > 15 || Mathf.Abs(b.Z) > 13) Shots.RemoveAt(i);
@@ -719,11 +918,10 @@ public class PatternResolveTests
 {
     [UnityTest] public IEnumerator Core_DamagesUnitsInRadius()
     {
-        var fcGo = new GameObject("fc"); var fc = fcGo.AddComponent<FormationController>();
-        fc.Init(); fc.Anchor = Vector2.zero;
+        var fc = SquadMovementTests.MakeFc(); fc.Anchor = Vector2.zero;
         foreach (var u in fc.Units) { u.X = 0; u.Z = 0; } // all at center → all in core danger
         var sys = new BossAttackSystem();
-        sys.ForceResolve(PatternId.Core, 0, 0, fc.Units);
+        sys.ForceResolve(DangerShape.Disc(3.10f), 0, 0, fc.Units); // resolve by shape, not pattern id
         Assert.That(fc.Units[0].Hp, Is.EqualTo(GameConstants.UnitMax - GameConstants.PatternUnitDamage).Within(0.01f));
         yield break;
     }
@@ -734,18 +932,20 @@ public class PatternResolveTests
 
 - [ ] **Step 3: BossAttackSystem 구현**
 
-상태: 현재 패턴/elapsed/remaining, nextAttack 타이머, attackIndex. `Tick`에서 패턴 없으면 nextAttack 감소→StartPattern, 있으면 remaining 감소→막판 0.38s 전까지 장판 중심이 anchor 추종(lerp 11), remaining<=0이면 Resolve. `Resolve`: 각 유닛 `DangerZones.InDanger`면 55 피해·사망 처리, 결과(피격/사망 수) 반환. nextAttack = HpFrac<0.55 ? 1.45 : 1.9. `ForceResolve`는 테스트/디버그용.
+상태: 현재 패턴(`PatternDefinition`)/elapsed/remaining, nextAttack 타이머, attackIndex. 시퀀스는 **`AttackSequence` 에셋** 주입(`public AttackSequence Sequence;`). `Tick`에서 패턴 없으면 nextAttack 감소→StartPattern, 있으면 remaining 감소→막판 0.38s 전까지 장판 중심이 anchor 추종(lerp 11), remaining<=0이면 Resolve. `Resolve`: 각 유닛 `DangerShapeEval.InDanger(shape,…)`면 55 피해·사망, 결과(피격/사망 수) 반환. nextAttack = HpFrac<0.55 ? 1.45 : 1.9. `ForceResolve(DangerShape,…)`는 테스트/디버그용.
 
 ```csharp
-using System.Collections.Generic; using UnityEngine; using KiteSquad.Core; using KiteSquad.Squad;
+using System.Collections.Generic; using UnityEngine;
+using KiteSquad.Core; using KiteSquad.Squad; using KiteSquad.Data;
 namespace KiteSquad.Boss
 {
     public class BossAttackSystem
     {
-        public struct Active { public AttackPattern P; public float Cx, Cz, Elapsed, Remaining; }
+        public AttackSequence Sequence;  // injected (SO). null-safe for ForceResolve tests.
+        public struct Active { public PatternDefinition P; public float Cx, Cz, Elapsed, Remaining; }
         public Active? Current; public int Index; public float NextAttack = GameConstants.FirstAttackDelay;
 
-        public System.Action<AttackPattern> OnStart;
+        public System.Action<PatternDefinition> OnStart;
         public System.Action<int,int> OnResolved; // hitCount, lost
 
         public void Tick(FormationController squad, Boss boss, float dt)
@@ -756,28 +956,28 @@ namespace KiteSquad.Boss
                 if (a.Remaining > GameConstants.CastTrackLockTime)
                 { a.Cx = Mathf.Lerp(a.Cx, squad.Anchor.x, Mathf.Min(1, dt*11)); a.Cz = Mathf.Lerp(a.Cz, squad.Anchor.y, Mathf.Min(1, dt*11)); }
                 Current = a;
-                if (a.Remaining <= 0) Resolve(a.P.Id, a.Cx, a.Cz, squad.Units, boss);
+                if (a.Remaining <= 0) Resolve(a.P.Shape, a.Cx, a.Cz, squad.Units, boss);
             }
             else { NextAttack -= dt; if (NextAttack <= 0) StartPattern(squad, boss); }
         }
 
         void StartPattern(FormationController squad, Boss boss)
         {
-            var p = AttackTable.Sequence[Index % AttackTable.Sequence.Count]; Index++;
+            var seq = Sequence.Patterns; var p = seq[Index % seq.Length]; Index++;
             Current = new Active { P = p, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
             OnStart?.Invoke(p);
         }
 
-        public void ForceResolve(PatternId id, float cx, float cz, IList<SquadUnit> units)
-            => Resolve(id, cx, cz, units, null);
+        public void ForceResolve(DangerShape shape, float cx, float cz, IList<SquadUnit> units)
+            => Resolve(shape, cx, cz, units, null);
 
-        void Resolve(PatternId id, float cx, float cz, IList<SquadUnit> units, Boss boss)
+        void Resolve(DangerShape shape, float cx, float cz, IList<SquadUnit> units, Boss boss)
         {
             int hit = 0, lost = 0;
             foreach (var u in units)
             {
                 if (u.Dead) continue;
-                if (DangerZones.InDanger(id, cx, cz, u.X, u.Z))
+                if (DangerShapeEval.InDanger(shape, cx, cz, u.X, u.Z))
                 { hit++; u.Hp -= GameConstants.PatternUnitDamage; u.Flash = 1;
                   if (u.Hp <= 0) { u.Dead = true; lost++; } }
             }
@@ -858,15 +1058,19 @@ namespace KiteSquad.Core
 ```csharp
 using System.Collections.Generic; using UnityEngine;
 using KiteSquad.Core; using KiteSquad.Squad; using KiteSquad.Boss;
+using KiteSquad.Combat; using KiteSquad.Data;
 namespace KiteSquad.Game
 {
     public enum Phase { Menu, Play, Win, Lose }
     public class GameDirector : MonoBehaviour
     {
         public FormationController Squad;           // assigned in scene
+        public AttackSequence Sequence;             // boss pattern sequence asset
+        public BossView BossView;                   // scene boss visual (collider + EnemyRef)
         public Phase Phase = Phase.Menu; public bool Paused;
         public float Elapsed, LastDps; public int BossPhase = 1;
         public Boss Boss { get; private set; }
+        public EnemyRegistry Enemies { get; private set; }
         public BossAttackSystem Attacks { get; private set; }
         public ShotSystem Shots { get; private set; }
         readonly List<(float t, float d)> _hits = new();
@@ -874,23 +1078,35 @@ namespace KiteSquad.Game
 
         public void Restart()
         {
-            Boss = new Boss(); Attacks = new BossAttackSystem(); Shots = new ShotSystem();
+            Boss = new Boss(); Enemies = new EnemyRegistry(); Enemies.Register(Boss);
+            Attacks = new BossAttackSystem { Sequence = Sequence }; Shots = new ShotSystem();
             _hits.Clear(); TotalDamage = 0; Elapsed = 0; BossPhase = 1; Paused = false;
             Shots.OnBossHit += d => { _hits.Add((Elapsed, d)); TotalDamage += d; };
             Squad.Init(); Squad.SetFormation("dense", true);
             Squad.Anchor = new Vector2(0, 3.4f); Squad.Destination = Squad.Anchor;
+            Squad.Order = SquadOrder.Move(Squad.Anchor);   // auto-fire still engages in-range enemies
+            if (BossView) BossView.Bind(Boss);
             Phase = Phase.Play;
         }
 
         public void TogglePause() { if (Phase == Phase.Play) Paused = !Paused; }
         public void ChangeFormation(string id) { if (Phase == Phase.Play) Squad.SetFormation(id); }
 
+        // Called by input. Move/AttackMove set anchor destination; AttackTarget chases if out of range.
+        public void IssueOrder(SquadOrder o)
+        {
+            if (Phase != Phase.Play || Paused) return;
+            Squad.Order = o;
+            if (o.Kind == OrderKind.AttackTarget && o.Target != null) Squad.SetDestination(o.Target.Pos);
+            else Squad.SetDestination(o.Point);
+        }
+
         void Update()
         {
             if (Phase != Phase.Play || Paused) return;
             float dt = Mathf.Min(0.042f, Time.deltaTime); Elapsed += dt;
             Squad.Tick(dt);
-            Shots.Tick(Squad.Units, Boss, dt);
+            Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             Attacks.Tick(Squad, Boss, dt);
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);
             LastDps = Combat.Dps(_hits, Elapsed);
@@ -902,6 +1118,8 @@ namespace KiteSquad.Game
     }
 }
 ```
+
+> `BossView`(MonoBehaviour): 콜라이더 + `EnemyRef`를 들고 `Bind(Boss)`로 참조 연결, 매 프레임 `transform.position=(Boss.Pos.x,0,Boss.Pos.y)`. 우클릭 피킹·플래시 표시에 사용.
 
 - [ ] **Step 6: Commit**
 
@@ -983,6 +1201,8 @@ cd main && git add -A && git commit -m "chore: M1 integration pass and tuning ag
 
 ## Self-Review 메모
 
-- **Spec 커버리지:** 프로토타입의 이동/진형/평타/4패턴/2페이즈/DPS감소/승패/HUD/일시정지/재시작/연출 — 각각 Task 5·3/5·7·4&8·9·9·9·10·6·6·11에 매핑. 미구현(대시/어택땅/잡몹)은 M1 범위 밖(decisions #2). formation-spec의 NavMesh/FlowField/적푸시는 M2~M3(PLAN §4).
-- **타입 일관성:** `SlotsFor`/`InDanger`/`Dps`/`IsPhase2` 시그니처는 테스트와 구현에서 동일. 좌표는 전부 `(x→x, z→z)` 규약.
-- **플레이스홀더:** 순수 로직(Task 2~9)은 완전한 C# 포함. Unity-에디터 의존(씬/카메라/Canvas/프리미티브 바인딩)은 해당 unity 스킬을 따르는 구체 단계로 기술 — 실행 시 설치된 6000.3.28f1 API로 확정.
+- **Spec 커버리지:** 프로토타입의 이동/진형/평타/4패턴/2페이즈/DPS감소/승패/HUD/일시정지/재시작/연출 — 각각 Task 5·3/5·7·4&8·9·9·9·10·6·6·11에 매핑. **추가(결정 #8·#9):** 패턴·진형 데이터화(Task 2·3·4), 적 추상화·오더(Task 5.5), 우클릭 스마트 커맨드·어택땅(Task 6), 오더 기반 타겟 획득(Task 7·9). 대시는 M4. formation-spec의 NavMesh/FlowField/적푸시는 M2~M3(PLAN §4).
+- **타입 일관성:** `FormationSlots.Generate(def)`/`DangerShapeEval.InDanger(shape,…)`/`ShotSystem.Tick(units,registry,order,dt)`/`BossAttackSystem`(+`AttackSequence`)/`Dps`/`IsPhase2` 시그니처는 테스트와 구현에서 동일. 좌표는 전부 `(x→x, z→z)` 규약. `IEnemy.Pos`도 동일 규약.
+- **데이터↔코드 경계:** 패턴/진형의 **값**은 ScriptableObject 에셋(원본 1:1), **로직**은 범용 평가기. 1:1 보장은 평가기 EditMode 테스트 + 에셋 값. 새 패턴/진형 추가는 에셋 추가로(코드 무변경), 새 기하/모드는 평가기에 1종 추가.
+- **M1 단일 보스 한계:** 어택땅·우클릭 타겟은 적이 보스뿐이라 체감은 제한적(두 명령 모두 보스 지향으로 수렴). 구조(레지스트리·오더·`IEnemy`)는 M2 잡몹에서 그대로 활성화.
+- **플레이스홀더:** 순수 로직(Task 2~9)은 완전한 C# 포함. Unity-에디터 의존(씬/카메라/Canvas/프리미티브/콜라이더·`EnemyRef` 바인딩, SO 에셋 작성)은 해당 unity 스킬을 따르는 구체 단계로 기술 — 실행 시 설치된 6000.3.28f1 API로 확정.
