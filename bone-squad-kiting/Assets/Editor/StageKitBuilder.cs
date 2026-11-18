@@ -373,7 +373,7 @@ namespace BoneSquadKiting.EditorTools
                 SceneManager.MoveGameObjectToScene(go, scene);
                 go.transform.SetAsFirstSibling();
                 var run = go.AddComponent<StageRun>();
-                run.NextScene = "Arena";
+                run.NextScene = "";
                 for (int i = 0; i < maps.Count; i++)
                 {
                     run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd,

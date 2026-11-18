@@ -130,7 +130,7 @@ public class MainMenuTests
         while (director.Phase != GamePhase.Win && Time.time < until) yield return null;
         Assert.AreEqual(GamePhase.Win, director.Phase);
         Assert.AreEqual(2, GameProgress.NextStage);
-        Assert.AreEqual(run.Stages.Count > 2 ? "" : run.NextScene, GameProgress.NextScene, "the scene after the maps is saved only once the last map is cleared");
+        Assert.AreEqual("", GameProgress.NextScene);
 
         // New game from the menu forgets the save and plays stage 1.
         yield return LoadMenu();
@@ -145,17 +145,36 @@ public class MainMenuTests
     }
 
     [UnityTest]
-    public IEnumerator Continue_AfterTheLastMap_GoesStraightToTheBossScene()
+    public IEnumerator Continue_ToTheBossStage_AndClearingItEndsTheSave()
     {
-        GameProgress.Save(2, "Arena");
+        GameProgress.Save(2);
         yield return LoadMenu();
         var menu = Object.FindFirstObjectByType<MainMenu>();
         Assert.IsTrue(menu.ContinueButton.interactable);
         Assert.AreEqual("이어하기", menu.ContinueLabel.text);
         menu.BurstSeconds = 0.2f;
         menu.ContinueButton.onClick.Invoke();
-        yield return WaitForScene("Arena");
-        var arena = Object.FindFirstObjectByType<GameDirector>();
-        Assert.AreEqual(GamePhase.Play, arena.Phase, "the boss stage starts at once");
+        yield return WaitForScene("Game");
+        var run = Object.FindFirstObjectByType<StageRun>();
+        var director = run.Kit.Director;
+        Assert.AreEqual(2, run.Current, "continue went to the boss stage");
+        Assert.IsTrue(run.IsLast);
+        Assert.AreEqual(GamePhase.Play, director.Phase);
+        var start = run.Stages[2].Map.GetComponentInChildren<StageStart>(true);
+        Assert.That(Vector2.Distance(director.Squad.Anchor, Flat(start.transform.position)), Is.LessThan(1.5f), "from its start point");
+
+        // Clearing the last stage finishes the game: nothing is left to continue.
+        director.ClearRule = StageClearRule.ReachEnd;
+        director.Squad.Anchor = Flat(start.EndPoint.position);
+        float until = Time.time + 3f;
+        while (director.Phase != GamePhase.Win && Time.time < until) yield return null;
+        Assert.AreEqual(GamePhase.Win, director.Phase);
+        Assert.IsFalse(GameProgress.HasSave, "the save is cleared");
+        Assert.AreEqual("", GameProgress.NextScene);
+
+        director.Proceed();
+        yield return WaitForScene("MainMenu");
+        menu = Object.FindFirstObjectByType<MainMenu>();
+        Assert.IsFalse(menu.ContinueButton.interactable, "back on the menu, continue is off");
     }
 }

@@ -203,8 +203,8 @@ namespace BoneSquadKiting.Game
         // A cleared stage moves "continue" on to the next one; clearing the last stage ends the save.
         void SaveProgress()
         {
-            if (Run != null) GameProgress.Save(Run.Current + 1, Run.IsLast ? Run.NextScene : "");
-            else if (IsFinalStage && HasBoss) GameProgress.Clear();   // the boss is down: the game is finished
+            if (IsFinalStage) { if (Run != null || HasBoss) GameProgress.Clear(); }   // the last stage is cleared: the game is finished
+            else if (Run != null) GameProgress.Save(Run.Current + 1, Run.IsLast ? Run.NextScene : "");
         }
 
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }

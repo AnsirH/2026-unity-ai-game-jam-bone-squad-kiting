@@ -27,7 +27,7 @@ public class StageRunTests
     {
         Assert.AreEqual("MainMenu", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(0)));
         Assert.AreEqual("Game", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(1)));
-        Assert.AreEqual("Arena", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(2)));
+        foreach (var scene in UnityEditor.EditorBuildSettings.scenes) StringAssert.DoesNotContain("Arena", scene.path, "the arena is not part of the game any more");
         foreach (var scene in UnityEditor.EditorBuildSettings.scenes) StringAssert.DoesNotContain("Test_", scene.path, "test scenes are not built");
     }
 
@@ -114,6 +114,9 @@ public class StageRunTests
         Assert.AreSame(start2.EndPoint, director.Stage.EndPoint);
         Assert.AreSame(run.Stages[1].WavePlan, director.Waves.Plan);
         Assert.AreSame(run.Stages[1].Volume, run.StageVolume.sharedProfile, "stage 2's look replaced stage 1's");
+        bool sunOn = false;
+        foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None)) if (l.type == LightType.Directional && l.enabled) sunOn = true;
+        Assert.IsTrue(sunOn, "the outdoor stages keep the scene's sun");
         Assert.That(Vector2.Distance(run.Kit.Cam.LookAt, director.Squad.Anchor), Is.LessThan(3f), "camera on the squad");
         var unit = Object.FindFirstObjectByType<BoneSquadKiting.Squad.SquadView>().transform.GetChild(3);
         Assert.That(unit.position.y, Is.EqualTo(GroundHeight.Y(unit.position.x, unit.position.z)).Within(0.05f), "units stand on stage 2's ground");
@@ -154,22 +157,18 @@ public class StageRunTests
         var unit3 = Object.FindFirstObjectByType<BoneSquadKiting.Squad.SquadView>().transform.GetChild(3);
         Assert.That(unit3.position.y, Is.EqualTo(GroundHeight.Y(unit3.position.x, unit3.position.z)).Within(0.05f), "units stand on the boss stage's floor");
 
-        // The last map leads on to the arena scene.
-        Assert.IsTrue(run.IsLast);
-        Assert.IsFalse(director.IsFinalStage);
-        director.Phase = GamePhase.Win;
-        director.Proceed();
-        until = Time.realtimeSinceStartup + 15f;
-        while (SceneManager.GetActiveScene().name != "Arena" && Time.realtimeSinceStartup < until) yield return null;
-        yield return null; yield return null;
-        Assert.AreEqual("Arena", SceneManager.GetActiveScene().name);
-        var arena = Object.FindFirstObjectByType<GameDirector>();
-        Assert.AreEqual(GamePhase.Play, arena.Phase, "the boss stage starts at once");
-        Assert.IsTrue(arena.IsFinalStage);
+        // The boss stage keeps the scene's sun off; the outdoor stages had it on.
+        Assert.IsFalse(run.Stages[2].UseSceneLight);
+        foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+            if (l.type == LightType.Directional && !l.transform.IsChildOf(run.Stages[2].Map.transform)) Assert.IsFalse(l.enabled, "scene light off on the boss stage: " + l.name);
 
-        // Winning the arena goes back to the game scene's title screen, on stage 1.
-        arena.Phase = GamePhase.Win;
-        arena.Proceed();
+        // The boss stage is the last one: clearing it ends the game and goes back to the main menu.
+        Assert.IsTrue(run.IsLast);
+        Assert.IsTrue(director.IsFinalStage, "nothing follows the boss stage");
+        director.Phase = GamePhase.Win;
+        yield return null;
+        StringAssert.Contains("게임 클리어", hud.OverlayTitle.text);
+        director.Proceed();
         until = Time.realtimeSinceStartup + 15f;
         while (SceneManager.GetActiveScene().name != "MainMenu" && Time.realtimeSinceStartup < until) yield return null;
         yield return null; yield return null;

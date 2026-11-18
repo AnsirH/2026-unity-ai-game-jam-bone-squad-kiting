@@ -552,21 +552,25 @@ MonoBehaviour:
     ClearRule: 1
     CameraYaw: 0
     Volume: {fileID: 11400000, guid: 786e870c43edc410587ef25c4c87c54d, type: 2}
+    UseSceneLight: 1
   - Map: {fileID: 5653229164141259420}
     Title: "\uC2A4\uD14C\uC774\uC9C0 2"
     WavePlan: {fileID: 11400000, guid: 70b73692317644dbac65329d413d92ba, type: 2}
     ClearRule: 1
     CameraYaw: 0
     Volume: {fileID: 11400000, guid: 674b8433206664aa094cf284587a12f0, type: 2}
+    UseSceneLight: 1
   - Map: {fileID: 774998199}
     Title: "\uBCF4\uC2A4 \uC2A4\uD14C\uC774\uC9C0"
     WavePlan: {fileID: 0}
     ClearRule: 1
     CameraYaw: 0
     Volume: {fileID: 11400000, guid: 8a4e719be28054c17b8eb09aae618abc, type: 2}
+    UseSceneLight: 0
   StartStage: 0
-  NextScene: Arena
+  NextScene: 
   FadeSeconds: 0.35
+  SceneLight: {fileID: 1136702283}
 --- !u!4 &985156817
 Transform:
   m_ObjectHideFlags: 0
