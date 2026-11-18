@@ -50,7 +50,7 @@ namespace BoneSquadKiting.UI
                 }
             }
 
-            string hint = "우클릭: 이동 / 적 공격   A+좌클릭: 어택땅   S: 정지   Q·W·E·R: 진형   휠: 회전   화면 가장자리: 카메라   P: 일시정지";
+            string hint = "우클릭: 이동 / 적 공격   A+좌클릭: 어택땅   S: 정지   F: 부활   Q·W·E·R: 진형   휠: 회전   화면 가장자리: 카메라   P: 일시정지";
             if (Input != null && Input.AttackMovePending) hint = "어택땅 대기 — 좌클릭으로 지점 지정 (Esc/우클릭 취소)";
             GUI.Label(new Rect(0, h - 24, w, 22), hint, _center);
         }

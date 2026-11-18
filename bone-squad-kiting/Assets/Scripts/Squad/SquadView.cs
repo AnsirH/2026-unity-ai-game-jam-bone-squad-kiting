@@ -11,6 +11,7 @@ namespace BoneSquadKiting.Squad
         public float UnitScale = 0.34f;
 
         public Color HitFlashColor = new(3f, 3f, 3f, 1f); // emission while a unit's hit flash is at full
+        public Color ReviveColor = new(0.4f, 3f, 0.9f, 1f); // pulsing emission on a unit that is reviving a comrade
 
         readonly List<Transform> _views = new();
         readonly List<Renderer> _renderers = new();
@@ -45,6 +46,12 @@ namespace BoneSquadKiting.Squad
                 if (u.Flash > 0f)
                 {
                     _block.SetColor(EmissionId, Color.Lerp(_baseEmission, HitFlashColor, u.Flash));
+                    r.SetPropertyBlock(_block);
+                }
+                else if (u.Reviving)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f);
+                    _block.SetColor(EmissionId, Color.Lerp(_baseEmission, ReviveColor, 0.35f + 0.65f * pulse));
                     r.SetPropertyBlock(_block);
                 }
                 else if (r.HasPropertyBlock()) r.SetPropertyBlock(null);

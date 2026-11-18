@@ -41,6 +41,7 @@ namespace BoneSquadKiting.Fx
             if (Director == null) return;
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
+            Director.ReviveCompleted += OnRevived;
         }
 
         void OnDisable()
@@ -48,6 +49,14 @@ namespace BoneSquadKiting.Fx
             if (Director == null) return;
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
+            Director.ReviveCompleted -= OnRevived;
+        }
+
+        // A burst where the unit comes back, so a finished revive can be seen without a gauge.
+        void OnRevived(BoneSquadKiting.Squad.SquadUnit reviver, BoneSquadKiting.Squad.SquadUnit revived)
+        {
+            if (HitParticles == null) return;
+            HitParticles.Emit(new ParticleSystem.EmitParams { position = new Vector3(revived.X, 0.4f, revived.Z), startColor = new Color(0.4f, 1f, 0.7f) }, ParticlesPerHit * 2);
         }
 
         void OnResolved(int hit, int lost)

@@ -102,7 +102,10 @@ namespace BoneSquadKiting.UI
             BossText.text = $"BOSS  {Mathf.CeilToInt(frac * 100)}%   {Mathf.CeilToInt(hp)} / {GameConstants.BossMax:0}";
 
             int alive = Director.AliveCount;
-            AliveText.text = $"생존  {alive} / {GameConstants.SquadSize}";
+            int dead = Director.DeadCount, reviving = Director.Revives != null ? Director.Revives.Active.Count : 0;
+            AliveText.text = dead > 0
+                ? $"생존  {alive} / {GameConstants.SquadSize}   전사 {dead}" + (reviving > 0 ? $" (부활 중 {reviving})" : "")
+                : $"생존  {alive} / {GameConstants.SquadSize}";
             AliveText.color = alive < 10 ? new Color(1f, 0.45f, 0.4f) : Color.white;
             DpsText.text = $"DPS  {Mathf.RoundToInt(Director.LastDps)}";
 

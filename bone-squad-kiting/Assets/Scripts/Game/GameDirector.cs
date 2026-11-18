@@ -31,6 +31,8 @@ namespace BoneSquadKiting.Game
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
         [Min(0f)] public float SquadEngageRange = GameConstants.SquadEngageRange;  // from the anchor: attack orders stop here
 
+        [Min(0.1f)] public float ReviveSeconds = 3f;                              // how long one revive takes
+
         [Header("State")]
         public GamePhase Phase = GamePhase.Menu;
         public bool Paused;
@@ -42,6 +44,8 @@ namespace BoneSquadKiting.Game
         public BossAttackSystem Attacks { get; private set; }
         public ShotSystem Shots { get; private set; }
         public MobSystem Mobs { get; private set; }
+        public ReviveSystem Revives { get; private set; }
+        public int DeadCount => Squad.Units.Count - Squad.AliveCount;
         public FlowField Flow { get; private set; }
 
         // Stable hooks for HUD / FX: the systems above are recreated on every Restart.
@@ -51,6 +55,9 @@ namespace BoneSquadKiting.Game
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
         public event System.Action<int, int> WaveStarted;    // wave number (1-based), mobs spawned
+        public event System.Action<SquadUnit, SquadUnit> ReviveStarted;     // reviver, dead unit
+        public event System.Action<SquadUnit, SquadUnit> ReviveCompleted;   // reviver, revived unit
+        public event System.Action<SquadUnit, SquadUnit> ReviveCancelled;   // reviver (now dead), unit that stays dead
 
         readonly List<(float t, float d)> _hits = new();
 
@@ -62,6 +69,10 @@ namespace BoneSquadKiting.Game
             Enemies = new EnemyRegistry();
             if (Boss != null) Enemies.Register(Boss);
             Mobs = new MobSystem();
+            Revives = new ReviveSystem();
+            Revives.OnStarted += (a, b) => ReviveStarted?.Invoke(a, b);
+            Revives.OnCompleted += (a, b) => ReviveCompleted?.Invoke(a, b);
+            Revives.OnCancelled += (a, b) => ReviveCancelled?.Invoke(a, b);
             Flow = Squad.Grid != null ? new FlowField(Squad.Grid) : null;
 
             Attacks = new BossAttackSystem { Sequence = Sequence };
@@ -94,6 +105,16 @@ namespace BoneSquadKiting.Game
         {
             if (Phase != GamePhase.Play || Paused) return;
             if (Squad.SetFormation(id)) FormationChanged?.Invoke(id);
+        }
+
+        /// <summary>
+        /// Revive action (F): one free living unit starts bringing one dead unit back. Returns false when
+        /// nobody is dead or nobody is free. Can be used again while earlier revives are still running.
+        /// </summary>
+        public bool TryRevive()
+        {
+            if (Phase != GamePhase.Play || Paused) return false;
+            return Revives.TryStart(Squad.Units);
         }
 
         /// <summary>Stop where the squad is: the anchor halts and the order becomes a plain hold.</summary>
@@ -182,6 +203,10 @@ namespace BoneSquadKiting.Game
             }
             Mobs.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
             if (Mobs.UnitsKilledLastTick > 0) Squad.Reform();   // close up around the survivors
+
+            Revives.Duration = ReviveSeconds;
+            Revives.Tick(Squad.Anchor, dt);
+            if (Revives.CompletedLastTick > 0) Squad.Reform();  // make room: the revived walk to free slots
 
             Shots.FireRange = UnitFireRange;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);

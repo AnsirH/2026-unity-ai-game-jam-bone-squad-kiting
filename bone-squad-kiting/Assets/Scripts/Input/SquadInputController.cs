@@ -8,7 +8,7 @@ namespace BoneSquadKiting.Input
 {
     /// <summary>
     /// Mouse / keyboard to squad commands. Right click: enemy = attack it, ground = move.
-    /// S: stop. A then left click: attack-move. Mouse wheel: rotate the formation. Formation hotkeys come from the formation assets (Q/W/E/R).
+    /// S: stop. F: revive. A then left click: attack-move. Mouse wheel: rotate the formation. Formation hotkeys come from the formation assets (Q/W/E/R).
     /// Reads the new Input System directly; the project has the legacy Input class disabled.
     /// </summary>
     public class SquadInputController : MonoBehaviour
@@ -31,6 +31,7 @@ namespace BoneSquadKiting.Input
                 if (Pressed(Key.A)) AttackMovePending = true;
                 if (Pressed(Key.Escape)) AttackMovePending = false;
                 if (Pressed(Key.S)) { AttackMovePending = false; Director.StopSquad(); }
+                if (Pressed(Key.F)) Director.TryRevive();
 
                 // A click that lands on a HUD button must not also be read as a squad command.
                 bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();

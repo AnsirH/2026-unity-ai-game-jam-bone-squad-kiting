@@ -11,6 +11,7 @@ namespace BoneSquadKiting.Squad
         public Vector2 Slot;                       // offset from the anchor, Vector2(x, z)
         public float Hp = GameConstants.UnitMax;
         public bool Dead;
+        public bool Reviving;                      // busy bringing a dead unit back; cannot fire (see FireRules)
         public bool Moving;                        // true while still travelling to its slot (see FireRules)
         public float Cd, Flash, Anim;
         public int ShotCount;
