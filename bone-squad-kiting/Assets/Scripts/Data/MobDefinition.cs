@@ -14,6 +14,12 @@ namespace BoneSquadKiting.Data
         public float AttackPeriod = 1.0f;   // seconds between hits
         public float AttackReach = 0.1f;    // extra distance beyond touching at which it can hit
 
+        [Header("Ranged attack (Attack Range 0 = melee)")]
+        public float AttackRange = 0f;      // stops this far from a unit and shoots instead of walking up to it
+        public float ShotSpeed = 6f;        // the shot flies straight at where the unit was; a moving squad can step out of it
+        public float ShotRadius = 0.25f;
+        public bool IsRanged => AttackRange > 0f;
+
         [Header("Looks (optional: empty = the placeholder sphere)")]
         public GameObject Prefab;           // model with an Animator; drawn with its feet on the ground
         public float ModelScale = 1f;       // multiplies the prefab's own scale

@@ -96,7 +96,8 @@
 
 ## 알아둘 점
 
-- 잡몹 종류는 `Assets/Data/Mobs/`의 `Grunt`(근접, EnemyMelee 모델)와 `Caster`(원거리, EnemyMage 모델) 둘이다. **`Caster`는 아직 모델만 다르고 행동은 근접과 같다**(다가와서 때린다). 원거리 공격(적 투사체)은 만들지 않았다.
+- 잡몹 종류는 `Assets/Data/Mobs/`의 `Grunt`(근접, EnemyMelee 모델)와 `Caster`(원거리, EnemyMage 모델) 둘이다. `Caster`는 사거리 안에 들어오면 멈춰서 투사체를 쏜다. 투사체는 쏜 순간 유닛이 있던 곳으로 **직선으로** 날아가므로 분대가 움직이면 피할 수 있고, 처음 닿은 유닛 하나가 피해를 받는다.
+- 원거리 값은 잡몹 파일의 **Ranged attack** 칸: Attack Range(0이면 근접. 실제로는 사거리의 85% 거리에서 멈춘다), Shot Speed, Shot Radius. 피해와 발사 간격은 Attack Damage, Attack Period를 같이 쓴다. `Caster` 시작값: 사거리 6.5, 투사체 속도 6, 피해 10, 간격 2.5초, 체력 44, 이동 3.
 - 잡몹 모델은 잡몹 파일의 **Looks** 칸에서 바꾼다: Prefab(비우면 임시 구), Model Scale, Model Yaw Offset, States(Run·Attack 등 애니메이터 상태 이름. 없는 이름은 무시된다).
 - `Stage1_v02`는 근접+원거리를 섞은 초안이고 Stage1 씬이 이것을 쓴다. 숫자는 플레이로 확인한 값이 아니다.
 - 동시에 살아 있는 잡몹은 `GameTuning.asset`의 **Mob Max Alive**(지금 200)를 넘지 못한다. 넘으면 그 웨이브는 잘린다.

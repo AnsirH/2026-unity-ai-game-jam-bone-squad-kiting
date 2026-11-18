@@ -14,11 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.MobDefinition
   DisplayName: "\uC6D0\uAC70\uB9AC"
   Radius: 0.3
-  Speed: 3.2
-  Hp: 66
+  Speed: 3
+  Hp: 44
   AttackDamage: 10
-  AttackPeriod: 1
+  AttackPeriod: 2.5
   AttackReach: 0.1
+  AttackRange: 6.5
+  ShotSpeed: 6
+  ShotRadius: 0.25
   Prefab: {fileID: 6834550672567396701, guid: 55397ca90934c47c5b23256db442b70d, type: 3}
   ModelScale: 0.85
   ModelYawOffset: 0

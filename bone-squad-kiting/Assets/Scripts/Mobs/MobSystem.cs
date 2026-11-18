@@ -20,6 +20,9 @@ namespace BoneSquadKiting.Mobs
         public float UnitRadius = 0.25f;
         public int MaxAlive = 200;
 
+        /// <summary>Shots in the air from ranged mobs. MobView draws them.</summary>
+        public readonly List<MobShot> Shots = new();
+
         public System.Action<SquadUnit, float> OnUnitHit;   // unit, damage
         public System.Action<Mob> OnMobDied;
 
@@ -45,12 +48,14 @@ namespace BoneSquadKiting.Mobs
         {
             foreach (var m in Mobs) registry?.Unregister(m);
             Mobs.Clear();
+            Shots.Clear();
         }
 
         public void Tick(FormationController squad, EnemyRegistry registry, WalkGrid grid, FlowField flow, float dt)
         {
             UnitsKilledLastTick = 0;
             RemoveDead(registry);
+            StepShots(squad, grid, dt);
             if (Mobs.Count == 0) return;
 
             flow?.Retarget(squad.Anchor);
@@ -97,6 +102,16 @@ namespace BoneSquadKiting.Mobs
             foreach (var m in Mobs)
             {
                 if (m.AttackCd > 0f) continue;
+                if (m.Def.IsRanged)
+                {
+                    var aim = NearestUnit(squad, m.Pos, m.Def.AttackRange);
+                    if (aim == null) continue;
+                    m.AttackCd = m.Def.AttackPeriod;
+                    var to = new Vector2(aim.X, aim.Z) - m.Pos;
+                    var dir = to.sqrMagnitude > 1e-6f ? to.normalized : Vector2.up;
+                    Shots.Add(new MobShot { X = m.X, Z = m.Z, Dir = dir, Def = m.Def, Left = m.Def.AttackRange * 1.5f });
+                    continue;
+                }
                 var target = NearestUnit(squad, m.Pos, m.Def.Radius + UnitRadius + m.Def.AttackReach);
                 if (target == null) continue;
                 m.AttackCd = m.Def.AttackPeriod;
@@ -110,6 +125,8 @@ namespace BoneSquadKiting.Mobs
         // Up close each chases the unit nearest to it, and stops once it can reach that unit.
         Vector2 Steer(Mob m, FormationController squad, FlowField flow)
         {
+            // A ranged mob stops a little inside its range, so a small step by the squad does not put it out of range.
+            if (m.Def.IsRanged && NearestUnit(squad, m.Pos, m.Def.AttackRange * 0.85f) != null) return Vector2.zero;
             var toAnchor = squad.Anchor - m.Pos;
             if (toAnchor.magnitude < SwitchDistance)
             {
@@ -125,6 +142,25 @@ namespace BoneSquadKiting.Mobs
                 if (dir != Vector2.zero) return dir;
             }
             return toAnchor.sqrMagnitude > 1e-6f ? toAnchor.normalized : Vector2.zero;
+        }
+
+        // Shots fly straight. One hits the first living unit it touches; walls and its travel limit end it.
+        void StepShots(FormationController squad, WalkGrid grid, float dt)
+        {
+            for (int i = Shots.Count - 1; i >= 0; i--)
+            {
+                var s = Shots[i];
+                float step = s.Def.ShotSpeed * dt;
+                s.X += s.Dir.x * step; s.Z += s.Dir.y * step; s.Left -= step;
+                var hit = NearestUnit(squad, s.Pos, s.Def.ShotRadius + UnitRadius);
+                if (hit != null)
+                {
+                    var took = SquadDamage.Apply(squad.Units, hit, s.Def.AttackDamage);
+                    OnUnitHit?.Invoke(took, s.Def.AttackDamage);
+                    if (took.Dead) UnitsKilledLastTick++;
+                }
+                if (hit != null || s.Left <= 0f || (grid != null && !grid.IsWalkable(s.Pos))) Shots.RemoveAt(i);
+            }
         }
 
         static SquadUnit NearestUnit(FormationController squad, Vector2 from, float range)

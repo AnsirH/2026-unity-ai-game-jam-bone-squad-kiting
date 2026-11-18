@@ -18,6 +18,8 @@ namespace BoneSquadKiting.Mobs
         public Material MobMaterial;
         public Color HitFlashColor = new(3f, 3f, 3f, 1f);
         public float TurnSpeed = 540f;     // degrees per second a model turns toward where it walks
+        public Color ShotColor = new(0.75f, 0.3f, 1f, 1f);
+        public float ShotHeight = 1.1f;    // how high above the ground enemy shots are drawn
 
         class View
         {
@@ -32,6 +34,11 @@ namespace BoneSquadKiting.Mobs
         readonly Dictionary<Mob, View> _live = new();
         readonly Dictionary<MobDefinition, Stack<View>> _free = new();
         readonly List<Mob> _gone = new();
+        readonly List<Transform> _shots = new();
+        Material _shotMaterial;
+
+        /// <summary>How many enemy shots are being drawn right now.</summary>
+        public int ShotsDrawn { get; private set; }
         MaterialPropertyBlock _block;
         Color _baseEmission;
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
@@ -59,6 +66,8 @@ namespace BoneSquadKiting.Mobs
                     Draw(m, v);
                 }
 
+            DrawShots();
+
             _gone.Clear();
             foreach (var pair in _live) if (!pair.Value.Seen) _gone.Add(pair.Key);
             foreach (var m in _gone)
@@ -71,6 +80,40 @@ namespace BoneSquadKiting.Mobs
             }
         }
 
+        void DrawShots()
+        {
+            var shots = Director != null && Director.Mobs != null ? Director.Mobs.Shots : null;
+            int n = shots?.Count ?? 0;
+            while (_shots.Count < n)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                go.name = "Mob Shot";
+                Destroy(go.GetComponent<Collider>());
+                go.transform.SetParent(transform, false);
+                if (_shotMaterial == null)
+                {
+                    _shotMaterial = new Material(go.GetComponent<Renderer>().sharedMaterial) { color = ShotColor };
+                    if (_shotMaterial.HasProperty("_BaseColor")) _shotMaterial.SetColor("_BaseColor", ShotColor);
+                    if (_shotMaterial.HasProperty(EmissionId)) { _shotMaterial.EnableKeyword("_EMISSION"); _shotMaterial.SetColor(EmissionId, ShotColor * 2f); }
+                }
+                go.GetComponent<Renderer>().sharedMaterial = _shotMaterial;
+                _shots.Add(go.transform);
+            }
+            for (int i = 0; i < _shots.Count; i++)
+            {
+                bool on = i < n;
+                if (_shots[i].gameObject.activeSelf != on) _shots[i].gameObject.SetActive(on);
+                if (!on) continue;
+                var s = shots[i];
+                float d = s.Def.ShotRadius * 2f;
+                _shots[i].position = new Vector3(s.X, GroundHeight.Y(s.X, s.Z) + ShotHeight, s.Z);
+                _shots[i].localScale = new Vector3(d, d, d);
+            }
+            ShotsDrawn = n;
+        }
+
+        void OnDestroy() { if (_shotMaterial != null) Destroy(_shotMaterial); }
+
         void Draw(Mob m, View v)
         {
             float y = GroundHeight.Y(m.X, m.Z);
@@ -82,9 +125,11 @@ namespace BoneSquadKiting.Mobs
                 v.Root.position = new Vector3(m.X, y, m.Z);
                 var size = m.Def.Prefab.transform.localScale * m.Def.ModelScale;
                 if (v.Root.localScale != size) v.Root.localScale = size;      // follows the definition, so it can be tuned while playing
-                if (moving)
+                var face = moved;
+                if (!moving && m.Def.IsRanged && Director != null && Director.Squad != null) face = Director.Squad.Anchor - m.Pos;   // a shooter standing still looks at the squad
+                if (face.sqrMagnitude > 1e-8f)
                 {
-                    var want = Quaternion.Euler(0f, Mathf.Atan2(moved.x, moved.y) * Mathf.Rad2Deg + m.Def.ModelYawOffset, 0f);
+                    var want = Quaternion.Euler(0f, Mathf.Atan2(face.x, face.y) * Mathf.Rad2Deg + m.Def.ModelYawOffset, 0f);
                     v.Root.rotation = Quaternion.RotateTowards(v.Root.rotation, want, TurnSpeed * Time.deltaTime);
                 }
                 if (m.AttackCd > v.LastCd + 1e-4f) v.Visual.PlayAttack();     // the cooldown jumped back up: it just hit
