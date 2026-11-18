@@ -27,3 +27,15 @@ MonoBehaviour:
   DeathDuration: 1.5
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
+  Prefab: {fileID: 5736227486350466048, guid: 128bba935906c450f9906835be963833, type: 3}
+  ModelScale: 3
+  ModelYawOffset: 90
+  ModelGroundOffset: 0.28
+  States:
+    Idle: Idle
+    Run: 
+    Attack: Fire
+    Die: 
+    Revive: 
+    CrossFade: 0.1
+  CastAnimSeconds: 2

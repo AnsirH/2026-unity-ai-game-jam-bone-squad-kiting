@@ -99,6 +99,8 @@ namespace BoneSquadKiting.Bosses
             v.Root.transform.position = new Vector3(e.X, y, e.Z);
             var size = e.Def.Prefab.transform.localScale * e.Def.ModelScale;
             if (v.Model.localScale != size) v.Model.localScale = size;      // follows the definition, so it can be tuned while playing
+            float lift = e.Def.ModelGroundOffset * e.Def.ModelScale;
+            if (v.Model.localPosition.y != lift) v.Model.localPosition = new Vector3(0f, lift, 0f);
             v.Pick.radius = e.Radius;                                        // what a click hits stays the game's size, whatever the model's
 
             var squad = Director != null ? Director.Squad : null;
