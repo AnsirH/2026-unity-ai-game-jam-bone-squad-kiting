@@ -11,6 +11,7 @@ namespace BoneSquadKiting.Squad
         public Vector2 Slot;                       // offset from the anchor, Vector2(x, z)
         public float Hp = GameConstants.UnitMax;
         public bool Dead;
+        public bool Moving;                        // true while still travelling to its slot (see FireRules)
         public float Cd, Flash, Anim;
         public int ShotCount;
 
@@ -22,7 +23,8 @@ namespace BoneSquadKiting.Squad
             float tz = Mathf.Clamp(anchor.y + Slot.y, GameConstants.LimitZMin, GameConstants.LimitZMax);
             float ux = tx - X, uz = tz - Z;
             float dist = Mathf.Sqrt(ux * ux + uz * uz);
-            if (dist > GameConstants.UnitArrive)
+            Moving = dist > GameConstants.UnitArrive;
+            if (Moving)
             {
                 float speed = GameConstants.UnitBaseSpeed
                               + Mathf.Min(GameConstants.UnitSpeedDistCap, dist * GameConstants.UnitSpeedDistGain);

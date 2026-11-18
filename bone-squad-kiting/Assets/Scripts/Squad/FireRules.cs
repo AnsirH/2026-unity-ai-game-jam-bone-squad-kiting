@@ -8,19 +8,13 @@ namespace BoneSquadKiting.Squad
     /// </summary>
     public static class FireRules
     {
-        /// <param name="unit">The unit that wants to fire (unused today; here for a per-unit rule).</param>
-        /// <param name="order">The squad's current order.</param>
-        /// <param name="squadMoving">True while the squad anchor is still walking to its destination.</param>
-        public static bool CanFire(SquadUnit unit, SquadOrder order, bool squadMoving)
-        {
-            // Decided: a Move order is a pure move. No firing on the way; auto-fire resumes on arrival.
-            if (order.Kind == OrderKind.Move && squadMoving) return false;
-
-            // Open questions, deliberately not guessed at:
-            //  1. Whether "moving" should be judged per unit (e.g. still sliding to a new formation slot)
-            //     instead of by the squad anchor.
-            //  2. What AttackMove does on the way to its point. Today it keeps firing while it walks.
-            return true;
-        }
+        /// <summary>
+        /// A unit fires only while it stands still. This holds for every order: walking with the squad,
+        /// or sliding to a new slot after a formation change, both silence it until it arrives.
+        /// Units that are stopped but out of range simply do not fire; they never leave formation to close in.
+        /// </summary>
+        /// <param name="order">Unused today. Kept so an order-specific rule (e.g. when an attack-move
+        /// squad should stop) can be added here without changing callers.</param>
+        public static bool CanFire(SquadUnit unit, SquadOrder order) => !unit.Moving;
     }
 }

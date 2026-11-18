@@ -23,7 +23,7 @@ public class CombatTests
 
     void Run(ShotSystem shots, EnemyRegistry reg, SquadOrder order, float seconds)
     {
-        for (float t = 0; t < seconds; t += 0.016f) { _fc.Tick(0.016f); shots.Tick(_fc.Units, reg, order, _fc.IsMoving, 0.016f); }
+        for (float t = 0; t < seconds; t += 0.016f) { _fc.Tick(0.016f); shots.Tick(_fc.Units, reg, order, 0.016f); }
     }
 
     [Test]
@@ -58,6 +58,38 @@ public class CombatTests
         Run(shots, reg, order, 2f);
         Assert.IsFalse(_fc.IsMoving);
         Assert.That(boss.Hp, Is.LessThan(GameConstants.BossMax), "auto-fire resumes after arriving");
+    }
+
+    [Test]
+    public void AttackMove_AlsoHoldsFireWhileMoving()
+    {
+        var boss = new Boss();
+        var reg = new EnemyRegistry(); reg.Register(boss);
+        var shots = new ShotSystem();
+        var order = SquadOrder.AttackMove(new Vector2(6f, 3.4f));
+        _fc.Order = order; _fc.SetDestination(order.Point);
+
+        Run(shots, reg, order, 0.6f);
+        Assert.AreEqual(0, shots.Shots.Count, "moving units never fire, whatever the order");
+    }
+
+    [Test]
+    public void FormationChange_SilencesUnitsUntilTheyReachTheirSlots()
+    {
+        var boss = new Boss();
+        var reg = new EnemyRegistry(); reg.Register(boss);
+        var shots = new ShotSystem();
+        var order = SquadOrder.Move(_fc.Anchor);
+        Run(shots, reg, order, 0.05f);          // settle: everyone is on a slot and may fire
+        shots.Shots.Clear();
+        foreach (var u in _fc.Units) u.Cd = 0;   // all ready to fire again
+
+        _fc.SetFormation("ring");
+        _fc.Tick(0.016f); shots.Tick(_fc.Units, reg, order, 0.016f);
+        Assert.AreEqual(0, shots.Shots.Count, "units sliding to new slots do not fire");
+
+        Run(shots, reg, order, 2f);
+        Assert.That(boss.Hp, Is.LessThan(GameConstants.BossMax), "they fire again once in place");
     }
 
     [Test]

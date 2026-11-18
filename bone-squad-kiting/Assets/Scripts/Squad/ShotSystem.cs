@@ -31,12 +31,11 @@ namespace BoneSquadKiting.Squad
             return registry.NearestInRange(p, GameConstants.FireRange);
         }
 
-        /// <param name="squadMoving">True while the squad anchor is walking; see <see cref="FireRules"/>.</param>
-        public void Tick(IList<SquadUnit> units, EnemyRegistry registry, SquadOrder order, bool squadMoving, float dt)
+        public void Tick(IList<SquadUnit> units, EnemyRegistry registry, SquadOrder order, float dt)
         {
             foreach (var u in units)
             {
-                if (u.Dead || u.Cd > 0 || !FireRules.CanFire(u, order, squadMoving)) continue;
+                if (u.Dead || u.Cd > 0 || !FireRules.CanFire(u, order)) continue;
                 var target = Acquire(u, registry, order);
                 if (target == null) continue;
                 u.Cd = GameConstants.UnitCdMin + Random.value * GameConstants.UnitCdRand;

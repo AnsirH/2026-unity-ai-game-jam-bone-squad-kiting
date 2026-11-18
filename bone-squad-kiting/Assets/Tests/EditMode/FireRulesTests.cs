@@ -5,20 +5,26 @@ using BoneSquadKiting.Squad;
 
 public class FireRulesTests
 {
-    static readonly SquadUnit Unit = new();
+    static readonly SquadOrder[] Orders =
+    {
+        SquadOrder.Move(Vector2.zero), SquadOrder.AttackMove(Vector2.zero), SquadOrder.Attack(null),
+    };
 
     [Test]
-    public void MoveOrder_BlocksFireOnlyWhileMoving()
-    {
-        var move = SquadOrder.Move(Vector2.zero);
-        Assert.IsFalse(FireRules.CanFire(Unit, move, squadMoving: true));
-        Assert.IsTrue(FireRules.CanFire(Unit, move, squadMoving: false));
-    }
+    public void MovingUnit_NeverFires([ValueSource(nameof(Orders))] SquadOrder order)
+        => Assert.IsFalse(FireRules.CanFire(new SquadUnit { Moving = true }, order));
 
     [Test]
-    public void AttackOrders_AreNotBlockedByMovement()
+    public void StoppedUnit_MayFire([ValueSource(nameof(Orders))] SquadOrder order)
+        => Assert.IsTrue(FireRules.CanFire(new SquadUnit { Moving = false }, order));
+
+    [Test]
+    public void MoveToward_SetsMovingUntilTheUnitArrives()
     {
-        Assert.IsTrue(FireRules.CanFire(Unit, SquadOrder.AttackMove(Vector2.zero), squadMoving: true));
-        Assert.IsTrue(FireRules.CanFire(Unit, SquadOrder.Attack(null), squadMoving: true));
+        var u = new SquadUnit { X = 0, Z = 0, Slot = Vector2.zero };
+        u.MoveToward(new Vector2(1f, 0f), 0.016f);
+        Assert.IsTrue(u.Moving);
+        for (int i = 0; i < 60; i++) u.MoveToward(new Vector2(1f, 0f), 0.016f);
+        Assert.IsFalse(u.Moving);
     }
 }
