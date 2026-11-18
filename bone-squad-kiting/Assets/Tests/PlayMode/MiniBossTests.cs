@@ -446,7 +446,7 @@ public class MiniBossTests
         Assert.AreEqual(1, cutscenes);
         Assert.That(Vector2.Distance(focus, new Vector2(-6f, 40f)), Is.LessThan(0.3f));
         Assert.AreEqual(_def.IntroDuration, seconds, "0 on the marker = the kind's own length");
-        Run(_def.IntroDuration + 3f);
+        Run(_def.IntroDuration + 6f);   // the intro freezes the game first; the 16-unit walk then takes 4 seconds
         Assert.IsFalse(elite.Entering);
         Assert.AreEqual(1, cutscenes, "and not again on arrival");
     }

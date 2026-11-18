@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.MobDefinition
   DisplayName: "\uC6D0\uAC70\uB9AC"
   Radius: 0.3
-  Speed: 3
+  Speed: 2.7
   Hp: 44
   AttackDamage: 10
   AttackPeriod: 2.5
