@@ -220,7 +220,10 @@ namespace BoneSquadKiting.Game
         {
             if (Phase != GamePhase.Play || Paused || InCutscene) return;
             Squad.Order = o;
-            Squad.FaceToward(o.Kind == OrderKind.AttackTarget && o.Target != null ? o.Target.Pos : o.Point);
+            // Only a plain move turns a ring to put its leader in front. An attack order leaves the ring as it
+            // stands (and stops a turn in progress): turning units cannot fire, and the point of the order is to.
+            if (o.Kind == OrderKind.Move) Squad.FaceToward(o.Point);
+            else Squad.HoldFacing();
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
                 bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
