@@ -82,12 +82,12 @@ namespace BoneSquadKiting.Audio
             float elapsed = 0f;
             while (elapsed < duration)
             {
+                yield return null;
                 elapsed += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 fades[0] = Mathf.Lerp(startA, target == 0 ? 1f : 0f, t);
                 fades[1] = Mathf.Lerp(startB, target == 1 ? 1f : 0f, t);
                 ApplyVolumes();
-                yield return null;
             }
             for (int i = 0; i < 2; i++)
             {

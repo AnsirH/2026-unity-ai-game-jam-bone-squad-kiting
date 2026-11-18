@@ -11,6 +11,9 @@ namespace BoneSquadKiting.Data
     public class EliteDefinition : ScriptableObject
     {
         public string DisplayName = "미니 보스";
+        [Tooltip("Bolts hit a metal shell or armor on this enemy.")]
+        public bool Armored;
+        public BoneSquadKiting.Audio.CastVoice CastSound;
         public float MaxHp = 4000f;
         public float Speed = 2f;              // slower than mobs (3.2): the swarm arrives first. 0 = fixed in place (a cannon)
         public float Radius = 0.8f;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BoneSquadKiting.Audio
@@ -12,8 +13,17 @@ namespace BoneSquadKiting.Audio
 
         public static SoundManager Current { get; private set; }
         public string CurrentBgmId => music.CurrentId;
+        readonly Dictionary<string, float> _lastVolleySound = new();
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        // Several soldiers often fire or land the same sound on the same beat.
+        public void PlayVolleySfx(string id)
+        {
+            float now = Time.unscaledTime;
+            if (_lastVolleySound.TryGetValue(id, out float last) && now - last < 0.06f) return;
+            if (PlaySfx(id)) _lastVolleySound[id] = now;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Bootstrap()
         {
             if (Current != null) return;

@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Stage;
@@ -38,6 +39,7 @@ namespace BoneSquadKiting.UI
         void Start()
         {
             Time.timeScale = 1f;
+            SoundManager.Current?.PlayBgm("bgm.stage3");
             Build();
             Refresh();
         }

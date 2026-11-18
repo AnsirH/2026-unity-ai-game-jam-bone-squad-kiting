@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: DarkFlameMage
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
   DisplayName: "\uAC80\uC815\uBD88\uAF43\uB9C8\uBC95\uC0AC"
+  Armored: 0
+  CastSound: 1
   MaxHp: 4000
   Speed: 2
   Radius: 0.8

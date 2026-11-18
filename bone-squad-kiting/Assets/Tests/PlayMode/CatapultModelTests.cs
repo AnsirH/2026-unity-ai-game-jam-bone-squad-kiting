@@ -69,9 +69,13 @@ public class CatapultModelTests
         yield return null; yield return null;
         Assert.AreSame(shot.Socket, shot.Stone.transform.parent, "stone stays seated through the extended windup");
         Vector3 beforeRelease = shot.Stone.transform.position;
+        Assert.IsFalse(CombatSoundTests.Playing("enemy.catapult.launch"));
         e.Attacks.Tick(_fc, null, shot.ReleaseSeconds - e.Attacks.Current.Value.Elapsed);
         yield return null; yield return null;
         Vector3 release = shot.Stone.transform.position;
+        Assert.IsTrue(CombatSoundTests.Playing("enemy.catapult.launch"));
+        Assert.IsTrue(CombatSoundTests.Playing("enemy.catapult.flight"));
+        Assert.IsFalse(CombatSoundTests.Playing("enemy.catapult.impact"));
         e.Attacks.Tick(_fc, null, 0.02f);
         yield return null; yield return null;
         Assert.AreNotSame(shot.Socket, shot.Stone.transform.parent, "stone left the arm");
@@ -91,6 +95,7 @@ public class CatapultModelTests
         e.Attacks.Tick(_fc, null, e.Attacks.Current.Value.Remaining + 0.01f);
         var impact = Object.FindFirstObjectByType<CatapultImpact>();
         Assert.IsNotNull(impact);
+        Assert.IsTrue(CombatSoundTests.Playing("enemy.catapult.impact"));
         Assert.That(Vector3.Distance(impact.transform.position, ground), Is.LessThan(0.001f));
         Assert.IsTrue(impact.Chips.isPlaying);
         yield return null; yield return null;

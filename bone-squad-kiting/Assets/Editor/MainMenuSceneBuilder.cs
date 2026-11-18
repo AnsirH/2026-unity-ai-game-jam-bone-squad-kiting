@@ -28,6 +28,7 @@ namespace BoneSquadKiting.EditorTools
             try
             {
                 SceneManager.SetActiveScene(scene);
+                PrefabUtility.InstantiatePrefab(Resources.Load<GameObject>("Audio/SoundManager"), scene);
                 var cam = new GameObject("Menu Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
                 cam.tag = "MainCamera";
                 cam.clearFlags = CameraClearFlags.SolidColor;
