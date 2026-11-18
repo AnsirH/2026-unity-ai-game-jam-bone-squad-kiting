@@ -16,8 +16,8 @@ MonoBehaviour:
   UnitScale: 0.9
   UnitStates:
     Idle: Idle
-    Run: Soldier_Fire_SlowRun
-    Attack: Fire
+    Run: Soldier_MeshyAI_Run02
+    Attack: 
     Die: 
     Revive: 
     CrossFade: 0.1
@@ -25,8 +25,8 @@ MonoBehaviour:
   LeaderScale: 0.35
   LeaderStates:
     Idle: 
-    Run: Spear_Walk
-    Attack: 
+    Run: Soldier_MeshyAI_Run02
+    Attack: Commander_Thrrow
     Die: 
     Revive: 
     CrossFade: 0.1

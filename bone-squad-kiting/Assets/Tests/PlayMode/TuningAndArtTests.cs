@@ -107,7 +107,7 @@ public class TuningAndArtTests
         Assert.IsNotNull(visual.Animator, "found the model's Animator");
         Assert.IsTrue(visual.Has(VisualState.Idle));
         Assert.IsTrue(visual.Has(VisualState.Run), "the run state name in the art set exists in the model");
-        Assert.IsTrue(visual.Has(VisualState.Attack));
+        Assert.IsFalse(visual.Has(VisualState.Attack), "shooting is an always-on upper-body layer, not a state");
         Assert.IsFalse(visual.Has(VisualState.Die), "no death animation has been made yet");
 
         visual.SetState(VisualState.Run); yield return null;

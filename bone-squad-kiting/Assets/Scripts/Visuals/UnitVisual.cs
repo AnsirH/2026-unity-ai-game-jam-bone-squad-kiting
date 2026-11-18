@@ -47,9 +47,16 @@ namespace BoneSquadKiting.Visuals
             if (state == _current && !restart) return;
             _current = state;
             string name = NameOf(state);
-            if (Animator == null || string.IsNullOrEmpty(name)) return;
-            int hash = Animator.StringToHash(name);
-            if (!Animator.HasState(0, hash)) return;   // this model has no such animation (yet): keep what is playing
+            if (Animator == null) return;
+            int hash = string.IsNullOrEmpty(name) ? 0 : Animator.StringToHash(name);
+            if (hash == 0 || !Animator.HasState(0, hash))
+            {
+                // This model has no such animation (yet): keep what is playing. A model with no idle would
+                // go on running on the spot, so standing still holds its pose instead.
+                if (state == VisualState.Idle) Animator.speed = 0f;
+                return;
+            }
+            Animator.speed = 1f;
             if (restart) Animator.CrossFadeInFixedTime(hash, States.CrossFade, 0, 0f);
             else Animator.CrossFadeInFixedTime(hash, States.CrossFade);
         }

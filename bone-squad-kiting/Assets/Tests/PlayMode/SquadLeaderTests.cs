@@ -128,4 +128,40 @@ public class SquadLeaderTests
         Assert.AreSame(plain.Units[0], took);
         Object.DestroyImmediate(plain.gameObject);
     }
+
+    [Test]
+    public void Ring_AClickInANewDirection_ShiftsUnitsByOnePlaceAtMost_AndNeverSwapsThem()
+    {
+        var fc = SquadTestRig.MakeFc(leader: true);
+        fc.SetFormation("ring");
+        for (int i = 0; i < 200; i++) fc.Tick(0.02f);                       // everyone settles on the ring
+        float spacing = float.MaxValue;
+        foreach (var u in fc.Units) if (!u.IsLeader && u != fc.Units[1]) spacing = Mathf.Min(spacing, (u.Slot - fc.Units[1].Slot).magnitude);
+
+        var rng = new System.Random(7);
+        for (int click = 0; click < 40; click++)
+        {
+            var before = new Vector2[fc.Units.Count];
+            for (int i = 0; i < before.Length; i++) before[i] = fc.Units[i].Slot;
+            float a = (float)(rng.NextDouble() * Mathf.PI * 2f);
+            fc.FaceToward(fc.Anchor + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 5f);
+
+            int moved = 0;
+            for (int i = 1; i < before.Length; i++)
+            {
+                float d = (fc.Units[i].Slot - before[i]).magnitude;
+                Assert.That(d, Is.LessThan(spacing * 1.05f), "a unit steps to the next place at most");
+                if (d > 1e-3f) moved++;
+            }
+            // Only the units between the leader's old and new place move: never more than half the ring.
+            Assert.That(moved, Is.LessThanOrEqualTo(12));
+            var again = new Vector2[before.Length];
+            for (int i = 0; i < again.Length; i++) again[i] = fc.Units[i].Slot;
+            fc.FaceToward(fc.Anchor + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 9f);   // same direction, clicked again
+            for (int i = 0; i < again.Length; i++) Assert.AreEqual(again[i], fc.Units[i].Slot, "the same direction changes nothing");
+            if (click % 3 == 0) for (int i = 0; i < 5; i++) fc.Tick(0.02f);            // sometimes clicked while still walking
+        }
+        Assert.That(Vector2.Dot(fc.Units[0].Slot.normalized, fc.LeaderFacing), Is.GreaterThan(0.95f), "the leader is on the rim, facing the click");
+        Object.DestroyImmediate(fc.gameObject);
+    }
 }
