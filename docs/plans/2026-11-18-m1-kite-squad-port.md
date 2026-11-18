@@ -94,29 +94,31 @@ git add bone-squad-kiting/Assets/Tests bone-squad-kiting/Assets/Scripts/BoneSqua
 
 ## Task 1: 아레나 씬 + 쿼터뷰 직교 카메라 + URP 포스트
 
+> **구현 메모(2026-11-18):** 씬은 `Assets/Editor/ArenaSceneBuilder.cs`(메뉴 `BoneSquadKiting/Rebuild Arena Scene`)가 통째로 생성한다 — 다시 돌리면 씬을 덮어쓰므로 씬을 손으로 고치기 시작하면 이 도구는 쓰지 않는다. 카메라는 +z 쪽에서 보스(−z)를 바라보게 Y 180° 돌려 보스가 화면 위에 온다(월드 +x가 화면 왼쪽). 직교 크기 9. 분대·보스·투사체·장판 비주얼과 게임 컴포넌트 결선까지 이 씬에 들어 있고, `ArenaSceneSmokeTests`가 실제 씬을 플레이시켜 `Logs/Screenshots/`에 스크린샷을 남긴다.
+
 **Files:**
 - Create: `bone-squad-kiting/Assets/Scenes/Arena.unity`
 - Create: `bone-squad-kiting/Assets/Settings/ArenaVolume.asset` (URP Volume Profile)
 
-- [ ] **Step 1: 아레나 지면 생성**
+- [x] **Step 1: 아레나 지면 생성**
 
 빈 씬 `Arena`에 Plane을 놓고 XZ 범위 `x∈[-12.3,12.3]`, `z∈[-10.2,10.2]`를 덮도록 스케일(Plane 기본 10x10m이므로 scale ≈ (2.46, 1, 2.04), center 0). 어두운 머티리얼(URP/Lit, base color `#0d2434`).
 
-- [ ] **Step 2: 직교 쿼터뷰 카메라**
+- [x] **Step 2: 직교 쿼터뷰 카메라**
 
 Main Camera: `Projection = Orthographic`, `Orthographic Size ≈ 11`(아레나 z 반경+여유), rotation `(50, 0, 0)`(쿼터뷰 하향각), position를 아레나 중심이 화면 중앙에 오도록 배치(예: `(0, 18, -15)` 후 사이즈/각도로 조정). 배경색 `#050d17`.
 Expected: 플레이 시 아레나 전체가 쿼터뷰로 보임.
 
-- [ ] **Step 3: 라이팅 + URP 포스트(Bloom/Vignette)**
+- [x] **Step 3: 라이팅 + URP 포스트(Bloom/Vignette)**
 
 `unity:urp-postprocessing` 스킬을 따라 Global Volume + Volume Profile(`ArenaVolume`)에 **Bloom**(threshold~0.9, intensity~0.8)과 **Vignette**(intensity~0.35) 추가. 카메라 `Post Processing` 체크. Directional Light 1개(약한 상단광). 원본의 글로·비네트 분위기 재현.
 
-- [ ] **Step 4: 검증(스크린샷)**
+- [x] **Step 4: 검증(스크린샷)**
 
 `unity:unity-cli` 스킬의 스크린샷/플레이모드 기능으로 씬을 캡처해 쿼터뷰·빛 분위기 확인.
 Expected: 어두운 아레나 + 비네트 + (이후 오브젝트에서) 블룸.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets && git commit -m "feat: add arena scene with quarter-view ortho camera and URP post"
@@ -618,7 +620,7 @@ namespace BoneSquadKiting.Squad
 
 - [x] **Step 5: 통과 확인** — Run PlayMode 테스트. Expected: PASS.
 
-- [ ] **Step 6: 유닛 비주얼(임시 도형) 바인딩**
+- [x] **Step 6: 유닛 비주얼(임시 도형) 바인딩**
 
 각 `SquadUnit`에 작은 Capsule/Cylinder 프리미티브를 대응시키는 `SquadView`(MonoBehaviour)를 만들어 매 프레임 `transform.position = new Vector3(u.X, 0, u.Z)`. 색: 청록 머티리얼. (렌더만, 로직 아님.)
 
@@ -924,7 +926,7 @@ namespace BoneSquadKiting.Squad
 
 - [x] **Step 5: 통과 확인** — Run PlayMode. Expected: PASS.
 
-- [ ] **Step 6: 보스/투사체 비주얼(임시) + 피킹 브리지** — 보스 큰 Cylinder(붉은 Emissive, 콜라이더 유지, 레이어 `Enemy`), 투사체 작은 Sphere/TrailRenderer. 보스 오브젝트에 아래 두 컴포넌트를 붙인다.
+- [x] **Step 6: 보스/투사체 비주얼(임시) + 피킹 브리지** — 보스 큰 Cylinder(붉은 Emissive, 콜라이더 유지, 레이어 `Enemy`), 투사체 작은 Sphere/TrailRenderer. 보스 오브젝트에 아래 두 컴포넌트를 붙인다.
 
 ```csharp
 // Combat/EnemyRef.cs
@@ -1049,7 +1051,7 @@ namespace BoneSquadKiting.Bosses
 
 - [x] **Step 4: 통과 확인** — Run PlayMode. Expected: PASS.
 
-- [ ] **Step 5: TelegraphView(임시 시각화)**
+- [x] **Step 5: TelegraphView(임시 시각화)**
 
 현재 패턴의 안전/위험 영역을 지면 위 반투명 메시로 표시: core=원, gate=좌우 사각, quadrant=4모서리 사각, shell=도넛. M1은 간단히 반투명 Quad/절차 메시 + 붉은/청록 색. 중심은 `Current.Cx,Cz` 추종. 카운트다운은 Task 9 HUD에서.
 
