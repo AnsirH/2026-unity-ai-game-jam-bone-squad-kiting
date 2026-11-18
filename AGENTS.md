@@ -1,4 +1,4 @@
-# 프로젝트 맥락 (bsk-project)
+# 프로젝트 맥락 (bone-squad-kiting)
 
 > 이 절은 팀원 모두의 AI(Claude Code, Codex, ChatGPT 등)가 공유하는 프로젝트 공통 메모리다.
 > 팀 합의로만 바꾼다. 개인 지시나 개인 작업 메모는 넣지 않는다 (아래 "개인 메모리").
