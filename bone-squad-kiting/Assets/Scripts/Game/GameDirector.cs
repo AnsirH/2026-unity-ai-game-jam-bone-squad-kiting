@@ -132,6 +132,7 @@ namespace BoneSquadKiting.Game
                 PatternResolved?.Invoke(hit, lost);
             };
             Elites.OnDied += OnMiniBossDied;
+            Elites.OnArrived += OnMiniBossArrived;
             // Mini boss markers placed in this director's own scene.
             var found = new List<MiniBossSpawn>();
             foreach (var m in FindObjectsByType<MiniBossSpawn>(FindObjectsSortMode.None))
@@ -304,14 +305,42 @@ namespace BoneSquadKiting.Game
             foreach (var m in _miniBosses)
             {
                 if (m.Triggered || m.Definition == null || !m.Unlocked) continue;
-                if (!m.PresentFromStart && (m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
-                var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
-                var elite = Elites.Spawn(m.Definition, pos, Enemies);
-                m.MarkTriggered(elite);
-                MiniBossAppeared?.Invoke(elite);
-                if (m.PlayIntro && !m.PresentFromStart)
-                    StartCutscene(pos, m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+                if (!m.PresentFromStart)
+                {
+                    // By progress when asked for (and the stage measures it), otherwise by distance.
+                    bool byProgress = m.AtProgress >= 0f && Waves != null;
+                    if (byProgress ? Waves.MaxProgress < m.AtProgress : (m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
+                }
+                SpawnMiniBoss(m);
             }
+        }
+
+        /// <summary>Make a marker's mini boss appear now, whatever its conditions. Does nothing if it already has.</summary>
+        public Elite SpawnMiniBoss(MiniBossSpawn m)
+        {
+            if (m == null || m.Triggered || m.Definition == null || Elites == null) return null;
+            var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
+            var route = m.PresentFromStart ? null : m.RoutePoints();
+            if (route != null) route[route.Count - 1] = pos;
+            var elite = Elites.Spawn(m.Definition, pos, Enemies, route, m.EntrySpeed);
+            m.MarkTriggered(elite);
+            MiniBossAppeared?.Invoke(elite);
+            if (!m.PresentFromStart && (m.IntroWhen == MiniBossIntroWhen.OnAppear || !elite.Entering)) PlayMiniBossIntro(m, elite);
+            return elite;
+        }
+
+        // The intro moment: the game freezes, the camera goes to the mini boss, and the marker's effect plays.
+        void PlayMiniBossIntro(MiniBossSpawn m, Elite elite)
+        {
+            if (!m.PlayIntro) return;
+            if (!string.IsNullOrEmpty(m.IntroEffectId)) BoneSquadKiting.Fx.PresentationManager.Current?.Play(m.IntroEffectId);
+            StartCutscene(elite.Pos, m.IntroSeconds > 0f ? m.IntroSeconds : m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+        }
+
+        void OnMiniBossArrived(Elite elite)
+        {
+            foreach (var m in _miniBosses)
+                if (m.Elite == elite && m.IntroWhen == MiniBossIntroWhen.OnArrive) PlayMiniBossIntro(m, elite);
         }
 
         // A mini boss fell. Only the stage's last one gets the big finish: its death moment plays, the swarm

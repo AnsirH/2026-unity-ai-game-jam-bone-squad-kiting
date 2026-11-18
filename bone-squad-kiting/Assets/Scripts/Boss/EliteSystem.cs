@@ -19,10 +19,20 @@ namespace BoneSquadKiting.Bosses
         public System.Action<Elite, PatternDefinition> OnPatternStarted;
         public System.Action<Elite, int, int> OnPatternResolved;   // elite, units hit, units lost
         public System.Action<Elite> OnDied;
+        public System.Action<Elite> OnArrived;   // finished walking its entry route
 
-        public Elite Spawn(EliteDefinition def, Vector2 pos, EnemyRegistry registry)
+        /// <summary>
+        /// Put a mini boss in play. With a route it appears at the route's first point and walks through
+        /// the rest (the last point is where it ends up) before it starts to fight.
+        /// </summary>
+        public Elite Spawn(EliteDefinition def, Vector2 pos, EnemyRegistry registry, List<Vector2> route = null, float entrySpeed = 4f)
         {
             var e = new Elite { Def = def, X = pos.x, Z = pos.y, Health = def.MaxHp };
+            if (route != null && route.Count > 1)
+            {
+                e.X = route[0].x; e.Z = route[0].y;
+                e.Path = route; e.PathIndex = 1; e.EntrySpeed = entrySpeed;
+            }
             e.Attacks = new BossAttackSystem
             {
                 Sequence = def.Patterns,
@@ -58,6 +68,21 @@ namespace BoneSquadKiting.Bosses
                     continue;
                 }
                 e.Flash = Mathf.Max(0f, e.Flash - dt * 3f);
+                if (e.Entering)
+                {
+                    // Walking in along its route: straight from point to point, walls or not.
+                    float left = e.EntrySpeed * dt;
+                    while (left > 0f && e.Path != null)
+                    {
+                        var to = e.Path[e.PathIndex] - e.Pos;
+                        float d = to.magnitude;
+                        if (d > 1e-4f) e.Heading = to / d;
+                        if (d <= left) { e.X = e.Path[e.PathIndex].x; e.Z = e.Path[e.PathIndex].y; left -= d; if (++e.PathIndex >= e.Path.Count) e.Path = null; }
+                        else { e.X += to.x / d * left; e.Z += to.y / d * left; left = 0f; }
+                    }
+                    if (!e.Entering) OnArrived?.Invoke(e);
+                    continue;
+                }
                 // A cast in progress always finishes; a new one only starts while the squad is within reach.
                 bool inReach = e.Def.AttackRange <= 0f || (squad.Anchor - e.Pos).magnitude <= e.Def.AttackRange;
                 if (e.Casting || inReach) e.Attacks.Tick(squad, null, dt);

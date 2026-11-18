@@ -102,7 +102,7 @@ namespace BoneSquadKiting.Bosses
             v.Pick.radius = e.Radius;                                        // what a click hits stays the game's size, whatever the model's
 
             var squad = Director != null ? Director.Squad : null;
-            var to = squad != null ? squad.Anchor - e.Pos : Vector2.zero;
+            var to = e.Entering ? e.Heading : (squad != null ? squad.Anchor - e.Pos : Vector2.zero);   // walking in: face the way it walks
             if (to.sqrMagnitude > 1e-6f)
             {
                 var want = Quaternion.Euler(0f, Mathf.Atan2(to.x, to.y) * Mathf.Rad2Deg + e.Def.ModelYawOffset, 0f);
@@ -130,7 +130,7 @@ namespace BoneSquadKiting.Bosses
             if (v.Visual != null)
             {
                 var squad = Director != null ? Director.Squad : null;
-                var to = squad != null ? squad.Anchor - e.Pos : Vector2.zero;
+                var to = e.Entering ? e.Heading : (squad != null ? squad.Anchor - e.Pos : Vector2.zero);   // walking in: face the way it walks
                 if (to.sqrMagnitude > 1e-6f)
                     v.Model.rotation = Quaternion.Euler(0f, Mathf.Atan2(to.x, to.y) * Mathf.Rad2Deg + e.Def.ModelYawOffset, 0f);
                 v.Visual.SetState(VisualState.Idle);

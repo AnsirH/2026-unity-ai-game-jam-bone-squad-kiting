@@ -13,6 +13,13 @@ namespace BoneSquadKiting.Bosses
         public float Flash;
         public BossAttackSystem Attacks;
 
+        /// <summary>The rest of its entry route. While this is set it is walking in: it neither chases nor casts.</summary>
+        public System.Collections.Generic.List<Vector2> Path;
+        public int PathIndex;
+        public float EntrySpeed = 4f;
+        public bool Entering => Path != null;
+        public Vector2 Heading;     // the way it last walked; used to turn its model while it walks in
+
         public Vector2 Pos => new(X, Z);
         public bool Alive => Health > 0f;
         public float Radius => Def.Radius;

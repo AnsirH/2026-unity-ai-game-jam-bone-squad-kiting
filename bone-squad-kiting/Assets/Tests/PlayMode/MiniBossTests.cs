@@ -381,4 +381,106 @@ public class MiniBossTests
         Assert.That(max - min, Is.GreaterThan(0.3f), "the gaps are not all the same");
         Object.DestroyImmediate(cannon);   // (the pattern asset it shares with _def is recreated in SetUp)
     }
+
+    // ---- entry routes, progress triggers, intro timing (the mini boss tool's settings) ----
+
+    Transform RoutePoint(Vector2 p)
+    {
+        var t = new GameObject("route").transform; t.SetParent(_spawn.transform); t.position = new Vector3(p.x, 0f, p.y);
+        return t;
+    }
+
+    [Test]
+    public void EntryRoute_ItAppearsAtTheFirstPoint_WalksThrough_AndOnlyThenFights()
+    {
+        _spawn.Route = new[] { RoutePoint(new Vector2(-6f, 40f)), RoutePoint(new Vector2(4f, 46f)) };   // from outside the corridor
+        _spawn.EntrySpeed = 5f; _spawn.PlayIntro = false;
+        var elite = Summon();
+        Assert.IsNotNull(elite);
+        Assert.IsTrue(elite.Entering);
+        Assert.That(Vector2.Distance(elite.Pos, new Vector2(-6f, 40f)), Is.LessThan(0.3f), "appears at the route's first point, walls or not");
+
+        float travelled = 0f; var last = elite.Pos; bool passedSecond = false;
+        for (int i = 0; i < 400 && elite.Entering; i++)
+        {
+            _dir.Step(0.02f);
+            travelled += Vector2.Distance(last, elite.Pos); last = elite.Pos;
+            if (Vector2.Distance(elite.Pos, new Vector2(4f, 46f)) < 0.3f) passedSecond = true;
+            Assert.IsFalse(elite.Casting, "no attacks while walking in");
+        }
+        Assert.IsFalse(elite.Entering, "arrived");
+        Assert.IsTrue(passedSecond, "went through the middle point");
+        Assert.That(Vector2.Distance(elite.Pos, BossSpot), Is.LessThan(0.6f), "ends on the marker");
+        float routeLength = Vector2.Distance(new Vector2(-6f, 40f), new Vector2(4f, 46f)) + Vector2.Distance(new Vector2(4f, 46f), BossSpot);
+        Assert.That(travelled, Is.EqualTo(routeLength).Within(0.7f));
+        Run(_def.FirstAttackDelay + 0.5f);
+        Assert.IsTrue(elite.Casting || _dir.Telegraphs.Count > 0, "fights once it has arrived");
+    }
+
+    [Test]
+    public void Intro_CanWaitUntilItArrives()
+    {
+        _spawn.Route = new[] { RoutePoint(new Vector2(-6f, 40f)) };
+        _spawn.EntrySpeed = 8f; _spawn.PlayIntro = true; _spawn.IntroWhen = MiniBossIntroWhen.OnArrive; _spawn.IntroSeconds = 0.6f;
+        _spawn.IntroEffectId = "no.such.effect";                 // an unknown effect id must not break anything
+        int cutscenes = 0; Vector2 focus = default; float seconds = 0f;
+        _dir.CutsceneStarted += (f, s, title, fx) => { cutscenes++; focus = f; seconds = s; };
+        var elite = Summon();
+        Assert.AreEqual(0, cutscenes, "nothing plays as it appears");
+        Assert.IsFalse(_dir.InCutscene);
+        for (int i = 0; i < 300 && elite.Entering; i++) _dir.Step(0.02f);
+        Assert.AreEqual(1, cutscenes, "the intro plays on arrival");
+        Assert.That(Vector2.Distance(focus, BossSpot), Is.LessThan(0.6f), "on the spot it arrived at");
+        Assert.AreEqual(0.6f, seconds, "the marker's own intro length");
+        Assert.IsTrue(_dir.InCutscene);
+    }
+
+    [Test]
+    public void Intro_OnAppear_PlaysAtTheRoutesFirstPoint()
+    {
+        _spawn.Route = new[] { RoutePoint(new Vector2(-6f, 40f)) };
+        _spawn.PlayIntro = true; _spawn.IntroWhen = MiniBossIntroWhen.OnAppear;
+        Vector2 focus = default; float seconds = 0f; int cutscenes = 0;
+        _dir.CutsceneStarted += (f, s, title, fx) => { cutscenes++; focus = f; seconds = s; };
+        var elite = Summon();
+        Assert.AreEqual(1, cutscenes);
+        Assert.That(Vector2.Distance(focus, new Vector2(-6f, 40f)), Is.LessThan(0.3f));
+        Assert.AreEqual(_def.IntroDuration, seconds, "0 on the marker = the kind's own length");
+        Run(_def.IntroDuration + 3f);
+        Assert.IsFalse(elite.Entering);
+        Assert.AreEqual(1, cutscenes, "and not again on arrival");
+    }
+
+    [Test]
+    public void AtProgress_AppearsWhenTheSquadHasComeThatFar_NotByDistance()
+    {
+        _spawn.AtProgress = 0.5f; _spawn.TriggerRadius = 1000f; _spawn.PlayIntro = false;
+        _dir.Step(0.02f);
+        Assert.IsFalse(_spawn.Triggered, "the huge radius is ignored: progress decides");
+        Teleport(new Vector2(10f, 70f)); Run(0.1f);            // a quarter of the way
+        Assert.IsFalse(_spawn.Triggered);
+        Teleport(new Vector2(10f, 48f)); Run(0.1f);            // past halfway
+        Assert.IsTrue(_spawn.Triggered);
+        Assert.That(Vector2.Distance(_spawn.Elite.Pos, BossSpot), Is.LessThan(0.6f));
+    }
+
+    [Test]
+    public void PresentFromStart_IgnoresTheRoute_AndSpawnMiniBossForcesOneOut()
+    {
+        _spawn.PresentFromStart = true;
+        _spawn.Route = new[] { RoutePoint(new Vector2(-6f, 40f)) };
+        _dir.Restart();
+        _dir.Step(0.02f);
+        Assert.IsTrue(_spawn.Triggered);
+        Assert.IsFalse(_spawn.Elite.Entering, "a fixed one is simply there");
+        Assert.That(Vector2.Distance(_spawn.Elite.Pos, BossSpot), Is.LessThan(0.6f));
+
+        var go = new GameObject("second"); go.transform.SetParent(_fc.transform); go.transform.position = new Vector3(10f, 0f, 20f);
+        var second = go.AddComponent<MiniBossSpawn>(); second.Definition = _def; second.TriggerRadius = 1f; second.PlayIntro = false;
+        _dir.Restart(); _dir.Step(0.02f);
+        Assert.IsFalse(second.Triggered);
+        Assert.IsNotNull(_dir.SpawnMiniBoss(second), "forced out from the tool");
+        Assert.IsTrue(second.Triggered);
+        Assert.IsNull(_dir.SpawnMiniBoss(second), "only once");
+    }
 }
