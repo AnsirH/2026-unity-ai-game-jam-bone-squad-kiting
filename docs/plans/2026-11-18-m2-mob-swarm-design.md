@@ -295,7 +295,7 @@ M1의 `IEnemy`·`EnemyRegistry`·`SquadOrder`는 M2를 염두에 두고 만들�
 **격자 만들기 (스테이지를 불러올 때 한 번)**
 
 - 맵 경계를 덮는 균일 격자. 칸 크기는 공간 해시와 같은 0.75로 맞추면 격자 하나를 같이 쓸 수 있다.
-- 각 칸의 중심이 이동 가능 지면 위인지 검사해 `bool[]`로 저장한다. NavMesh를 쓰면 칸마다 `NavMesh.SamplePosition`(짧은 거리) 한 번이다.
+- 각 칸의 중심이 이동 가능 지면 위인지 검사해 `bool[]`로 저장한다. 구현은 NavMesh 대신 칸마다 아래로 레이캐스트한다(`WalkGridBaker`, 아티스트 규칙은 `docs/guides/map-authoring.md`).
 
 **거리장과 방향 (분대 중심이 다른 칸으로 넘어갈 때)**
 
