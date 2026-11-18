@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using BoneSquadKiting.Core;
@@ -21,7 +22,10 @@ namespace BoneSquadKiting.Cameras
         public Vector2 BoundsMax = new(GameConstants.LimitXMax, GameConstants.LimitZMax);
 
         /// <summary>Extra world-space offset added on top of the scrolled position (screen shake).</summary>
-        [System.NonSerialized] public Vector3 ShakeOffset;
+        public Vector3 ShakeOffset { get; private set; }
+
+        internal float CombatShakeStrength { get; set; }
+        readonly List<(float strength, float duration, float remaining)> _presentationShakes = new();
 
         /// <summary>Lines the view may not be scrolled past while their mini bosses live. Set by StageSetup.</summary>
         [System.NonSerialized] public BoneSquadKiting.Stage.CameraGate[] Gates;
@@ -71,8 +75,57 @@ namespace BoneSquadKiting.Cameras
 
         void Start() => Apply();
 
+        public void PlayPresentationShake(float strength, float seconds)
+        {
+            if (strength <= 0f || seconds <= 0f) return;
+            for (int i = 0; i < _presentationShakes.Count; i++)
+            {
+                var shake = _presentationShakes[i];
+                if (shake.strength != strength || shake.duration != seconds) continue;
+                _presentationShakes[i] = (strength, seconds, seconds);
+                return;
+            }
+            _presentationShakes.Add((strength, seconds, seconds));
+        }
+
+        public void ClearPresentationShake()
+        {
+            _presentationShakes.Clear();
+            if (CombatShakeStrength <= 0f && ShakeOffset.sqrMagnitude > 0f)
+            {
+                ShakeOffset = Vector3.zero;
+                Apply();
+            }
+        }
+
+        public float TickShake(float dt)
+        {
+            float strongest = CombatShakeStrength;
+            for (int i = _presentationShakes.Count - 1; i >= 0; i--)
+            {
+                var shake = _presentationShakes[i];
+                shake.remaining -= dt;
+                if (shake.remaining <= 0f)
+                {
+                    _presentationShakes.RemoveAt(i);
+                    continue;
+                }
+                _presentationShakes[i] = shake;
+                strongest = Mathf.Max(strongest, shake.strength * (shake.remaining / shake.duration));
+            }
+            ShakeOffset = strongest > 0f ? Random.insideUnitSphere * strongest : Vector3.zero;
+            return strongest;
+        }
+
+        void OnDisable()
+        {
+            CombatShakeStrength = 0f;
+            ClearPresentationShake();
+        }
+
         void LateUpdate()
         {
+            TickShake(Time.unscaledDeltaTime);
             if (TickFocus(Time.unscaledDeltaTime)) return;   // no edge scrolling while the camera is being directed
             // Until the mouse has reported a position it reads (0, 0), which would look like the corner.
             if (Mouse.current != null && Mouse.current.position.ReadValue() != Vector2.zero) _mouseSeen = true;
