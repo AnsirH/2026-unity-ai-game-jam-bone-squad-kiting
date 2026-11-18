@@ -332,11 +332,14 @@ namespace BoneSquadKiting.EditorTools
 
                 var dummy = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 dummy.name = "Training Dummy (cannot die)";
-                dummy.transform.position = new Vector3(-22f, 1f, 16f); dummy.transform.localScale = new Vector3(1.6f, 1f, 1.6f);
+                dummy.transform.position = new Vector3(-12f, 1f, 18f); dummy.transform.localScale = new Vector3(1.6f, 1f, 1.6f);
                 dummy.layer = A.EnsureLayer(A.EnemyLayer);
                 dummy.GetComponent<Renderer>().sharedMaterial = A.Lit("MiniBoss", A.Hex("#c9722a"), A.Hex("#ff8a2a") * 1.4f);
                 dummy.AddComponent<EnemyRef>();
                 dummy.AddComponent<TrainingDummy>();
+
+                // Test panel: summon any enemy at a marked point (nothing is there until a button is pressed).
+                MonsterSpawnerBuilder.AddTo(new Vector3(16f, 0f, 22f));
 
                 EditorSceneManager.SaveScene(scene, MoveTuningPath);
             });
@@ -373,7 +376,8 @@ namespace BoneSquadKiting.EditorTools
                 run.NextScene = "Arena";
                 for (int i = 0; i < maps.Count; i++)
                 {
-                    run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd });
+                    run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd,
+                        Volume = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.VolumeProfile>($"Assets/Settings/Stage{i + 1}Volume.asset") });
                     maps[i].SetActive(i == 0);
                 }
                 EditorSceneManager.SaveScene(scene);
