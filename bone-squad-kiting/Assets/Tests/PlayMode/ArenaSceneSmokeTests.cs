@@ -98,7 +98,9 @@ public class ArenaSceneSmokeTests
 
         // Dodge the first pattern (core -> ring). Step back from the boss first: right next to it the ring
         // overlaps the boss's keep-out area, and units pressed inward there can still be caught.
-        director.IssueOrder(SquadOrder.Move(new Vector2(0f, 3.4f)));
+        // A short step, so the squad has stopped and closed up well before the blast: units trail the
+        // formation while it travels, and a ring that is still moving gets caught.
+        director.IssueOrder(SquadOrder.Move(director.Squad.Anchor + new Vector2(0f, 2.2f)));
         director.ChangeFormation("ring");
         float resolveBy = Time.time + 4f;
         while (director.Attacks.Current != null && Time.time < resolveBy) yield return null;

@@ -40,5 +40,13 @@ namespace BoneSquadKiting.Data
         [Header("Projectile")]
         public GameObject ShotPrefab;
         public float ShotScale = 1f;
+        [Tooltip("Turn the model so its tip points along +Z (the way it flies).")]
+        public Vector3 ShotRotation;
+
+        [Header("The leader's projectile (falls back to the one above when empty)")]
+        public GameObject LeaderShotPrefab;
+        public float LeaderShotScale = 1f;
+        [Tooltip("Turn the model so its tip points along +Z (the way it flies).")]
+        public Vector3 LeaderShotRotation;
     }
 }

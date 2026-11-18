@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using BoneSquadKiting.Data;
 using BoneSquadKiting.Cameras;
 using BoneSquadKiting.Game;
 
@@ -25,6 +26,8 @@ namespace BoneSquadKiting.Stage
         public float EndRadius = 3f;
         [Tooltip("Shown on the title screen.")]
         public string StageTitle = "Stage";
+        [Tooltip("This stage's waves. Empty = no waves. They grow with progress toward the End Point; without an End Point only the plan's first row is used.")]
+        public WavePlan WavePlan;
 
         /// <summary>The kit this marker brought in, while playing.</summary>
         public StageKit Kit { get; private set; }
@@ -50,6 +53,12 @@ namespace BoneSquadKiting.Stage
             Kit.Setup.StartPoint = transform;
             Kit.Setup.EndPoint = EndPoint; Kit.Setup.EndRadius = EndRadius;
             Kit.Director.StageTitle = StageTitle;
+            if (WavePlan != null)
+            {
+                var waves = Kit.Director.Waves != null ? Kit.Director.Waves : Kit.Setup.gameObject.AddComponent<WaveSpawner>();
+                waves.Plan = WavePlan;
+                Kit.Director.Waves = waves;
+            }
             if (hasEventSystem) foreach (var es in go.GetComponentsInChildren<EventSystem>(true)) Destroy(es.gameObject);
             go.SetActive(true);                                 // StageSetup bakes the walk area and seats the squad
 
