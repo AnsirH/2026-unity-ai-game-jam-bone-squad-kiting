@@ -2,6 +2,8 @@ Shader "Bone Squad/Stage Visibility"
 {
     Properties
     {
+        [HideInInspector] _VisibilityReadMask ("Stencil read mask", Float) = 1
+        [HideInInspector] _VisibilityWriteMask ("Stencil write mask", Float) = 0
         _Darkness ("Maximum darkness", Range(0, 1)) = 0.8
         _EdgeDrift ("Edge drift (UV)", Range(0, 0.005)) = 0.002
         [NoScaleOffset] _VisibilityMap ("Visibility (white = visible)", 2D) = "white" {}
@@ -18,7 +20,9 @@ Shader "Bone Squad/Stage Visibility"
             // Multiply destination RGB by visibility, leaving camera alpha intact.
             Blend Zero SrcColor
             ColorMask RGB
-            Stencil { Ref 1 ReadMask 1 WriteMask 0 Comp NotEqual }
+            // Bit 0 skips root-shaded props. A draped mesh also marks bit 1 to avoid
+            // multiplying the same pixel twice where slopes overlap in projection.
+            Stencil { Ref 0 ReadMask [_VisibilityReadMask] WriteMask [_VisibilityWriteMask] Comp Equal Pass Invert }
 
             HLSLPROGRAM
             #pragma vertex Vert

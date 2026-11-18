@@ -14,9 +14,18 @@ Shader "Bone Squad/Background PBR"
 
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull Mode", Float) = 2
 
+        [Header(Diffuse Color)]
+        [Toggle(_DIFFUSE_COLOR_ADJUST)] _UseDiffuseColorAdjust("Adjust Diffuse Color", Float) = 0
+        _DiffuseHue("Hue Shift (Degrees)", Range(-180, 180)) = 0
+        _DiffuseSaturation("Saturation", Range(0, 2)) = 1
+        _DiffuseValue("Value", Range(0, 2)) = 1
+        _DiffuseContrast("Contrast", Range(0, 2)) = 1
+
         [Toggle(_TREE_ROOT_VISIBILITY)] _TreeRootVisibility("Fade at object base", Float) = 0
 
         [Header(Transparency)]
+        [Toggle(_CLIP_ABOVE_HEIGHT)] _UseHeightClip("Clip Above Height", Float) = 0
+        _ClipHeightWS("Cutoff Height (World Y)", Float) = 0
         [Toggle(_DITHER_FADE)] _UseDitherFade("Dithered Opacity", Float) = 0
         _Opacity("Opacity", Range(0, 1)) = 1
     }
@@ -31,6 +40,7 @@ Shader "Bone Squad/Background PBR"
         HLSLINCLUDE
         #pragma target 3.5
         #pragma shader_feature_local _DITHER_FADE
+        #pragma shader_feature_local _CLIP_ABOVE_HEIGHT
         #include "BackgroundSurface.hlsl"
         ENDHLSL
 
@@ -48,6 +58,7 @@ Shader "Bone Squad/Background PBR"
             #pragma fragment BackgroundForwardFragment
             #pragma shader_feature_local _NORMALMAP
             #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_fragment _DIFFUSE_COLOR_ADJUST
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -78,14 +89,22 @@ Shader "Bone Squad/Background PBR"
             SAMPLER(sampler_StageTreeMask);
             float4 _StageTreeU, _StageTreeV;
             half _StageTreeDarkness;
+            TEXTURE2D(_StageTreeMask2);
+            float4 _StageTreeU2, _StageTreeV2;
+            half _StageTreeDarkness2;
+
 
             half TreeRootBrightness()
             {
                 float4 root = float4(TransformObjectToWorld(float3(0, 0, 0)), 1);
                 float2 uv = float2(dot(_StageTreeU, root), dot(_StageTreeV, root)) + 0.5;
-                half mask = SAMPLE_TEXTURE2D_LOD(_StageTreeMask, sampler_StageTreeMask, uv, 0).r;
-                bool onMap = all(uv >= 0.0) && all(uv <= 1.0);
-                return StageBrightness(mask, onMap ? _StageTreeDarkness : 0.0h);
+                if (_StageTreeDarkness > 0 && all(uv >= 0.0) && all(uv <= 1.0))
+                    return StageBrightness(SAMPLE_TEXTURE2D_LOD(_StageTreeMask, sampler_StageTreeMask, uv, 0).r, _StageTreeDarkness);
+
+                float2 uv2 = float2(dot(_StageTreeU2, root), dot(_StageTreeV2, root)) + 0.5;
+                if (_StageTreeDarkness2 > 0 && all(uv2 >= 0.0) && all(uv2 <= 1.0))
+                    return StageBrightness(SAMPLE_TEXTURE2D_LOD(_StageTreeMask2, sampler_StageTreeMask, uv2, 0).r, _StageTreeDarkness2);
+                return 1.0h;
             }
             #endif
 
@@ -96,6 +115,9 @@ Shader "Bone Squad/Background PBR"
             )
             {
                 ApplyBackgroundCoverage(input.uv, input.positionCS.xy);
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                ClipAboveHeight(input.positionWS.y);
+            #endif
                 LitPassFragment(input, color
                 #ifdef _WRITE_RENDERING_LAYERS
                     , renderingLayers
@@ -145,7 +167,7 @@ Shader "Bone Squad/Background PBR"
             Tags { "LightMode" = "DepthNormalsOnly" }
 
             HLSLPROGRAM
-            #pragma vertex DepthNormalsVertex
+            #pragma vertex BackgroundDepthNormalsVertex
             #pragma fragment BackgroundDepthNormalsFragment
             #pragma shader_feature_local _NORMALMAP
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
@@ -156,7 +178,23 @@ Shader "Bone Squad/Background PBR"
             #endif
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitDepthNormalsPass.hlsl"
 
+            Varyings BackgroundDepthNormalsVertex(Attributes input
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                , out float worldY : TEXCOORD3
+            #endif
+            )
+            {
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                UNITY_SETUP_INSTANCE_ID(input);
+                worldY = TransformObjectToWorld(input.positionOS.xyz).y;
+            #endif
+                return DepthNormalsVertex(input);
+            }
+
             void BackgroundDepthNormalsFragment(Varyings input, out half4 normalWS : SV_Target0
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                , float worldY : TEXCOORD3
+            #endif
             #ifdef _WRITE_RENDERING_LAYERS
                 , out uint renderingLayers : SV_Target1
             #endif
@@ -164,6 +202,9 @@ Shader "Bone Squad/Background PBR"
             {
             #if defined(_DITHER_FADE)
                 ApplyBackgroundCoverage(input.uv, input.positionCS.xy);
+            #endif
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                ClipAboveHeight(worldY);
             #endif
                 DepthNormalsFragment(input, normalWS
                 #ifdef _WRITE_RENDERING_LAYERS
@@ -181,15 +222,36 @@ Shader "Bone Squad/Background PBR"
             Cull Off
 
             HLSLPROGRAM
-            #pragma vertex UniversalVertexMeta
+            #pragma vertex BackgroundMetaVertex
             #pragma fragment BackgroundMetaFragment
             #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_fragment _DIFFUSE_COLOR_ADJUST
             #pragma shader_feature EDITOR_VISUALIZATION
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitMetaPass.hlsl"
 
-            half4 BackgroundMetaFragment(Varyings input) : SV_Target
+            Varyings BackgroundMetaVertex(Attributes input
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                , out float worldY : TEXCOORD3
+            #endif
+            )
             {
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                UNITY_SETUP_INSTANCE_ID(input);
+                worldY = TransformObjectToWorld(input.positionOS.xyz).y;
+            #endif
+                return UniversalVertexMeta(input);
+            }
+
+            half4 BackgroundMetaFragment(Varyings input
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                , float worldY : TEXCOORD3
+            #endif
+            ) : SV_Target
+            {
+            #if defined(_CLIP_ABOVE_HEIGHT)
+                ClipAboveHeight(worldY);
+            #endif
                 ApplyBackgroundCoverage(input.uv, input.positionCS.xy);
                 return UniversalFragmentMetaLit(input);
             }
