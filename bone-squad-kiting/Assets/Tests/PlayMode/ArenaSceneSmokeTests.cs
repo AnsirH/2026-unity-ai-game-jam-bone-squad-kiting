@@ -229,6 +229,14 @@ public class ArenaSceneSmokeTests
             Assert.AreEqual(expected, d.ClearRule, order[i]);
             Assert.AreEqual(order[i] == "Arena", d.HasBoss, order[i]);
             Assert.IsTrue(d.Squad.Grid.IsWalkable(d.Squad.Anchor), order[i] + ": squad starts on walkable ground");
+            int[] miniBosses = { 4, 6, 6, 2, 0 };            // per the stage lineup
+            var spawns = Object.FindObjectsByType<BoneSquadKiting.Stage.MiniBossSpawn>(FindObjectsSortMode.None);
+            Assert.AreEqual(miniBosses[i], spawns.Length, order[i] + ": mini boss count");
+            foreach (var sp in spawns)
+            {
+                Assert.IsNotNull(sp.Definition, order[i] + ": " + sp.name + " has a definition");
+                Assert.IsTrue(d.Squad.Grid.IsWalkable(sp.Position), order[i] + ": " + sp.name + " stands on walkable ground");
+            }
             if (d.Stage.EndPoint != null)
             {
                 var end = new Vector2(d.Stage.EndPoint.position.x, d.Stage.EndPoint.position.z);

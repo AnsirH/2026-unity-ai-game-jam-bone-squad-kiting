@@ -53,20 +53,43 @@ namespace BoneSquadKiting.EditorTools
         {
             public string Name, Title, Next;
             public float Width = 18f, Length = 64f;
-            public bool MiniBoss = true;
+            public bool ReachEndOnly;                       // clear by reaching the end point even if mini bosses live
+            public Placement[] MiniBosses = new Placement[0];
             public float Interval0 = 12f, Interval1 = 5f;   // seconds between waves at the start / at the end
             public float Count0 = 8f, Count1 = 30f;         // mobs per wave at the start / at the end
             public string Path => $"Assets/Scenes/{Name}.unity";
         }
 
-        // Stage order (decision #37): 1, 2, 4 = mobs + mini boss; 3 = no mini boss, break through to the end;
-        // 5 = the boss arena.
+        /// <summary>One mini boss on a stage. Along = 0 at the start point, 1 at the end point.</summary>
+        class Placement
+        {
+            public string Elite; public float X, Along;
+            public bool FromStart;          // a fixed cannon that is simply there
+            public int[] After;             // indices of placements that must die before this one activates
+            public Placement(string elite, float x, float along, bool fromStart = false, int[] after = null)
+            { Elite = elite; X = x; Along = along; FromStart = fromStart; After = after; }
+        }
+
+        // Stage lineup (decisions #45, #46). Positions and wave numbers are placeholders.
+        //  1: three catapults along the way, the dark-flame mage at the end
+        //  2: the shadow swordsman, three catapults; once those three are down, one more catapult and the spear thrower
+        //  3: many catapults and the telekinetic mage, but the stage is cleared by reaching the end point
+        //  4: the telekinetic mage twice
+        //  5: the boss arena
         static readonly StageSpec[] Stages =
         {
-            new() { Name = "Stage1", Title = "스테이지 1", Next = "Stage2", Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f },
-            new() { Name = "Stage2", Title = "스테이지 2", Next = "Stage3", Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f },
-            new() { Name = "Stage3", Title = "스테이지 3", Next = "Stage4", Length = 84f, MiniBoss = false, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f },
-            new() { Name = "Stage4", Title = "스테이지 4", Next = "Arena", Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f },
+            new() { Name = "Stage1", Title = "스테이지 1", Next = "Stage2", Length = 84f, Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f,
+                    MiniBosses = new[] { new Placement("Catapult", -5f, 0.28f, true), new Placement("Catapult", 5f, 0.45f, true),
+                                         new Placement("Catapult", 0f, 0.64f, true), new Placement("DarkFlameMage", 0f, 0.9f) } },
+            new() { Name = "Stage2", Title = "스테이지 2", Next = "Stage3", Length = 96f, Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f,
+                    MiniBosses = new[] { new Placement("ShadowSwordsman", 0f, 0.22f),
+                                         new Placement("Catapult", -5f, 0.42f, true), new Placement("Catapult", 5f, 0.52f, true), new Placement("Catapult", 6f, 0.62f, true),
+                                         new Placement("Catapult", 4f, 0.8f, true, new[] { 1, 2, 3 }), new Placement("SpearThrower", 0f, 0.9f, false, new[] { 1, 2, 3 }) } },
+            new() { Name = "Stage3", Title = "스테이지 3", Next = "Stage4", Length = 108f, ReachEndOnly = true, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f,
+                    MiniBosses = new[] { new Placement("Catapult", -5f, 0.2f, true), new Placement("Catapult", 5f, 0.32f, true), new Placement("Catapult", -5f, 0.46f, true),
+                                         new Placement("Catapult", 5f, 0.58f, true), new Placement("Catapult", 0f, 0.72f, true), new Placement("TelekineticMage", 0f, 0.9f) } },
+            new() { Name = "Stage4", Title = "스테이지 4", Next = "Arena", Length = 84f, Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f,
+                    MiniBosses = new[] { new Placement("TelekineticMage", 0f, 0.45f), new Placement("TelekineticMage", 0f, 0.9f) } },
         };
         const string ArenaTitle = "스테이지 5";
 
@@ -283,7 +306,7 @@ namespace BoneSquadKiting.EditorTools
 
             Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea);   // the telegraph view stays: the mini boss uses it
             director.BossView = null; director.HasBoss = false;
-            director.ClearRule = spec.MiniBoss ? StageClearRule.DefeatMiniBossThenReachEnd : StageClearRule.ReachEnd;
+            director.ClearRule = spec.ReachEndOnly ? StageClearRule.ReachEnd : StageClearRule.DefeatMiniBossThenReachEnd;
             director.Stage = stage;
 
             // Move the squad and its pre-placed units to the start point.
@@ -325,15 +348,24 @@ namespace BoneSquadKiting.EditorTools
             waves.Count = AnimationCurve.Linear(0f, spec.Count0, 1f, spec.Count1);
             director.Waves = waves;
 
-            if (spec.MiniBoss)
+            // Mini bosses, placed along the corridor between the start and the end point.
+            var spawns = new MiniBossSpawn[spec.MiniBosses.Length];
+            for (int i = 0; i < spawns.Length; i++)
             {
-                // A mini boss waits near the end; it appears when the squad comes within its trigger radius.
-                var miniBoss = new GameObject("Mini Boss Spawn");
-                miniBoss.transform.SetParent(stage.transform, false);
-                miniBoss.transform.position = new Vector3(0f, 0f, end.y + 8f);
-                var spawn = miniBoss.AddComponent<MiniBossSpawn>();
-                spawn.Definition = Load<EliteDefinition>("Assets/Data/Elites/Brute.asset");
-                spawn.TriggerRadius = 12f;
+                var pl = spec.MiniBosses[i];
+                var go = new GameObject($"Mini Boss {i + 1} ({pl.Elite})");
+                go.transform.SetParent(stage.transform, false);
+                go.transform.position = new Vector3(pl.X, 0f, Mathf.Lerp(start.y, end.y, pl.Along));
+                spawns[i] = go.AddComponent<MiniBossSpawn>();
+                spawns[i].Definition = Load<EliteDefinition>($"Assets/Data/Elites/{pl.Elite}.asset");
+                spawns[i].PresentFromStart = pl.FromStart;
+                spawns[i].TriggerRadius = 12f;
+            }
+            for (int i = 0; i < spawns.Length; i++)
+            {
+                var after = spec.MiniBosses[i].After;
+                if (after == null) continue;
+                spawns[i].ActivateAfter = System.Array.ConvertAll(after, k => spawns[k]);
             }
 
             var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();
