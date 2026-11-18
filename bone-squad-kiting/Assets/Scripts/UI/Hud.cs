@@ -78,7 +78,11 @@ namespace BoneSquadKiting.UI
         }
 
         void OnCutscene(Vector2 focus, float seconds, string title, GameObject fx) { if (!string.IsNullOrEmpty(title)) ShowToast(title, seconds); }
-        void OnMiniBossDefeated(Elite elite) => ShowToast(Director.EndOpen ? "끝 지점이 열렸습니다" : $"{elite.Def.DisplayName} 처치", 3f);
+        void OnMiniBossDefeated(Elite elite)
+        {
+            bool gated = Director.ClearRule == Stage.StageClearRule.DefeatMiniBossThenReachEnd;
+            ShowToast(gated && Director.EndOpen ? "끝 지점이 열렸습니다" : $"{elite.Def.DisplayName} 처치", 3f);
+        }
         void OnOverlayButton()
         {
             if (Director.Phase == GamePhase.Win) Director.Proceed();

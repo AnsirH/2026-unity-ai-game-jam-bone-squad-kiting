@@ -250,4 +250,135 @@ public class MiniBossTests
         Assert.AreEqual(new Vector2(1, 2), cam.LookAt, "back where the player left it");
         Object.DestroyImmediate(go);
     }
+
+    // ---- stage lineup features: fixed cannons, several mini bosses per stage, activation chains ----
+
+    MiniBossSpawn AddSpawn(Vector2 at, EliteDefinition def = null)
+    {
+        var go = new GameObject("extra spawn"); go.transform.SetParent(_fc.transform);
+        go.transform.position = new Vector3(at.x, 0, at.y);
+        var spawn = go.AddComponent<MiniBossSpawn>();
+        spawn.Definition = def != null ? def : _def; spawn.TriggerRadius = 12f;
+        return spawn;
+    }
+
+    EliteDefinition Cannon()
+    {
+        var c = Object.Instantiate(_def);
+        c.Speed = 0f; c.AttackRange = 14f; c.FirstAttackDelay = 0.5f; c.AttackGap = 1f; c.AttackGapRandom = 0f;
+        return c;
+    }
+
+    [Test]
+    public void PresentFromStart_ItIsThereAtOnce_WithNoIntro()
+    {
+        _spawn.PresentFromStart = true;
+        bool cutscene = false; _dir.CutsceneStarted += (f, s, t, fx) => cutscene = true;
+        _dir.Restart();
+        _dir.Step(0.02f);                                   // squad is 50 away, far outside the trigger radius
+        Assert.IsTrue(_spawn.Triggered);
+        Assert.AreEqual(1, _dir.Elites.Elites.Count);
+        Assert.IsFalse(cutscene);
+        Assert.IsFalse(_dir.InCutscene);
+    }
+
+    [Test]
+    public void FixedMiniBoss_NeverMoves_AndOnlyFiresWhenTheSquadIsInReach()
+    {
+        var cannon = Cannon();
+        _spawn.Definition = cannon; _spawn.PresentFromStart = true;
+        _dir.Restart();
+        Run(4f);                                            // squad 50 away: out of its 14 reach
+        var elite = _spawn.Elite;
+        Assert.That(Vector2.Distance(elite.Pos, BossSpot), Is.LessThan(0.01f));
+        Assert.AreEqual(0, _dir.Telegraphs.Count, "it holds fire while the squad is out of reach");
+
+        Teleport(BossSpot + new Vector2(0, 10f));
+        bool fired = false;
+        for (int i = 0; i < 200 && !fired; i++) { _dir.Step(0.02f); fired = _dir.Telegraphs.Count > 0; }
+        Assert.IsTrue(fired, "in reach: it fires");
+        Run(5f);
+        Assert.That(Vector2.Distance(elite.Pos, BossSpot), Is.LessThan(0.01f), "and still has not moved");
+        Object.DestroyImmediate(cannon);
+    }
+
+    [Test]
+    public void NoIntro_WhenTheMarkerSaysSo()
+    {
+        _spawn.PlayIntro = false;
+        Summon();
+        Assert.AreEqual(1, _dir.Elites.Elites.Count);
+        Assert.IsFalse(_dir.InCutscene);
+    }
+
+    [Test]
+    public void SeveralMiniBosses_OnlyTheLastDeathSweepsTheStage()
+    {
+        var second = AddSpawn(BossSpot + new Vector2(0, -15f));
+        _dir.Restart();
+        var first = Summon(); Run(2.1f); Run(2f);
+        Assert.That(_dir.Mobs.AliveCount, Is.GreaterThan(0));
+
+        int cutscenes = 0; _dir.CutsceneStarted += (f, s, t, fx) => cutscenes++;
+        int defeated = 0; _dir.MiniBossDefeated += e => defeated++;
+        first.ApplyDamage(float.MaxValue);
+        _dir.Step(0.02f);
+        Assert.AreEqual(1, defeated);
+        Assert.AreEqual(0, cutscenes, "not the last one: it just dies");
+        Assert.That(_dir.Mobs.AliveCount, Is.GreaterThan(0), "the swarm stays");
+        Assert.IsFalse(_waves.Stopped);
+        Assert.IsFalse(_dir.EndOpen);
+
+        Teleport(second.Position + new Vector2(0, 11f)); _dir.Step(0.02f);
+        Assert.IsTrue(second.Triggered);
+        Run(2.1f);
+        second.Elite.ApplyDamage(float.MaxValue);
+        _dir.Step(0.02f);
+        Assert.AreEqual(2, cutscenes, "its intro, then the finish for the last one");
+        Assert.AreEqual(0, _dir.Mobs.AliveCount);
+        Assert.IsTrue(_waves.Stopped);
+        Assert.IsTrue(_dir.EndOpen);
+    }
+
+    [Test]
+    public void ActivateAfter_StaysAwayUntilTheOthersAreDead()
+    {
+        var gated = AddSpawn(BossSpot + new Vector2(3f, 0));     // right next to the first one
+        gated.ActivateAfter = new[] { _spawn };
+        _dir.Restart();
+        var first = Summon(); Run(2.1f);
+        Assert.IsFalse(gated.Triggered, "close enough, but it waits for the first to die");
+        Assert.IsFalse(gated.Unlocked);
+
+        first.ApplyDamage(float.MaxValue);
+        Run(0.1f);
+        Assert.IsTrue(gated.Unlocked);
+        Assert.IsTrue(gated.Triggered, "now it appears");
+        Assert.IsFalse(_dir.EndOpen, "and the stage is not over");
+        Assert.AreEqual(1, _dir.Elites.Elites.Count);
+    }
+
+    [Test]
+    public void AttackGapRandom_MakesTheGapsIrregular_WithinItsRange()
+    {
+        var cannon = Cannon();
+        // A pinpoint zone and a ring formation: nobody is ever hit, so the squad survives long enough to count gaps.
+        cannon.AttackGap = 1f; cannon.AttackGapRandom = 2f;
+        cannon.Patterns.Patterns[0].Time = 0.2f; cannon.Patterns.Patterns[0].Shape = DangerShape.Disc(0.01f);
+        _spawn.Definition = cannon; _spawn.PresentFromStart = true;
+        _dir.Restart();
+        _fc.SetFormation("ring");
+        Teleport(BossSpot + new Vector2(0, 10f));
+        var gaps = new System.Collections.Generic.List<float>();
+        float lastResolve = -1f;
+        _dir.PatternResolved += (h, l) => lastResolve = _dir.Elapsed;
+        _dir.PatternStarted += p => { if (lastResolve >= 0f) gaps.Add(_dir.Elapsed - lastResolve); };
+        Run(40f);
+        Assert.That(gaps.Count, Is.GreaterThan(8));
+        float min = float.MaxValue, max = 0;
+        foreach (var g in gaps) { min = Mathf.Min(min, g); max = Mathf.Max(max, g); }
+        Assert.That(min, Is.GreaterThanOrEqualTo(0.95f)); Assert.That(max, Is.LessThanOrEqualTo(3.1f));
+        Assert.That(max - min, Is.GreaterThan(0.3f), "the gaps are not all the same");
+        Object.DestroyImmediate(cannon);   // (the pattern asset it shares with _def is recreated in SetUp)
+    }
 }

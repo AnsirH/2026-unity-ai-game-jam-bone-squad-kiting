@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49529fdac290a2f4ab5a3cfb79b12d9f, type: 3}
+  m_Name: DarkFlameMage
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
+  DisplayName: "\uAC80\uC815\uBD88\uAF43\uB9C8\uBC95\uC0AC"
+  MaxHp: 4000
+  Speed: 2
+  Radius: 0.8
+  StopDistance: 3
+  Patterns: {fileID: 11400000, guid: fc439cdd5271c1e44bae606d80215d4a, type: 2}
+  FirstAttackDelay: 3
+  AttackGap: 4.5
+  AttackGapRandom: 0
+  AttackRange: 16
+  IntroDuration: 2
+  DeathDuration: 1.5
+  IntroFx: {fileID: 0}
+  DeathFx: {fileID: 0}
