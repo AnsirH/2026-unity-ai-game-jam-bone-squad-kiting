@@ -32,10 +32,9 @@ namespace BoneSquadKiting.EditorTools
         const float CameraPitch = 60f;      // degrees down from horizontal
         const float CameraYaw = 0f;         // degrees turned around Y; 0 = straight on, boss directly ahead
         const float CameraFov = 30f;        // vertical field of view
-        const float CameraDistance = 34f;   // from the squad anchor it follows
-        const float CameraSmoothTime = 0.35f;
-        // Look a little ahead of the squad, toward the boss side, so the boss stays in frame at this zoom.
-        static readonly Vector3 CameraLookOffset = new(0f, 0f, -3.5f);
+        const float CameraDistance = 34f;   // from the ground point at the center of the view
+        // Start between the squad (z = 3.4) and the boss (z = -7.4) so both are in frame.
+        static readonly Vector2 CameraStartLookAt = new(0f, -0.1f);
 
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
         public static void Build()
@@ -111,11 +110,10 @@ namespace BoneSquadKiting.EditorTools
             var director = game.AddComponent<GameDirector>();
             director.Squad = squad;
             director.Sequence = Load<AttackSequence>("Assets/Data/Sequences/BossMain.asset");
-            // The camera eases after the formation anchor; it starts already centered on the squad.
-            var follow = camGo.AddComponent<QuarterViewCamera>();
-            follow.Squad = squad; follow.Distance = CameraDistance; follow.SmoothTime = CameraSmoothTime;
-            follow.LookOffset = CameraLookOffset;
-            camGo.transform.position = follow.DesiredPosition;
+            // RTS camera: it does not follow the squad; the mouse at a screen edge slides it over the arena.
+            var scroll = camGo.AddComponent<EdgeScrollCamera>();
+            scroll.Distance = CameraDistance; scroll.LookAt = CameraStartLookAt;
+            scroll.Apply();
 
             var input = game.AddComponent<SquadInputController>();
             input.Cam = cam; input.Director = director; input.EnemyMask = 1 << enemyLayer;
