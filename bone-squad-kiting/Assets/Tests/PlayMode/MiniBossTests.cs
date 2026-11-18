@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using BoneSquadKiting.Bosses;
@@ -45,8 +46,7 @@ public class MiniBossTests
         _def.FirstAttackDelay = 1f; _def.AttackGap = 2f; _def.IntroDuration = 2f; _def.DeathDuration = 1.5f;
         var pattern = ScriptableObject.CreateInstance<PatternDefinition>();
         pattern.Time = 1.5f; pattern.Shape = DangerShape.Disc(3.10f); pattern.DisplayName = "slam";
-        _def.Patterns = ScriptableObject.CreateInstance<AttackSequence>();
-        _def.Patterns.Patterns = new[] { pattern };
+        _def.Patterns = new List<PatternDefinition> { pattern };
 
         var spawnGo = new GameObject("mini boss spawn"); spawnGo.transform.SetParent(_fc.transform);
         spawnGo.transform.position = new Vector3(BossSpot.x, 0, BossSpot.y);
@@ -87,6 +87,25 @@ public class MiniBossTests
         Assert.AreEqual(1, _dir.Elites.Elites.Count);
         Assert.That(Vector2.Distance(elite.Pos, BossSpot), Is.LessThan(1f), "it appears on its marker");
         Assert.AreEqual(500f, elite.Health);
+    }
+
+    [Test]
+    public void TwoPatterns_AreCastInListOrder_ThenFromTheTopAgain()
+    {
+        // Pinpoint zones: nobody is hit, so the squad lives through several casts.
+        _def.Patterns[0].Time = 0.2f; _def.Patterns[0].Shape = DangerShape.Disc(0.01f);
+        var second = ScriptableObject.CreateInstance<PatternDefinition>();
+        second.Time = 0.2f; second.Shape = DangerShape.Disc(0.01f); second.DisplayName = "cross";
+        _def.Patterns.Add(second);
+        var cast = new List<PatternDefinition>();
+        _dir.PatternStarted += cast.Add;
+        Summon();
+        Run(10f);
+        Assert.That(cast.Count, Is.GreaterThanOrEqualTo(3));
+        Assert.AreSame(_def.Patterns[0], cast[0]);
+        Assert.AreSame(second, cast[1]);
+        Assert.AreSame(_def.Patterns[0], cast[2]);
+        Object.DestroyImmediate(second);
     }
 
     [Test]
@@ -378,7 +397,7 @@ public class MiniBossTests
         var cannon = Cannon();
         // A pinpoint zone and a ring formation: nobody is ever hit, so the squad survives long enough to count gaps.
         cannon.AttackGap = 1f; cannon.AttackGapRandom = 2f;
-        cannon.Patterns.Patterns[0].Time = 0.2f; cannon.Patterns.Patterns[0].Shape = DangerShape.Disc(0.01f);
+        cannon.Patterns[0].Time = 0.2f; cannon.Patterns[0].Shape = DangerShape.Disc(0.01f);
         _spawn.Definition = cannon; _spawn.PresentFromStart = true;
         _dir.Restart();
         _fc.SetFormation("ring");

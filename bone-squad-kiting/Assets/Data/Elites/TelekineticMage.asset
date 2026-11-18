@@ -17,7 +17,8 @@ MonoBehaviour:
   Speed: 2
   Radius: 0.8
   StopDistance: 3
-  Patterns: {fileID: 11400000, guid: 4469bb02013cf1845829848ca51f12a6, type: 2}
+  Patterns:
+  - {fileID: 11400000, guid: 53200b1b295cac74495338a0073b8c06, type: 2}
   FirstAttackDelay: 3
   AttackGap: 4.5
   AttackGapRandom: 0

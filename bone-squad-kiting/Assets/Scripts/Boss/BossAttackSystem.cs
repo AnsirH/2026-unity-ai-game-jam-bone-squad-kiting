@@ -32,6 +32,8 @@ namespace BoneSquadKiting.Bosses
         }
 
         public AttackSequence Sequence;
+        /// <summary>Patterns given directly (a mini boss's list). Used instead of Sequence when set.</summary>
+        public IReadOnlyList<PatternDefinition> Patterns;
         public Active? Current;
         public int Index;
         public float NextAttack = GameConstants.FirstAttackDelay;
@@ -120,9 +122,11 @@ namespace BoneSquadKiting.Bosses
 
         void StartPattern(FormationController squad)
         {
-            if (Sequence == null || Sequence.Patterns == null || Sequence.Patterns.Length == 0) return;
-            var p = Sequence.Patterns[Index % Sequence.Patterns.Length];
+            IReadOnlyList<PatternDefinition> list = Patterns ?? (Sequence != null ? Sequence.Patterns : null);
+            if (list == null || list.Count == 0) return;
+            var p = list[Index % list.Count];
             Index++;
+            if (p == null) return;   // an empty slot in the list: skip to the next one on the next cast
             float scale = p.ScaleWithSquad ? FormationSlots.SquadFraction(squad.AliveCount) : 1f;
             var shape = p.ScaleWithSquad ? p.Shape.Scaled(scale) : p.Shape;
             Current = new Active { Pattern = p, Shape = shape, ShapeScale = scale, Tracks = TrackSquad, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };

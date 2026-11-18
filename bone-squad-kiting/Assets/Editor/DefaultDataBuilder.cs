@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -43,11 +44,8 @@ namespace BoneSquadKiting.EditorTools
 
             // A basic mini boss, reusing three of the boss's patterns. Its zones are fixed where they are announced.
             EnsureFolder(Root, "Elites");
-            var eliteSeq = Upsert<AttackSequence>(Root + "/Sequences/EliteBasic.asset");
-            eliteSeq.Patterns = new[] { seq.Patterns[0], seq.Patterns[3], seq.Patterns[1] };   // core, shell, gate
-            EditorUtility.SetDirty(eliteSeq);
             var brute = Upsert<EliteDefinition>(Root + "/Elites/Brute.asset");
-            brute.DisplayName = "미니 보스"; brute.Patterns = eliteSeq;
+            brute.DisplayName = "미니 보스"; brute.Patterns = new List<PatternDefinition> { seq.Patterns[0], seq.Patterns[3], seq.Patterns[1] };   // core, shell, gate
             EditorUtility.SetDirty(brute);
 
             // The five mini bosses of the stage lineup. Each casts one pattern; everything but the pattern,
@@ -107,11 +105,8 @@ namespace BoneSquadKiting.EditorTools
 
         static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false, float rotation = 0f)
         {
-            var seq = Upsert<AttackSequence>($"{Root}/Sequences/Elite_{file}.asset");
-            seq.Patterns = new[] { pattern };
-            EditorUtility.SetDirty(seq);
             var e = Upsert<EliteDefinition>($"{Root}/Elites/{file}.asset");
-            e.DisplayName = name; e.Patterns = seq;
+            e.DisplayName = name; e.Patterns = new List<PatternDefinition> { pattern };
             e.ZoneRotationSpeed = rotation;
             if (cannon)
             {
