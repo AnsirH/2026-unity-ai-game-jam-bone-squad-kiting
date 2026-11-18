@@ -38,6 +38,12 @@ namespace BoneSquadKiting.Data
         [Min(0f)] public float CameraScrollSpeed = 14f;   // world units per second at a screen edge
         [Min(1f)] public float CameraEdgeWidth = 18f;     // pixels from the screen edge that count as "at the edge"
         [Min(1f)] public float CameraDistance = 34f;      // zoom: distance from the point the camera looks at
+        [Tooltip("On: the camera stays on the squad and leans toward the mouse. Off: it only moves when the mouse pushes a screen edge.")]
+        public bool CameraFollow = true;
+        [Range(0f, 1f)] public float CameraLookAhead = 1f;      // how far it leans toward the mouse: 1 = until the squad's center reaches the keep margin
+        [Range(0f, 0.45f)] public float CameraKeepMargin = 0.14f; // the squad's center never gets closer to a screen edge than this share of the screen
+        [Range(0f, 0.9f)] public float CameraDeadZone = 0.12f;  // mouse this close to the screen center (share of the half screen) does not lean the camera
+        [Min(0f)] public float CameraSmoothTime = 0.22f;        // seconds the camera takes to catch up with the mouse
 
         [Header("Mobs")]
         [Min(0f)] public float MobSwitchDistance = 5f;    // closer to the squad than this, a mob chases the nearest unit directly
