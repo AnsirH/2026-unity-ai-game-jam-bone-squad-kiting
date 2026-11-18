@@ -31,6 +31,10 @@ public class ArenaSceneSmokeTests
         Assert.IsNotNull(director.BossView, "boss view wired");
         Assert.AreEqual(4, director.Squad.Formations.Count);
         Assert.AreEqual(GamePhase.Menu, director.Phase);
+        Assert.AreEqual(GameConstants.SquadSize, director.AliveCount, "squad stands on the field before the match starts");
+        Assert.IsFalse(Camera.main.orthographic, "quarter view uses a perspective camera");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
+        Capture("arena-0-menu.png");
 
         director.Restart();
         Assert.AreEqual(GamePhase.Play, director.Phase);

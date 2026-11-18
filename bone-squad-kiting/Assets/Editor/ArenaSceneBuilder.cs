@@ -11,6 +11,7 @@ using BoneSquadKiting.Data;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Input;
 using BoneSquadKiting.Squad;
+using BoneSquadKiting.UI;
 
 namespace BoneSquadKiting.EditorTools
 {
@@ -25,6 +26,13 @@ namespace BoneSquadKiting.EditorTools
         const string ScenePath = "Assets/Scenes/Arena.unity";
         const string MatDir = "Assets/Prototype/Materials";
         const string EnemyLayer = "Enemy";
+
+        // Camera framing. Tune here (or on the camera, once the scene is hand-authored).
+        const float CameraPitch = 50f;      // degrees down from horizontal
+        const float CameraYaw = 25f;        // degrees turned around Y, away from straight-on
+        const float CameraFov = 35f;        // vertical field of view
+        const float CameraDistance = 45f;   // from the look-at point
+        static readonly Vector3 CameraTarget = new(0f, 0f, 0.8f);
 
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
         public static void Build()
@@ -50,18 +58,18 @@ namespace BoneSquadKiting.EditorTools
                 (GameConstants.LimitZMax - GameConstants.LimitZMin) / 10f);
             plane.GetComponent<Renderer>().sharedMaterial = ground;
 
-            // Quarter-view orthographic camera looking at the arena center from the +z side, so the boss
-            // (negative z) sits at the top of the screen like the prototype. World +x is screen-left as a result.
+            // Quarter view: a perspective camera looking down at an angle, turned a little around Y so the
+            // arena reads as a diagonal. It sits on the +z side, so the boss (negative z) is at the far end.
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camGo.AddComponent<Camera>();
             camGo.AddComponent<AudioListener>();
-            cam.orthographic = true;
-            cam.orthographicSize = 9f;
+            cam.orthographic = false;
+            cam.fieldOfView = CameraFov;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = Hex("#050d17");
-            cam.nearClipPlane = 0.3f; cam.farClipPlane = 100f;
-            camGo.transform.rotation = Quaternion.Euler(50f, 180f, 0f);
-            camGo.transform.position = -camGo.transform.forward * 30f;
+            cam.nearClipPlane = 0.3f; cam.farClipPlane = 200f;
+            camGo.transform.rotation = Quaternion.Euler(CameraPitch, 180f + CameraYaw, 0f);
+            camGo.transform.position = CameraTarget - camGo.transform.forward * CameraDistance;
             camGo.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
 
             var lightGo = new GameObject("Directional Light");
@@ -105,6 +113,14 @@ namespace BoneSquadKiting.EditorTools
 
             var squadView = new GameObject("Squad View").AddComponent<SquadView>();
             squadView.Squad = squad; squadView.UnitMaterial = unit;
+            // Pre-place the squad in its starting layout so it is visible without entering Play mode.
+            var startSlots = FormationSlots.Generate(squad.Formations[0]);
+            for (int i = 0; i < GameConstants.SquadSize; i++)
+            {
+                var u = SquadView.BuildUnit(i, squadView.UnitScale, unit);
+                u.transform.SetParent(squadView.transform, false);
+                u.transform.position = new Vector3(squad.Anchor.x + startSlots[i].x, squadView.UnitScale, squad.Anchor.y + startSlots[i].y);
+            }
 
             var shotView = new GameObject("Shot View").AddComponent<ShotView>();
             shotView.Director = director; shotView.ShotMaterial = shot;
@@ -124,6 +140,9 @@ namespace BoneSquadKiting.EditorTools
             tele.Director = director;
             teleGo.GetComponent<MeshRenderer>().sharedMaterial = telegraph;
             teleGo.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+
+            var hud = game.AddComponent<TestHud>();
+            hud.Director = director; hud.Input = input;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
