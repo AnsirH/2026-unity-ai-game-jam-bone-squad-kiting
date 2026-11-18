@@ -11,6 +11,10 @@ namespace BoneSquadKiting.Bosses
     /// boss's) on the ground. A zone brightens once it locks, i.e. stops following the squad.
     /// On uneven ground the zone is laid over the ground's shape (see GroundHeight), and its material
     /// draws it above the ground but behind anything standing on it.
+    /// With the animated telegraph material (shader BoneSquad/Attack Telegraph) the zone grows in when it
+    /// appears and keeps the material's own colours: dimmer while it still follows the squad, stronger while
+    /// it is dealing damage, and the shader's lethal colours for a lethal pattern. Any other material is
+    /// tinted with the three colours below.
     /// </summary>
     public class TelegraphView : MonoBehaviour
     {
@@ -29,13 +33,44 @@ namespace BoneSquadKiting.Bosses
             public PatternDefinition Pattern; public DangerShape Shape;
             public Vector3[] Flat, Laid;          // the mesh's points: as built, and lifted onto the ground
             public Vector3 LaidAt; public float LaidAngle; public bool IsLaid;
+            public float Born;                    // when this zone appeared: it grows in from then
         }
 
         readonly List<Zone> _zones = new();
         MaterialPropertyBlock _block;
         static readonly int ColorId = Shader.PropertyToID("_Color");
+        static readonly int FillId = Shader.PropertyToID("_FillColor"), EdgeId = Shader.PropertyToID("_EdgeColor");
+        static readonly int LethalId = Shader.PropertyToID("_LethalTelegraph"), ShapeId = Shader.PropertyToID("_Shape");
+        static readonly int InnerId = Shader.PropertyToID("_InnerRadius"), ProgressId = Shader.PropertyToID("_Progress");
+        static readonly int LoopId = Shader.PropertyToID("_Loop"), DurationId = Shader.PropertyToID("_Duration");
+
+        [Tooltip("Animated material only: how much of the material's opacity a zone has while it still follows the squad.")]
+        [Range(0f, 1f)] public float TrackingOpacity = 0.55f;
+        [Tooltip("Animated material only: how much stronger the fill gets while the zone is dealing damage.")]
+        [Min(1f)] public float LiveFillBoost = 1.6f;
+
+        /// <summary>True when <see cref="Material"/> is the animated telegraph material (it has fill and rim colours).</summary>
+        public bool Animated => Material != null && Material.HasProperty(FillId);
 
         void Awake() { _block = new MaterialPropertyBlock(); }
+
+        // What the animated material needs to draw one zone: its shape, how far it has grown, and its state.
+        void SetAnimated(Zone z, bool locked, bool live, bool lethal)
+        {
+            var shape = z.Shape;
+            float kind = shape.Type == DangerShapeType.Disc ? 1f : shape.Type == DangerShapeType.Annulus ? 2f : 0f;
+            _block.SetFloat(ShapeId, kind);
+            if (kind == 2f) _block.SetFloat(InnerId, Mathf.Clamp(shape.RMin / Mathf.Max(shape.ROut, 1e-4f), 0.05f, 0.95f));
+            _block.SetFloat(LoopId, 0f);   // the material's loop is for previews: a real zone grows in once and stays
+            float grow = Mathf.Max(Material.GetFloat(DurationId), 0.01f);
+            _block.SetFloat(ProgressId, Mathf.Clamp01((Time.time - z.Born) / grow));
+            _block.SetFloat(LethalId, lethal ? 1f : 0f);
+            Color fill = Material.GetColor(FillId), edge = Material.GetColor(EdgeId);
+            if (live) fill.a = Mathf.Min(1f, fill.a * LiveFillBoost);
+            else if (!locked) { fill.a *= TrackingOpacity; edge.a *= TrackingOpacity; }
+            _block.SetColor(FillId, fill);
+            _block.SetColor(EdgeId, edge);
+        }
 
         void LateUpdate()
         {
@@ -47,6 +82,7 @@ namespace BoneSquadKiting.Bosses
                 var z = _zones[i];
                 if (i >= n) { z.Renderer.enabled = false; z.Pattern = null; continue; }
                 var a = telegraphs[i];
+                if (z.Pattern != a.Pattern || !z.Renderer.enabled) z.Born = Time.time;
                 if (z.Pattern != a.Pattern || !z.Shape.Equals(a.Shape))
                 {
                     if (z.Filter.sharedMesh != null) Destroy(z.Filter.sharedMesh);
@@ -60,17 +96,17 @@ namespace BoneSquadKiting.Bosses
                 z.Filter.transform.SetPositionAndRotation(at, turn);
                 LayOnGround(z, at, turn, a.Angle);
                 bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
-                var color = a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor;
-                if (a.Pattern != null && a.Pattern.LethalTelegraph)
-                {
-                    // Keep the warning readable as it moves from tracking to live damage.
-                    color = new Color(0.48f, 0.025f, 0.08f, Mathf.Lerp(0.5f, 1f, color.a));
-                }
+                bool lethal = a.Pattern != null && a.Pattern.LethalTelegraph;
+                _block.Clear();
+                if (Animated) SetAnimated(z, locked, a.Sustaining, lethal);
                 else
                 {
-                    color.a *= 0.7f;
+                    var color = a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor;
+                    // Keep the warning readable as it moves from tracking to live damage.
+                    if (lethal) color = new Color(0.48f, 0.025f, 0.08f, Mathf.Lerp(0.5f, 1f, color.a));
+                    else color.a *= 0.7f;
+                    _block.SetColor(ColorId, color);
                 }
-                _block.SetColor(ColorId, color);
                 z.Renderer.SetPropertyBlock(_block);
                 z.Renderer.enabled = true;
             }
