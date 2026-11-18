@@ -13,6 +13,7 @@ namespace BoneSquadKiting.Squad
         public bool Heavy;      // thrown by the squad leader: drawn as its own projectile
         public Vector2 Dir;     // which way it is flying
         public float Damage;    // what it deals when it lands, fixed when it is fired
+        public float Reserve;   // how much of the target's health was counted on for it
     }
 
     /// <summary>
@@ -28,6 +29,10 @@ namespace BoneSquadKiting.Squad
         public System.Action<float> OnHit; // damage dealt to an enemy
 
         public float FireRange = GameConstants.FireRange; // per-unit range; the director keeps it in sync
+        public float UnitDamage = GameConstants.UnitDamage;        // a soldier's shot
+        public float UnitInterval = GameConstants.UnitCdMin, UnitIntervalRandom = GameConstants.UnitCdRand;
+        public float LeaderDamage = GameConstants.UnitDamage;      // the squad leader's throw
+        public float LeaderInterval = 1.35f, LeaderIntervalRandom = 0f;
         public float DamageMultiplier = 1f;    // applied to shots as they are fired (the near-miss buff); the director sets it
         public float ThreatRadius = 4f;        // a stopped unit shoots mobs this close before anything else
         public float AttackMoveRadius = 4f;    // attack-move prefers mobs this close to the clicked point
@@ -67,6 +72,7 @@ namespace BoneSquadKiting.Squad
         {
             foreach (var u in units)
             {
+                u.AttackInterval = u.IsLeader ? LeaderInterval : UnitInterval;
                 if (u.PendingTarget != null)
                 {
                     // Mid wind-up: the shot leaves when the time is up (or earlier, when the model's
@@ -78,8 +84,10 @@ namespace BoneSquadKiting.Squad
                 if (u.Dead || u.Cd > 0 || !FireRules.CanFire(u, order)) continue;
                 var target = Acquire(u, registry, order, FireRange, ThreatRadius, AttackMoveRadius);
                 if (target == null) continue;
-                u.Cd = Mathf.Max(GameConstants.UnitCdMin + Random.value * GameConstants.UnitCdRand, u.AttackDuration);
-                target.Reserved += GameConstants.UnitDamage;
+                float interval = u.IsLeader ? LeaderInterval + Random.value * LeaderIntervalRandom : UnitInterval + Random.value * UnitIntervalRandom;
+                u.Cd = Mathf.Max(interval, u.AttackDuration);     // never sooner than its attack motion allows
+                u.PendingReserve = u.IsLeader ? LeaderDamage : UnitDamage;
+                target.Reserved += u.PendingReserve;
                 u.Facing = (target.Pos - new Vector2(u.X, u.Z)).normalized;   // turn to face what it shoots
                 u.ShotCount++;                                               // the view starts the attack motion on this
                 u.PendingTarget = target;
@@ -122,30 +130,30 @@ namespace BoneSquadKiting.Squad
             var target = u.PendingTarget;
             if (target == null) return;
             u.PendingTarget = null;
-            if (u.Dead || target is not { Alive: true }) { ReleaseReserve(target); return; }
+            if (u.Dead || target is not { Alive: true }) { ReleaseReserve(target, u.PendingReserve); return; }
             var dir = (target.Pos - new Vector2(u.X, u.Z)).normalized;
             Shots.Add(new Shot
             {
                 X = u.X + dir.x * MuzzleOffset, Z = u.Z + dir.y * MuzzleOffset,
                 Life = GameConstants.ShotLife, Owner = u.Id, Target = target, Heavy = u.IsLeader, Dir = dir,
-                Damage = GameConstants.UnitDamage * DamageMultiplier,
+                Damage = u.PendingReserve * DamageMultiplier, Reserve = u.PendingReserve,
             });
         }
 
         void CancelPending(SquadUnit u)
         {
-            ReleaseReserve(u.PendingTarget);
+            ReleaseReserve(u.PendingTarget, u.PendingReserve);
             u.PendingTarget = null;
         }
 
-        static void ReleaseReserve(IEnemy target)
+        static void ReleaseReserve(IEnemy target, float amount)
         {
-            if (target != null) target.Reserved = Mathf.Max(0f, target.Reserved - GameConstants.UnitDamage);
+            if (target != null) target.Reserved = Mathf.Max(0f, target.Reserved - amount);
         }
 
         static void Release(Shot s)
         {
-            if (s.Target != null) s.Target.Reserved = Mathf.Max(0f, s.Target.Reserved - GameConstants.UnitDamage);
+            if (s.Target != null) s.Target.Reserved = Mathf.Max(0f, s.Target.Reserved - s.Reserve);
         }
     }
 }

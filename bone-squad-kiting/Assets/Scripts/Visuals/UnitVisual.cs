@@ -21,9 +21,17 @@ namespace BoneSquadKiting.Visuals
         public const string AttackEventName = "AttackRelease";
 
         /// <summary>Seconds after an attack starts at which its AttackRelease event fires; 0 when it has none.</summary>
-        public float AttackEventTime => _eventTime / AttackSpeed;
+        public float AttackEventTime => _eventTime / (AttackSpeed * Scale);
         /// <summary>How long the attack animation that has the event takes to play; 0 when there is none.</summary>
-        public float AttackLength => _clipLength / AttackSpeed;
+        public float AttackLength => _clipLength / (AttackSpeed * Scale);
+        /// <summary>How long the attack animation takes when it is not sped up (AttackPlaybackScale 1).</summary>
+        public float NaturalAttackLength => _clipLength / AttackSpeed;
+        /// <summary>
+        /// Plays the attack animation this many times faster, so a unit meant to attack more often than
+        /// its motion lasts still shows the whole motion. 1 = as authored.
+        /// </summary>
+        public float AttackPlaybackScale = 1f;
+        float Scale => Mathf.Max(0.01f, AttackPlaybackScale);
         /// <summary>
         /// Playback speed of the attack state, as set in the Animator. It cannot be read until the state has
         /// played once, so it is 1 for the very first attack (the event still releases the shot on time).
@@ -61,7 +69,7 @@ namespace BoneSquadKiting.Visuals
             // Learn the attack state's speed while it plays.
             if (_clipLength <= 0f || Animator == null || string.IsNullOrEmpty(States.Attack)) return;
             var info = Animator.GetCurrentAnimatorStateInfo(0);
-            if (info.shortNameHash == Animator.StringToHash(States.Attack) && info.speed > 0.01f) AttackSpeed = info.speed * Mathf.Max(0.01f, Animator.speed);
+            if (info.shortNameHash == Animator.StringToHash(States.Attack) && info.speed > 0.01f) AttackSpeed = info.speed;   // the state's own speed; the playback scale is applied on top
         }
 
         /// <summary>The state currently requested (Attack shows briefly, then falls back).</summary>
@@ -96,7 +104,7 @@ namespace BoneSquadKiting.Visuals
                 if (state == VisualState.Idle) Animator.speed = 0f;
                 return;
             }
-            Animator.speed = 1f;
+            Animator.speed = state == VisualState.Attack ? Scale : 1f;
             if (restart) Animator.CrossFadeInFixedTime(hash, States.CrossFade, 0, 0f);
             else Animator.CrossFadeInFixedTime(hash, States.CrossFade);
         }

@@ -82,6 +82,9 @@ namespace BoneSquadKiting.Squad
                 v.Root.rotation = Quaternion.RotateTowards(v.Root.rotation, want, Art.TurnSpeed * Time.deltaTime);
             }
             // The model's attack animation decides when the projectile leaves and how long the motion takes.
+            // A unit meant to attack more often than its attack motion lasts plays the motion faster.
+            float natural = v.Visual.NaturalAttackLength;
+            v.Visual.AttackPlaybackScale = natural > 0f && u.AttackInterval > 0f && natural > u.AttackInterval ? natural / u.AttackInterval : 1f;
             u.AttackWindup = v.Visual.AttackEventTime; u.AttackDuration = v.Visual.AttackLength;
             if (u.ShotCount != v.ShotsSeen) { v.ShotsSeen = u.ShotCount; v.Visual.PlayAttack(); }
             v.Visual.SetState(u.Moving ? VisualState.Run : u.Reviving && v.Visual.Has(VisualState.Revive) ? VisualState.Revive : VisualState.Idle);
