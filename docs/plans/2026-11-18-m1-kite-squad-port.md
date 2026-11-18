@@ -57,6 +57,8 @@
 
 ## Task 0: Unity 프로젝트 스캐폴딩
 
+> **구현 메모:** EditMode 어셈블리는 `Assets/Tests/EditMode/BoneSquadKiting.Tests.EditMode.asmdef`로 만들었다. PlayMode 어셈블리는 첫 PlayMode 테스트가 생기는 Task 5에서 만든다(스크립트 없는 asmdef는 경고를 낸다).
+
 > **진행 상태:** Step 1~3은 완료·커밋됨(`cccc396`, `40922f4`). 프로젝트는 `bone-squad-kiting/`에 있고 Unity용 무시 규칙은 `bone-squad-kiting/.gitignore`에 들어 있다. 런타임 asmdef `Assets/Scripts/BoneSquadKiting.asmdef`도 이미 있다. **남은 것은 Step 4.**
 
 **Files:**
@@ -78,11 +80,11 @@ Expected: `bone-squad-kiting/Assets`, `ProjectSettings/ProjectVersion.txt`에 `6
 
 GitHub `Unity.gitignore` 표준 규칙을 `bone-squad-kiting/.gitignore`에 둔다(프로젝트 폴더 안에 있으므로 경로 접두사 불필요).
 
-- [ ] **Step 4: 테스트 프레임워크 어셈블리 준비**
+- [x] **Step 4: 테스트 프레임워크 어셈블리 준비**
 
 `Assets/Tests/EditMode/EditMode.asmdef`(참조: `BoneSquadKiting` + `UnityEngine.TestRunner`,`UnityEditor.TestRunner`, 플랫폼 Editor), `Assets/Tests/PlayMode/PlayMode.asmdef`(참조: `BoneSquadKiting` + `UnityEngine.TestRunner`) 생성. 기존 `Assets/Scripts/BoneSquadKiting.asmdef`의 `references`가 비어 있으므로 **`Unity.InputSystem`**(Task 6)과 **`Unity.TextMeshPro`**(Task 10)를 추가한다. (ui-ugui/unity-cli 스킬에 asmdef 예시 있음.)
 
-- [ ] **Step 5: Commit** (스캐폴딩 자체는 커밋됨. Step 4의 asmdef만 커밋)
+- [x] **Step 5: Commit** (스캐폴딩 자체는 커밋됨. Step 4의 asmdef만 커밋)
 
 ```bash
 git add bone-squad-kiting/Assets/Tests bone-squad-kiting/Assets/Scripts/BoneSquadKiting.asmdef && git commit -m "chore: add test assemblies and runtime asmdef references"
@@ -123,6 +125,8 @@ git add bone-squad-kiting/Assets && git commit -m "feat: add arena scene with qu
 ---
 
 ## Task 2: 상수 + 패턴 데이터
+
+> **구현 메모(완료):** 에셋 13개는 `Assets/Editor/DefaultDataBuilder.cs`(메뉴 `BoneSquadKiting/Rebuild Default Data`, 헤드리스 `-executeMethod BoneSquadKiting.EditorTools.DefaultDataBuilder.Build`)로 생성했고, 값은 `Assets/Tests/EditMode/DataAssetsTests.cs`가 고정한다. `PatternDefinition`과 `AttackSequence`는 Unity가 스크립트 파일명과 클래스명을 맞추도록 요구해 파일을 나눴다.
 
 **Files:**
 - Exists: `Assets/Scripts/Core/GameConstants.cs` (작성·커밋됨 — 아래 값과 대조만)
@@ -183,7 +187,7 @@ namespace BoneSquadKiting.Core
 }
 ```
 
-- [ ] **Step 2: 장판 모양 데이터 타입(`Core/DangerShape.cs`)**
+- [x] **Step 2: 장판 모양 데이터 타입(`Core/DangerShape.cs`)**
 
 장판을 **조립형 모양 데이터**로 표현한다(판정 로직은 Task 4 평가기). 패턴 추가 시 에셋에서 모양·파라미터만 바꾼다. 정말 새 기하가 필요할 때만 `DangerShapeType`에 1종 추가.
 
@@ -208,7 +212,7 @@ namespace BoneSquadKiting.Core
 }
 ```
 
-- [ ] **Step 3: PatternDefinition / AttackSequence ScriptableObject + 데이터 에셋(원본 1:1)**
+- [x] **Step 3: PatternDefinition / AttackSequence ScriptableObject + 데이터 에셋(원본 1:1)**
 
 ```csharp
 using UnityEngine; using BoneSquadKiting.Core;
@@ -245,16 +249,16 @@ namespace BoneSquadKiting.Data
 >
 > detail 문구(삭제되는 `AttackPattern.cs`에서 옮김): Core "중앙이 폭발합니다. 원형으로 흩어지세요!" · Gate "좌우가 휩쓸립니다. 일자로 줄이세요!" · Quadrant "십자 통로만 안전합니다!" · Shell "바깥부터 폭발합니다. 중심으로 모이세요!"
 
-- [ ] **Step 4: 기존 하드코딩 테이블 삭제**
+- [x] **Step 4: 기존 하드코딩 테이블 삭제**
 
 에셋에 값을 다 옮긴 뒤 `Assets/Scripts/Core/AttackPattern.cs`와 `.meta`를 삭제한다(`PatternId` 중복 정의 방지).
 
-- [ ] **Step 5: 컴파일 확인**
+- [x] **Step 5: 컴파일 확인**
 
 Run: `unity:unity-cli` 스킬의 컴파일/로그 확인 기능으로 에러 0 확인.
 Expected: 컴파일 에러 없음.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Core bone-squad-kiting/Assets/Scripts/Data bone-squad-kiting/Assets/Data && git commit -m "feat: replace hardcoded attack table with pattern data assets"
@@ -272,7 +276,7 @@ git add bone-squad-kiting/Assets/Scripts/Core bone-squad-kiting/Assets/Scripts/D
 
 진형을 **데이터(Mode+파라미터)** 로 두고 생성기는 범용. 진형 추가 = 에셋 추가(+필요시 Mode 1종).
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 원본값: dense=5×5(간격0.53), line=25개 `x=(i%3-1)*0.12, z=(i-12)*0.49`, ring=반경3.7 25개, cross=중심1+4방향×6=25. 테스트는 `FormationDefinition`을 메모리 생성해 `FormationSlots.Generate`로 검증.
 
@@ -313,12 +317,12 @@ public class FormationSlotsTests
 }
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `unity:unity-cli` 스킬의 EditMode 테스트 실행(정확 커맨드는 스킬 참조).
 Expected: FAIL (`FormationSlots`/`FormationDefinition` 미정의).
 
-- [ ] **Step 3: 구현(SO + 생성기, 원본 slotsFor 포팅)**
+- [x] **Step 3: 구현(SO + 생성기, 원본 slotsFor 포팅)**
 
 ```csharp
 // Data/FormationDefinition.cs
@@ -371,12 +375,12 @@ namespace BoneSquadKiting.Core
 
 > 주의: cross는 중심1 + 6×4=24 = 25. 인덱스 순서가 원본과 동일(`[-x,+x,-z,+z]` 반복)해야 유닛 슬롯 배분이 일관된다. line/ring/grid 기본값은 원본과 동일하게 에셋에 저장.
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 
 Run: EditMode 테스트.
 Expected: PASS (4 테스트).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Core/FormationSlots.cs bone-squad-kiting/Assets/Scripts/Data/FormationDefinition.cs bone-squad-kiting/Assets/Data/Formations bone-squad-kiting/Assets/Tests/EditMode/FormationSlotsTests.cs && git commit -m "feat: add formation definitions (SO) and slot generator with tests"
@@ -392,7 +396,7 @@ git add bone-squad-kiting/Assets/Scripts/Core/FormationSlots.cs bone-squad-kitin
 
 패턴 id가 아니라 **DangerShape 데이터**로 판정 → 패턴 추가 시 코드 무변경(에셋의 shape만 지정).
 
-- [ ] **Step 1: 실패 테스트(원본 inDanger 진리표 — shape로)**
+- [x] **Step 1: 실패 테스트(원본 inDanger 진리표 — shape로)**
 
 원본값 그대로: Disc `r<3.10`; BandsX `|dx|>0.83 && |dx|<6.4 && |dz|<7.1`; Quadrants `|dx|>0.56 && |dz|>0.56 && |dx|<5.7 && |dz|<5.7`; Annulus `1.73<r<6.05`. (dx=x-cx, dz=z-cz)
 
@@ -428,9 +432,9 @@ public class DangerShapeEvalTests
 }
 ```
 
-- [ ] **Step 2: 실패 확인** — Run EditMode 테스트. Expected: FAIL (`DangerShapeEval` 미정의).
+- [x] **Step 2: 실패 확인** — Run EditMode 테스트. Expected: FAIL (`DangerShapeEval` 미정의).
 
-- [ ] **Step 3: 구현(shape 범용 평가)**
+- [x] **Step 3: 구현(shape 범용 평가)**
 
 ```csharp
 using UnityEngine;
@@ -454,9 +458,9 @@ namespace BoneSquadKiting.Core
 }
 ```
 
-- [ ] **Step 4: 통과 확인** — Run EditMode 테스트. Expected: PASS.
+- [x] **Step 4: 통과 확인** — Run EditMode 테스트. Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Core/DangerShape.cs bone-squad-kiting/Assets/Scripts/Core/DangerShapeEval.cs bone-squad-kiting/Assets/Tests/EditMode/DangerShapeEvalTests.cs && git commit -m "feat: add data-driven danger-shape evaluator with tests"
@@ -632,7 +636,7 @@ git add bone-squad-kiting/Assets/Scripts/Squad bone-squad-kiting/Assets/Tests/Pl
 
 어택땅·우클릭 타겟의 토대. M1엔 보스 1개만 등록되지만 M2 잡몹이 바로 드롭인된다.
 
-- [ ] **Step 1: 실패 테스트(레지스트리 획득)**
+- [x] **Step 1: 실패 테스트(레지스트리 획득)**
 
 ```csharp
 using NUnit.Framework; using UnityEngine; using BoneSquadKiting.Combat;
@@ -652,9 +656,9 @@ public class EnemyRegistryTests
 }
 ```
 
-- [ ] **Step 2: 실패 확인** — Run EditMode. Expected: FAIL.
+- [x] **Step 2: 실패 확인** — Run EditMode. Expected: FAIL.
 
-- [ ] **Step 3: 구현**
+- [x] **Step 3: 구현**
 
 ```csharp
 // Combat/IEnemy.cs
@@ -703,9 +707,9 @@ namespace BoneSquadKiting.Combat
 
 `FormationController`에 `public SquadOrder Order;` 추가. `SetDestination`은 `Order = SquadOrder.Move(p)` + anchor 목적지 지정으로 통합. `AttackMove(p)`도 anchor 목적지를 p로 두되 Kind만 다름(이동 중 자동사격은 기존대로, Task 7에서 타겟 획득이 오더를 참조). `AttackTarget(t)`는 타겟이 사거리(`FireRange`) 밖일 때만 anchor를 타겟 쪽으로(클램프 내) 전진하고, 이미 사거리 안이면 **그 자리에 멈춰** 사격한다(Task 9 `IssueOrder`). M1 아레나에서는 보스가 항상 사거리 안이라 보스 우클릭은 "정지 후 집중사격"이 된다.
 
-- [ ] **Step 4: 통과 확인** — Run EditMode. Expected: PASS.
+- [x] **Step 4: 통과 확인** — Run EditMode. Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Combat bone-squad-kiting/Assets/Tests/EditMode/EnemyRegistryTests.cs && git commit -m "feat: enemy abstraction (IEnemy/registry) and squad order state"
