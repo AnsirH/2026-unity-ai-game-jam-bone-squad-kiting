@@ -283,6 +283,20 @@ public class MiniBossTests
     }
 
     [Test]
+    public void OffWalkableGround_AFixedOneStaysOnItsMarker_AMovingOneIsPutOnTheNearestOpenPoint()
+    {
+        var offGrid = new Vector2(25f, 40f);                // the corridor is x 0..20
+        var fixedSpawn = AddSpawn(offGrid, Cannon()); fixedSpawn.PresentFromStart = true;
+        var movingSpawn = AddSpawn(offGrid); movingSpawn.PresentFromStart = true;
+        _dir.Restart();
+        _dir.Step(0.02f);
+        Assert.AreEqual(offGrid, fixedSpawn.Elite.Pos, "a fixed one stands where it was placed");
+        Assert.IsTrue(_fc.Grid.IsWalkable(movingSpawn.Elite.Pos), "a moving one is brought onto walkable ground");
+        Run(2f);
+        Assert.AreEqual(offGrid, fixedSpawn.Elite.Pos, "and it stays there");
+    }
+
+    [Test]
     public void FixedMiniBoss_NeverMoves_AndOnlyFiresWhenTheSquadIsInReach()
     {
         var cannon = Cannon();

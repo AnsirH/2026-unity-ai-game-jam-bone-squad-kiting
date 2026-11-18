@@ -220,7 +220,7 @@ public class ArenaSceneSmokeTests
             foreach (var sp in spawns)
             {
                 Assert.IsNotNull(sp.Definition, scenes[i] + ": " + sp.name + " has a definition");
-                Assert.IsTrue(d.Squad.Grid.IsWalkable(sp.Position), scenes[i] + ": " + sp.name + " stands on walkable ground");
+                Assert.IsTrue(sp.Definition.Fixed || d.Squad.Grid.IsWalkable(sp.Position), scenes[i] + ": " + sp.name + " stands on walkable ground (fixed ones may stand anywhere)");
             }
             if (d.Stage.EndPoint != null)
             {

@@ -12,8 +12,10 @@ namespace BoneSquadKiting.Data
         public string DisplayName = "미니 보스";
         public float MaxHp = 4000f;
         public float Speed = 2f;              // slower than mobs (3.2): the swarm arrives first. 0 = fixed in place (a cannon)
+        /// <summary>True for one that never moves. It may be placed off walkable ground.</summary>
+        public bool Fixed => Speed <= 0f;
         public float Radius = 0.8f;
-        public float StopDistance = 3f;       // stops walking this close to the nearest unit
+        public float StopDistance = 3f;      // stops walking this close to the nearest unit
 
         [Header("Area attacks")]
         public AttackSequence Patterns;
