@@ -42,15 +42,13 @@ namespace BoneSquadKiting.UI
             Refresh();
         }
 
-        /// <summary>Enable "continue" only when there is a save, and say where it goes.</summary>
+        /// <summary>Enable "continue" only when there is a save.</summary>
         public void Refresh()
         {
             if (Root == null || Starting) return;
             bool save = GameProgress.HasSave;
             ContinueButton.interactable = save;
             ContinueLabel.color = save ? Color.white : new Color(1f, 1f, 1f, 0.35f);
-            string where = !string.IsNullOrEmpty(GameProgress.NextScene) ? "보스" : $"스테이지 {GameProgress.NextStage + 1}";
-            ContinueLabel.text = save ? $"이어하기  ({where})" : "이어하기";
         }
 
         /// <summary>Stage 1, from its start point. The old save is forgotten.</summary>

@@ -106,7 +106,7 @@ public class MainMenuTests
         yield return LoadMenu();
         menu = Object.FindFirstObjectByType<MainMenu>();
         Assert.IsTrue(menu.ContinueButton.interactable);
-        StringAssert.Contains("스테이지 2", menu.ContinueLabel.text, "it says where continue goes");
+        Assert.AreEqual("이어하기", menu.ContinueLabel.text, "just the word, no stage name");
         menu.BurstSeconds = 0.2f;
         menu.ContinueButton.onClick.Invoke();
         yield return WaitForScene("Game");
@@ -150,7 +150,7 @@ public class MainMenuTests
         yield return LoadMenu();
         var menu = Object.FindFirstObjectByType<MainMenu>();
         Assert.IsTrue(menu.ContinueButton.interactable);
-        StringAssert.Contains("보스", menu.ContinueLabel.text);
+        Assert.AreEqual("이어하기", menu.ContinueLabel.text);
         menu.BurstSeconds = 0.2f;
         menu.ContinueButton.onClick.Invoke();
         yield return WaitForScene("Arena");
