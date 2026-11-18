@@ -77,7 +77,7 @@ namespace BoneSquadKiting.Squad
             }
             Units.Clear();
             Anchor = Destination = StartAnchor;
-            Formation = DefaultFormation;
+            Formation = DefaultFormation; _slotsFormation = DefaultFormation;
             RotationDegrees = 0; TargetRotationDegrees = 0;
             LeaderFacing = new Vector2(0f, -1f);
             Order = SquadOrder.Move(StartAnchor);
@@ -190,10 +190,38 @@ namespace BoneSquadKiting.Squad
                 slots = rest;
             }
 
+            // Already standing in this ring: keep everyone's order around it. Only the units between the
+            // leader's old place and its new one step along by one; nobody swaps across the circle.
+            bool keepOrder = def.Mode == FormationMode.Ring && _slotsFormation == def.Id;
+            _slotsFormation = def.Id;
+            if (keepOrder) { AssignAroundRing(alive, slots); return; }
+
             var positions = new Vector2[alive.Count];
             for (int i = 0; i < alive.Count; i++) positions[i] = new Vector2(alive[i].X, alive[i].Z) - Anchor;
             var assignment = FormationSlots.AssignNearest(positions, slots);
             for (int i = 0; i < alive.Count; i++) alive[i].Slot = slots[assignment[i]];
+        }
+
+        string _slotsFormation;   // the formation the units' current slots belong to
+
+        // Units and free slots are both put in order around the circle; the units keep that order and take
+        // the slots at whichever turn of the circle moves them least.
+        static void AssignAroundRing(List<SquadUnit> units, Vector2[] slots)
+        {
+            int n = units.Count;
+            if (n == 0) return;
+            static float Angle(Vector2 v) => Mathf.Atan2(v.y, v.x);
+            units.Sort((a, b) => Angle(a.Slot).CompareTo(Angle(b.Slot)));
+            var ordered = (Vector2[])slots.Clone();
+            System.Array.Sort(ordered, (a, b) => Angle(a).CompareTo(Angle(b)));
+            int bestShift = 0; float bestCost = float.MaxValue;
+            for (int shift = 0; shift < n; shift++)
+            {
+                float cost = 0f;
+                for (int i = 0; i < n && cost < bestCost; i++) cost += (units[i].Slot - ordered[(i + shift) % n]).sqrMagnitude;
+                if (cost < bestCost) { bestCost = cost; bestShift = shift; }
+            }
+            for (int i = 0; i < n; i++) units[i].Slot = ordered[(i + bestShift) % n];
         }
 
         /// <summary>Set where the anchor walks to, clamped to the commander's allowed area.</summary>
