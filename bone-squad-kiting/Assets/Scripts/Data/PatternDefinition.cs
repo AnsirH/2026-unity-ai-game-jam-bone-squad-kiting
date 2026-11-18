@@ -18,6 +18,8 @@ namespace BoneSquadKiting.Data
         // When set, the shape shrinks with the squad (alive / full), the same way the ring formation does,
         // so the formation that dodges it keeps dodging it as units are lost.
         public bool ScaleWithSquad;
+        [Tooltip("Use a dark crimson warning for a lethal attack. Visual only.")]
+        public bool LethalTelegraph;
 
         [Header("Sustained patterns only")]
         public PatternKind Kind = PatternKind.Burst;
