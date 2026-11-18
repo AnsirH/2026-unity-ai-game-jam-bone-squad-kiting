@@ -24,6 +24,18 @@ namespace BoneSquadKiting.Data
     [CreateAssetMenu(menuName = "BoneSquadKiting/Art Set")]
     public class ArtSet : ScriptableObject
     {
+        [System.Serializable]
+        public class EnemyProjectile
+        {
+            public MobDefinition Enemy;
+            public GameObject Prefab;
+            public GameObject HitEffectPrefab;
+            public float Scale = 1f;
+            public Vector3 Rotation;
+        }
+
+        [Header("Enemy projectiles (one entry per enemy type)")]
+        public EnemyProjectile[] EnemyProjectiles = System.Array.Empty<EnemyProjectile>();
         [Header("Squad units (24 soldiers share one model; the leader has its own)")]
         public GameObject UnitPrefab;
         public float UnitScale = 1f;          // multiplies the prefab's own scale, to fit it to the game's unit spacing

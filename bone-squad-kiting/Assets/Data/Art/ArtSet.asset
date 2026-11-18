@@ -12,6 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d68da17a738eb14992010ba70e4a951, type: 3}
   m_Name: ArtSet
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.ArtSet
+  EnemyProjectiles:
+  - Enemy: {fileID: 11400000, guid: e4174749d27ce4b0a9f84007d2c7a4bb, type: 2}
+    Prefab: {fileID: 280308009859959783, guid: 991af6a8465264b639448824cf66dfe7, type: 3}
+    HitEffectPrefab: {fileID: 381614570576816199, guid: 48ef6f6fed79b4463bba7b982ea02155, type: 3}
+    Scale: 1
+    Rotation: {x: 0, y: 0, z: 0}
   UnitPrefab: {fileID: 2410664768326594577, guid: 098688f04a233416d89062c6917b2931, type: 3}
   UnitScale: 0.9
   UnitStates:

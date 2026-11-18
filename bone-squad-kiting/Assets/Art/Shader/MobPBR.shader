@@ -14,6 +14,8 @@ Shader "Bone Squad/Mob PBR"
 
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull Mode", Float) = 2
 
+        [Toggle(_MOB_EMISSION_MAP)] _UseEmissionMap("Use Emission Map", Float) = 0
+        [NoScaleOffset] _EmissionMap("Emission Map (RGB)", 2D) = "white" {}
         [HDR] _EmissionColor("Emission Color", Color) = (0, 0, 0, 1)
         _Opacity("Opacity", Range(0, 1)) = 1
 
@@ -104,7 +106,11 @@ Shader "Bone Squad/Mob PBR"
             surface.metallic = mask.r;
             surface.smoothness *= mask.a;
         #endif
-            surface.emission = _EmissionColor.rgb + _HitFlashColor.rgb * (_HitFlashIntensity * saturate(_HitFlashAmount));
+            surface.emission = _EmissionColor.rgb;
+        #if defined(_MOB_EMISSION_MAP)
+            surface.emission *= SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, uv).rgb;
+        #endif
+            surface.emission += _HitFlashColor.rgb * (_HitFlashIntensity * saturate(_HitFlashAmount));
             surface.occlusion = 1.0h;
             surface.alpha = 1.0h;
         }
@@ -120,6 +126,7 @@ Shader "Bone Squad/Mob PBR"
             #pragma fragment MobFragment
             #pragma shader_feature_local _NORMALMAP
             #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_fragment _MOB_EMISSION_MAP
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
