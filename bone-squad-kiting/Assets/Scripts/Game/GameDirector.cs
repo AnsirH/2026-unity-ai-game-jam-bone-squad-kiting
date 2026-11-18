@@ -44,6 +44,40 @@ namespace BoneSquadKiting.Game
         public BossAttackSystem Attacks { get; private set; }
         public ShotSystem Shots { get; private set; }
         public MobSystem Mobs { get; private set; }
+        public EliteSystem Elites { get; private set; }
+
+        /// <summary>Every pattern being cast right now: the boss's and each mini boss's.</summary>
+        public readonly List<BossAttackSystem.Active> Telegraphs = new();
+
+        /// <summary>The telegraph that will go off first, if any. The HUD warns about this one.</summary>
+        public BossAttackSystem.Active? NextTelegraph
+        {
+            get
+            {
+                BossAttackSystem.Active? best = null;
+                foreach (var t in Telegraphs) if (best == null || t.Remaining < best.Value.Remaining) best = t;
+                return best;
+            }
+        }
+
+        /// <summary>
+        /// True while an intro / death moment is playing: the simulation is frozen and input is ignored,
+        /// but effects and the camera keep moving (Time.timeScale is untouched).
+        /// </summary>
+        public bool InCutscene => _cutsceneRemaining > 0f;
+        float _cutsceneRemaining;
+        MiniBossSpawn[] _miniBosses = new MiniBossSpawn[0];
+
+        /// <summary>Whether the end point currently counts (for rules that open it only after the mini boss).</summary>
+        public bool EndOpen
+        {
+            get
+            {
+                if (ClearRule != StageClearRule.DefeatMiniBossThenReachEnd) return ClearRule == StageClearRule.ReachEnd;
+                foreach (var m in _miniBosses) if (!m.Defeated) return false;
+                return true;
+            }
+        }
         public ReviveSystem Revives { get; private set; }
         public int DeadCount => Squad.Units.Count - Squad.AliveCount;
         public FlowField Flow { get; private set; }
@@ -55,6 +89,10 @@ namespace BoneSquadKiting.Game
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
         public event System.Action<int, int> WaveStarted;    // wave number (1-based), mobs spawned
+        /// <summary>Focus point, seconds, title to show (may be null), effect prefab to spawn (may be null).</summary>
+        public event System.Action<Vector2, float, string, GameObject> CutsceneStarted;
+        public event System.Action<Elite> MiniBossAppeared;
+        public event System.Action<Elite> MiniBossDefeated;
         public event System.Action<SquadUnit, SquadUnit> ReviveStarted;     // reviver, dead unit
         public event System.Action<SquadUnit, SquadUnit> ReviveCompleted;   // reviver, revived unit
         public event System.Action<SquadUnit, SquadUnit> ReviveCancelled;   // reviver (now dead), unit that stays dead
@@ -69,6 +107,22 @@ namespace BoneSquadKiting.Game
             Enemies = new EnemyRegistry();
             if (Boss != null) Enemies.Register(Boss);
             Mobs = new MobSystem();
+            Elites = new EliteSystem();
+            Elites.OnPatternStarted += (e, p) => PatternStarted?.Invoke(p);
+            Elites.OnPatternResolved += (e, hit, lost) =>
+            {
+                if (lost > 0) Squad.Reform();
+                PatternResolved?.Invoke(hit, lost);
+            };
+            Elites.OnDied += OnMiniBossDied;
+            // Mini boss markers placed in this director's own scene.
+            var found = new List<MiniBossSpawn>();
+            foreach (var m in FindObjectsByType<MiniBossSpawn>(FindObjectsSortMode.None))
+                if (m.gameObject.scene == gameObject.scene) found.Add(m);
+            _miniBosses = found.ToArray();
+            foreach (var m in _miniBosses) m.ResetSpawn();
+            _cutsceneRemaining = 0f;
+            Telegraphs.Clear();
             Revives = new ReviveSystem();
             Revives.OnStarted += (a, b) => ReviveStarted?.Invoke(a, b);
             Revives.OnCompleted += (a, b) => ReviveCompleted?.Invoke(a, b);
@@ -99,11 +153,11 @@ namespace BoneSquadKiting.Game
             FormationChanged?.Invoke(Squad.Formation);
         }
 
-        public void TogglePause() { if (Phase == GamePhase.Play) Paused = !Paused; }
+        public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
 
         public void ChangeFormation(string id)
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene) return;
             if (Squad.SetFormation(id)) FormationChanged?.Invoke(id);
         }
 
@@ -113,14 +167,14 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public bool TryRevive()
         {
-            if (Phase != GamePhase.Play || Paused) return false;
+            if (Phase != GamePhase.Play || Paused || InCutscene) return false;
             return Revives.TryStart(Squad.Units);
         }
 
         /// <summary>Stop where the squad is: the anchor halts and the order becomes a plain hold.</summary>
         public void StopSquad()
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene) return;
             Squad.Halt();
             Squad.Order = SquadOrder.Move(Squad.Anchor);
         }
@@ -128,7 +182,7 @@ namespace BoneSquadKiting.Game
         /// <summary>Turn the formation by mouse-wheel notches. Positive = clockwise seen from above.</summary>
         public void RotateFormation(int clockwiseNotches)
         {
-            if (Phase != GamePhase.Play || Paused || clockwiseNotches == 0) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene || clockwiseNotches == 0) return;
             Squad.Rotate(clockwiseNotches);
             FormationRotated?.Invoke(Squad.RotationDegrees);
         }
@@ -140,8 +194,9 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public void IssueOrder(SquadOrder o)
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene) return;
             Squad.Order = o;
+            Squad.FaceToward(o.Kind == OrderKind.AttackTarget && o.Target != null ? o.Target.Pos : o.Point);
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
                 bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
@@ -173,6 +228,39 @@ namespace BoneSquadKiting.Game
             if (Squad != null && Squad.Units.Count == 0) Squad.Init();
         }
 
+        // A mini boss appears, with its intro, when the squad's anchor comes within its trigger radius.
+        void TriggerMiniBosses()
+        {
+            foreach (var m in _miniBosses)
+            {
+                if (m.Triggered || m.Definition == null) continue;
+                if ((m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
+                var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
+                var elite = Elites.Spawn(m.Definition, pos, Enemies);
+                m.MarkTriggered(elite);
+                MiniBossAppeared?.Invoke(elite);
+                StartCutscene(pos, m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+            }
+        }
+
+        // When a mini boss falls: its death moment plays, the swarm is swept away and the waves stop,
+        // so the walk to the end point is clear. Shots in flight go with them.
+        void OnMiniBossDied(Elite elite)
+        {
+            Mobs.Clear(Enemies);
+            Shots.Shots.Clear();
+            if (Waves != null) Waves.Stopped = true;
+            MiniBossDefeated?.Invoke(elite);
+            StartCutscene(elite.Pos, elite.Def.DeathDuration, null, elite.Def.DeathFx);
+        }
+
+        void StartCutscene(Vector2 focus, float seconds, string title, GameObject fx)
+        {
+            if (seconds <= 0f) return;
+            _cutsceneRemaining = seconds;
+            CutsceneStarted?.Invoke(focus, seconds, title, fx);
+        }
+
         bool StageCleared()
         {
             bool reachedEnd = Stage != null && Stage.ReachedEnd;
@@ -180,6 +268,7 @@ namespace BoneSquadKiting.Game
             {
                 case StageClearRule.DefeatBoss: return Boss != null && !Boss.Alive;
                 case StageClearRule.ReachEnd: return reachedEnd;
+                case StageClearRule.DefeatMiniBossThenReachEnd: return EndOpen && reachedEnd;
                 default: return false;
             }
         }
@@ -190,6 +279,11 @@ namespace BoneSquadKiting.Game
         public void Step(float dt)
         {
             if (Phase != GamePhase.Play || Paused) return;
+            if (InCutscene)
+            {
+                _cutsceneRemaining -= dt;   // nothing else advances: nobody gets hit while the camera is away
+                return;
+            }
             Elapsed += dt;
 
             if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
@@ -211,6 +305,14 @@ namespace BoneSquadKiting.Game
             Shots.FireRange = UnitFireRange;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             if (Boss != null) Attacks.Tick(Squad, Boss, dt);
+
+            TriggerMiniBosses();
+            if (InCutscene) return;   // a mini boss just appeared: freeze from this frame on
+            Elites.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
+
+            Telegraphs.Clear();
+            if (Attacks.Current.HasValue) Telegraphs.Add(Attacks.Current.Value);
+            foreach (var e in Elites.Elites) if (e.Attacks.Current.HasValue) Telegraphs.Add(e.Attacks.Current.Value);
 
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);
             LastDps = CombatMath.Dps(_hits, Elapsed);

@@ -191,9 +191,7 @@ namespace BoneSquadKiting.EditorTools
 
             var teleGo = new GameObject("Telegraph");
             var tele = teleGo.AddComponent<TelegraphView>();
-            tele.Director = director;
-            teleGo.GetComponent<MeshRenderer>().sharedMaterial = telegraph;
-            teleGo.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+            tele.Director = director; tele.Material = telegraph;
 
             // Debug overlay (F1) for playtesting, plus the player HUD.
             var testHud = game.AddComponent<TestHud>();
@@ -252,9 +250,9 @@ namespace BoneSquadKiting.EditorTools
             plane.transform.localScale = new Vector3(width / 10f, 1f, length / 10f);
             baker.Size = new Vector2(width, length);
 
-            Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea); Object.DestroyImmediate(teleGo);
+            Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea);   // the telegraph view stays: the mini boss uses it
             director.BossView = null; director.HasBoss = false;
-            director.ClearRule = StageClearRule.ReachEnd;
+            director.ClearRule = StageClearRule.DefeatMiniBossThenReachEnd;
             director.Stage = stage;
 
             // Move the squad and its pre-placed units to the start point.
@@ -291,6 +289,19 @@ namespace BoneSquadKiting.EditorTools
             var waves = stage.gameObject.AddComponent<WaveSpawner>();
             waves.Mob = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
             director.Waves = waves;
+
+            // A mini boss waits near the end; it appears when the squad comes within its trigger radius.
+            var miniBoss = new GameObject("Mini Boss Spawn");
+            miniBoss.transform.SetParent(stage.transform, false);
+            miniBoss.transform.position = new Vector3(0f, 0f, end.y + 8f);
+            var spawn = miniBoss.AddComponent<MiniBossSpawn>();
+            spawn.Definition = Load<EliteDefinition>("Assets/Data/Elites/Brute.asset");
+            spawn.TriggerRadius = 12f;
+
+            var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();
+            eliteView.Director = director;
+            eliteView.EnemyLayer = EnsureLayer(EnemyLayer);
+            eliteView.EliteMaterial = Lit("MiniBoss", Hex("#c9722a"), Hex("#ff8a2a") * 1.4f);
 
             var mobView = new GameObject("Mob View").AddComponent<MobView>();
             mobView.Director = director;

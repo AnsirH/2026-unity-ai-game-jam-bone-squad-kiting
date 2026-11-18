@@ -19,12 +19,15 @@ namespace BoneSquadKiting.Bosses
             public PatternDefinition Pattern;
             public DangerShape Shape;   // the pattern's shape as cast (already scaled to the squad if it scales)
             public float Cx, Cz, Elapsed, Remaining;
+            public bool Tracks;         // whether the zone follows the squad until the lock time
         }
 
         public AttackSequence Sequence;
         public Active? Current;
         public int Index;
         public float NextAttack = GameConstants.FirstAttackDelay;
+        public bool TrackSquad = true;   // the boss's zones follow the squad until the lock time; a mini boss's do not
+        public float FixedGap = -1f;     // > 0: seconds between casts, instead of the boss's HP-based gap
 
         public System.Action<PatternDefinition> OnStart;
         public System.Action<int, int> OnResolved; // units hit, units lost
@@ -35,7 +38,7 @@ namespace BoneSquadKiting.Bosses
             {
                 a.Elapsed += dt;
                 a.Remaining = Mathf.Max(0, a.Pattern.Time - a.Elapsed);
-                if (a.Remaining > GameConstants.CastTrackLockTime)
+                if (a.Tracks && a.Remaining > GameConstants.CastTrackLockTime)
                 {
                     float k = Mathf.Min(1, dt * TrackLerp);
                     a.Cx = Mathf.Lerp(a.Cx, squad.Anchor.x, k);
@@ -57,7 +60,7 @@ namespace BoneSquadKiting.Bosses
             var p = Sequence.Patterns[Index % Sequence.Patterns.Length];
             Index++;
             var shape = p.ScaleWithSquad ? p.Shape.Scaled(FormationSlots.SquadFraction(squad.AliveCount)) : p.Shape;
-            Current = new Active { Pattern = p, Shape = shape, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
+            Current = new Active { Pattern = p, Shape = shape, Tracks = TrackSquad, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
             OnStart?.Invoke(p);
         }
 
@@ -68,17 +71,19 @@ namespace BoneSquadKiting.Bosses
         void Resolve(DangerShape shape, float cx, float cz, IList<SquadUnit> units, Boss boss)
         {
             int hit = 0, lost = 0;
+            // Decide who is caught before dealing any damage, so a unit killed by the leader's share
+            // still counts as hit by its own.
+            var caught = new List<SquadUnit>();
             foreach (var u in units)
-            {
-                if (u.Dead || !DangerShapeEval.InDanger(shape, cx, cz, u.X, u.Z)) continue;
-                hit++;
-                u.Hp -= GameConstants.PatternUnitDamage;
-                u.Flash = 1;
-                if (u.Hp <= 0) { u.Dead = true; lost++; }
-            }
+                if (!u.Dead && DangerShapeEval.InDanger(shape, cx, cz, u.X, u.Z)) caught.Add(u);
+            int aliveBefore = 0; foreach (var u in units) if (!u.Dead) aliveBefore++;
+            foreach (var u in caught) SquadDamage.Apply(units, u, GameConstants.PatternUnitDamage);
+            int aliveAfter = 0; foreach (var u in units) if (!u.Dead) aliveAfter++;
+            hit = caught.Count; lost = aliveBefore - aliveAfter;
             Current = null;
-            NextAttack = (boss != null && boss.HpFrac < GameConstants.FastAttackHpFrac)
-                ? GameConstants.NextAttackPhase2 : GameConstants.NextAttackPhase1;
+            NextAttack = FixedGap > 0f ? FixedGap
+                : (boss != null && boss.HpFrac < GameConstants.FastAttackHpFrac)
+                    ? GameConstants.NextAttackPhase2 : GameConstants.NextAttackPhase1;
             OnResolved?.Invoke(hit, lost);
         }
     }

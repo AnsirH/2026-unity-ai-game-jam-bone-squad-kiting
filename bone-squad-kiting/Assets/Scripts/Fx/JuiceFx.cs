@@ -42,6 +42,7 @@ namespace BoneSquadKiting.Fx
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
             Director.ReviveCompleted += OnRevived;
+            Director.CutsceneStarted += OnCutscene;
         }
 
         void OnDisable()
@@ -50,6 +51,16 @@ namespace BoneSquadKiting.Fx
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
             Director.ReviveCompleted -= OnRevived;
+            Director.CutsceneStarted -= OnCutscene;
+        }
+
+        // Mini boss intro / death: send the camera over and drop the effect prefab there, if one is set.
+        void OnCutscene(Vector2 focus, float seconds, string title, GameObject fxPrefab)
+        {
+            if (Cam != null) Cam.FocusOn(focus, seconds);
+            if (fxPrefab == null) return;
+            var fx = Instantiate(fxPrefab, new Vector3(focus.x, 0f, focus.y), Quaternion.identity);
+            Destroy(fx, seconds + 3f);
         }
 
         // A burst where the unit comes back, so a finished revive can be seen without a gauge.
@@ -84,7 +95,7 @@ namespace BoneSquadKiting.Fx
         /// <summary>Advance the effects. Public so tests can drive time.</summary>
         public void Tick(float dt)
         {
-            if (Director != null && Director.Attacks?.Current is BossAttackSystem.Active a)
+            if (Director != null && Director.NextTelegraph is BossAttackSystem.Active a)
                 _lastCenter = new Vector3(a.Cx, 0.05f, a.Cz);
 
             Shake *= Mathf.Exp(-ShakeDecay * dt);

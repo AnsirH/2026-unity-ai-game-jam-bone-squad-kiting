@@ -25,6 +25,14 @@ namespace BoneSquadKiting.Squad
         /// are pulled back toward the anchor. When null the prototype arena's fixed limits apply.
         /// </summary>
         [System.NonSerialized] public WalkGrid Grid;
+        public bool HasLeader = true;   // unit 0 is the squad leader: fixed at the formation's center (on the rim in a ring)
+
+        /// <summary>
+        /// Direction from the anchor to the last point the player clicked. In a ring formation the leader
+        /// stands on the rim in this direction.
+        /// </summary>
+        public Vector2 LeaderFacing = new(0f, -1f);
+
         public float SeatSize = 0.5f;   // spacing of the seats pressed units take along a wall (about one unit spacing)
 
         FlowField _route;               // path to the current destination, used when the straight line is blocked
@@ -59,12 +67,13 @@ namespace BoneSquadKiting.Squad
             Anchor = Destination = StartAnchor;
             Formation = DefaultFormation;
             RotationDegrees = 0;
+            LeaderFacing = new Vector2(0f, -1f);
             Order = SquadOrder.Move(StartAnchor);
             var slots = FormationSlots.Generate(def, GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
                 Units.Add(new SquadUnit
                 {
-                    Id = i, Slot = slots[i],
+                    Id = i, Slot = slots[i], IsLeader = HasLeader && i == 0,   // slot 0 is the one at the center
                     X = SlotPosition(slots[i]).x, Z = SlotPosition(slots[i]).y,
                     Cd = Random.value * 0.65f, Anim = Random.value * 6.28f,
                 });
@@ -105,6 +114,35 @@ namespace BoneSquadKiting.Squad
                 Mathf.Clamp(p.y, GameConstants.LimitZMin, GameConstants.LimitZMax));
         }
 
+        // Which slot the leader takes: the one nearest the center — except in a ring, which has no center
+        // slot, where it is the rim slot closest to the direction the player last clicked.
+        int LeaderSlotIndex(FormationDefinition def, Vector2[] slots)
+        {
+            int best = 0; float bestScore = float.MaxValue;
+            bool ring = def.Mode == FormationMode.Ring;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                float score = ring
+                    ? -Vector2.Dot(slots[i].normalized, LeaderFacing)   // most aligned with the facing
+                    : slots[i].sqrMagnitude;                            // closest to the center
+                if (score < bestScore) { bestScore = score; best = i; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Tell the squad where the player last clicked. Only the direction matters, and only a ring
+        /// formation shows it: the leader moves along the rim to face that way.
+        /// </summary>
+        public void FaceToward(Vector2 worldPoint)
+        {
+            var dir = worldPoint - Anchor;
+            if (dir.sqrMagnitude < 1e-4f) return;   // clicked on the anchor itself: keep the last direction
+            LeaderFacing = dir.normalized;
+            var def = Find(Formation);
+            if (HasLeader && def != null && def.Mode == FormationMode.Ring) ApplySlots(def);
+        }
+
         /// <summary>Stop where the anchor is now.</summary>
         public void Halt() { Destination = Anchor; }
 
@@ -125,6 +163,19 @@ namespace BoneSquadKiting.Squad
             var alive = Units.FindAll(u => !u.Dead);
             if (alive.Count == 0) return;
             var slots = FormationSlots.Rotate(FormationSlots.Generate(def, alive.Count), RotationDegrees);
+
+            // The leader's slot is fixed and taken out before the others are matched to what is left.
+            var leader = alive.Find(u => u.IsLeader);
+            if (leader != null)
+            {
+                int index = LeaderSlotIndex(def, slots);
+                leader.Slot = slots[index];
+                alive.Remove(leader);
+                var rest = new Vector2[slots.Length - 1];
+                for (int i = 0, k = 0; i < slots.Length; i++) if (i != index) rest[k++] = slots[i];
+                slots = rest;
+            }
+
             var positions = new Vector2[alive.Count];
             for (int i = 0; i < alive.Count; i++) positions[i] = new Vector2(alive[i].X, alive[i].Z) - Anchor;
             var assignment = FormationSlots.AssignNearest(positions, slots);

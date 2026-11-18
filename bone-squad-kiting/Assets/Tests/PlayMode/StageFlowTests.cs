@@ -117,7 +117,10 @@ public class StageFlowTests
     public void Mobs_SpawnOnWalkableGround_AwayFromTheSquad()
     {
         _dir.Restart();
-        _fc.Anchor = _fc.Destination = new Vector2(5f, 50f);
+        // Put the whole squad there (not just the anchor): units walking through a spawn would push mobs along.
+        var here = new Vector2(5f, 50f);
+        _fc.Anchor = _fc.Destination = here;
+        foreach (var u in _fc.Units) { u.X = here.x + u.Slot.x; u.Z = here.y + u.Slot.y; }
         Run(6f);
         Assert.That(_dir.Mobs.Mobs.Count, Is.GreaterThan(0));
         int ahead = 0;

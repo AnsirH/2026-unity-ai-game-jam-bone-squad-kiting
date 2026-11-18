@@ -11,8 +11,9 @@ namespace BoneSquadKiting.Stage
     /// <summary>How a stage is cleared. Chosen per stage on GameDirector.</summary>
     public enum StageClearRule
     {
-        DefeatBoss,   // the stage's boss (or mini boss) dies
-        ReachEnd,     // the squad gets to the end point
+        DefeatBoss,                    // boss stage: the boss dies
+        ReachEnd,                      // the squad gets to the end point
+        DefeatMiniBossThenReachEnd,    // every mini boss on the stage dies, then the squad gets to the end point
     }
 
     /// <summary>
@@ -40,6 +41,8 @@ namespace BoneSquadKiting.Stage
         /// <summary>Furthest progress reached this match, 0..1. Never goes down.</summary>
         public float MaxProgress { get; private set; }
         public float TimeToNextWave { get; private set; }
+        /// <summary>Set to end the waves for the rest of the match (after the mini boss falls).</summary>
+        public bool Stopped { get; set; }
 
         FlowField _toEnd;      // distance-to-end-point field, for measuring progress along the actual route
         int _startDistance;
@@ -47,7 +50,7 @@ namespace BoneSquadKiting.Stage
         /// <summary>Call at match start. Without a grid or an end point, progress stays at 0.</summary>
         public void Begin(WalkGrid grid, Vector2 start, Vector2? end)
         {
-            WavesSpawned = 0; MaxProgress = 0f; TimeToNextWave = FirstWaveDelay;
+            WavesSpawned = 0; MaxProgress = 0f; TimeToNextWave = FirstWaveDelay; Stopped = false;
             _toEnd = null; _startDistance = 0;
             if (grid == null || end == null) return;
             _toEnd = new FlowField(grid);
@@ -68,7 +71,8 @@ namespace BoneSquadKiting.Stage
         public int Tick(FormationController squad, MobSystem mobs, EnemyRegistry registry, float dt)
         {
             MaxProgress = Mathf.Max(MaxProgress, ProgressAt(squad.Anchor));
-            TimeToNextWave -= dt;
+            if (!Stopped) TimeToNextWave -= dt;
+            if (Stopped) return 0;
             if (TimeToNextWave > 0f || Mob == null) return 0;
 
             TimeToNextWave = Mathf.Max(0.5f, Interval.Evaluate(MaxProgress));

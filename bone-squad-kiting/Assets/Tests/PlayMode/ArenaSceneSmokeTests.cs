@@ -14,6 +14,16 @@ using BoneSquadKiting.Game;
 /// </summary>
 public class ArenaSceneSmokeTests
 {
+    // These tests load whole scenes. Leave an empty one behind so later tests do not find this scene's objects.
+    [UnityTearDown]
+    public IEnumerator LeaveAnEmptyScene()
+    {
+        var loaded = SceneManager.GetActiveScene();
+        var empty = SceneManager.CreateScene("Empty " + System.Guid.NewGuid().ToString("N").Substring(0, 6));
+        SceneManager.SetActiveScene(empty);
+        yield return SceneManager.UnloadSceneAsync(loaded);
+    }
+
     [UnityTest]
     public IEnumerator Arena_PlaysAndRenders()
     {
@@ -139,7 +149,9 @@ public class ArenaSceneSmokeTests
         Assert.IsFalse(director.HasBoss);
         Assert.IsNotNull(director.Waves, "wave spawner wired");
         Assert.IsNotNull(director.Stage.EndPoint, "end point set");
-        Assert.AreEqual(BoneSquadKiting.Stage.StageClearRule.ReachEnd, director.ClearRule);
+        Assert.AreEqual(BoneSquadKiting.Stage.StageClearRule.DefeatMiniBossThenReachEnd, director.ClearRule);
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Stage.MiniBossSpawn>(), "mini boss marker placed");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Bosses.EliteView>(), "mini boss is drawn");
 
         // The squad must be on screen at the start.
         var anchor = director.Squad.Anchor;

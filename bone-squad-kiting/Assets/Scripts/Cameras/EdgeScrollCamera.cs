@@ -23,6 +23,35 @@ namespace BoneSquadKiting.Cameras
 
         bool _mouseSeen;
 
+        // Temporary look at a point (mini boss intro / death): go there, hold, come back.
+        Vector2 _focusPoint, _focusReturn;
+        float _focusDuration, _focusElapsed = -1f;
+
+        public bool Focusing => _focusElapsed >= 0f;
+
+        /// <summary>Glide to a point, hold, and return to where the view was, over <paramref name="seconds"/>.</summary>
+        public void FocusOn(Vector2 point, float seconds)
+        {
+            if (seconds <= 0f) return;
+            if (!Focusing) _focusReturn = LookAt;
+            _focusPoint = point; _focusDuration = seconds; _focusElapsed = 0f;
+        }
+
+        /// <summary>Advance a focus move. Public so tests can drive time. Returns true while one is running.</summary>
+        public bool TickFocus(float dt)
+        {
+            if (!Focusing) return false;
+            _focusElapsed += dt;
+            float t = Mathf.Clamp01(_focusElapsed / _focusDuration);
+            const float edge = 0.3f;   // share of the time spent travelling each way
+            float w = t < edge ? Mathf.SmoothStep(0f, 1f, t / edge)
+                    : t > 1f - edge ? Mathf.SmoothStep(1f, 0f, (t - (1f - edge)) / edge) : 1f;
+            LookAt = Vector2.Lerp(_focusReturn, _focusPoint, w);
+            if (t >= 1f) { LookAt = _focusReturn; _focusElapsed = -1f; }
+            Apply();
+            return true;
+        }
+
         /// <summary>
         /// Which way to scroll for a mouse position, as (right, up) in -1..1. Zero when the cursor is not
         /// at an edge or is outside the view (so dragging the mouse out of the Game window does nothing).
@@ -39,6 +68,7 @@ namespace BoneSquadKiting.Cameras
 
         void LateUpdate()
         {
+            if (TickFocus(Time.unscaledDeltaTime)) return;   // no edge scrolling while the camera is being directed
             // Until the mouse has reported a position it reads (0, 0), which would look like the corner.
             if (Mouse.current != null && Mouse.current.position.ReadValue() != Vector2.zero) _mouseSeen = true;
             var dir = _mouseSeen && Application.isFocused
