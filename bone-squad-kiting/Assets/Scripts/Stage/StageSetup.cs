@@ -19,6 +19,8 @@ namespace BoneSquadKiting.Stage
         public Transform StartPoint;       // where the squad's anchor begins; optional
         public Transform EndPoint;         // optional
         public float EndRadius = 3f;       // the squad has arrived when its anchor is this close to EndPoint
+        [Tooltip("Colliders the drawn units stand on (uneven terrain). Empty = flat ground at height 0.")]
+        public LayerMask GroundFollowMask;
 
         public WalkGrid Grid { get; private set; }
 
@@ -38,6 +40,7 @@ namespace BoneSquadKiting.Stage
         /// <summary>Bake and wire everything. Runs in Awake, before the director fields the squad in Start.</summary>
         public void Apply()
         {
+            GroundHeight.Mask = GroundFollowMask;   // set for every stage, so a flat stage after a terrain one is flat again
             if (Ground == null || Squad == null) return;
             Grid = Ground.Bake();
             Squad.Grid = Grid;

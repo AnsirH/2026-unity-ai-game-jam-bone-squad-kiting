@@ -19,6 +19,9 @@ namespace BoneSquadKiting.Stage
     public class WalkGridBaker : MonoBehaviour
     {
         public Vector2 Size = new(24.6f, 20.4f);   // x and z extent of the area, centered on this object
+        [Tooltip("Ignore this object's position and Size: cover the Include outlines drawn in the scene instead (or, with none, every collider on the ground layers). For maps whose size is not known in advance.")]
+        public bool FitToScene;
+        public float FitPadding = 1.5f;
         public float CellSize = 0.75f;
         public float Clearance = 0.3f;             // how close an obstacle may be to a cell center
         public float RayHeight = 50f;              // ray starts this far above the object
@@ -32,10 +35,10 @@ namespace BoneSquadKiting.Stage
         public WalkGrid Bake()
         {
             Physics.SyncTransforms();
-            var center = new Vector2(transform.position.x, transform.position.z);
-            var min = center - Size / 2f;
-            int w = Mathf.Max(1, Mathf.CeilToInt(Size.x / CellSize));
-            int h = Mathf.Max(1, Mathf.CeilToInt(Size.y / CellSize));
+            Area(out var center, out var area);
+            var min = center - area / 2f;
+            int w = Mathf.Max(1, Mathf.CeilToInt(area.x / CellSize));
+            int h = Mathf.Max(1, Mathf.CeilToInt(area.y / CellSize));
             var grid = new WalkGrid(min, CellSize, w, h);
             float top = transform.position.y + RayHeight;
 
@@ -62,6 +65,31 @@ namespace BoneSquadKiting.Stage
             return grid;
         }
 
+        /// <summary>The rectangle (center and size on x/z) the grid covers.</summary>
+        public void Area(out Vector2 center, out Vector2 size)
+        {
+            center = new Vector2(transform.position.x, transform.position.z); size = Size;
+            if (!FitToScene) return;
+            bool any = false; Vector2 lo = default, hi = default;
+            void Grow(Vector2 p) { if (!any) { lo = hi = p; any = true; } else { lo = Vector2.Min(lo, p); hi = Vector2.Max(hi, p); } }
+            foreach (var outline in FindObjectsByType<WalkOutline>(FindObjectsSortMode.None))
+            {
+                if (outline.gameObject.scene != gameObject.scene || outline.Mode != WalkOutlineMode.Include) continue;
+                var points = outline.Points();
+                if (points.Length < 3) continue;
+                foreach (var p in points) Grow(p);
+            }
+            if (!any)
+                foreach (var col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+                {
+                    if (col.gameObject.scene != gameObject.scene || (GroundMask.value & (1 << col.gameObject.layer)) == 0) continue;
+                    Grow(new Vector2(col.bounds.min.x, col.bounds.min.z)); Grow(new Vector2(col.bounds.max.x, col.bounds.max.z));
+                }
+            if (!any) return;
+            center = (lo + hi) / 2f;
+            size = hi - lo + Vector2.one * (FitPadding * 2f);
+        }
+
         static bool InsideOutlines(Vector2 p, List<Vector2[]> includes, List<Vector2[]> excludes)
         {
             foreach (var hole in excludes) if (Polygon.Contains(hole, p)) return false;
@@ -86,7 +114,8 @@ namespace BoneSquadKiting.Stage
                     Gizmos.DrawCube(new Vector3(c.x, y, c.y), size);
                 }
             Gizmos.color = Color.white;
-            Gizmos.DrawWireCube(transform.position, new Vector3(Size.x, 0.1f, Size.y));
+            Area(out var gc, out var gs);
+            Gizmos.DrawWireCube(new Vector3(gc.x, transform.position.y, gc.y), new Vector3(gs.x, 0.1f, gs.y));
         }
     }
 }

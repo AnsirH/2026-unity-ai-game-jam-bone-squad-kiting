@@ -84,7 +84,7 @@ namespace BoneSquadKiting.EditorTools
             return hud;
         }
 
-        static RectTransform Rect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b, bool stretch)
+        internal static RectTransform Rect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b, bool stretch)
         {
             var go = new GameObject(name, typeof(RectTransform));
             var rt = go.GetComponent<RectTransform>();
@@ -95,7 +95,7 @@ namespace BoneSquadKiting.EditorTools
             return rt;
         }
 
-        static Image Panel(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b)
+        internal static Image Panel(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b)
         {
             var rt = Rect(parent, name, anchorMin, anchorMax, a, b, false);
             var img = rt.gameObject.AddComponent<Image>();
@@ -103,7 +103,7 @@ namespace BoneSquadKiting.EditorTools
             return img;
         }
 
-        static Text Label(Transform parent, string name, int size, TextAnchor align, Vector2 anchorMin, Vector2 anchorMax,
+        internal static Text Label(Transform parent, string name, int size, TextAnchor align, Vector2 anchorMin, Vector2 anchorMax,
                           Vector2 a, Vector2 b, bool bold = false, bool stretch = false)
         {
             var rt = Rect(parent, name, anchorMin, anchorMax, a, b, stretch);

@@ -71,7 +71,7 @@ namespace BoneSquadKiting.Squad
         // A model: feet on the ground, turned to face where it walks or shoots, animation by state.
         void DriveModel(View v, SquadUnit u)
         {
-            v.Root.position = new Vector3(u.X, 0f, u.Z);
+            v.Root.position = new Vector3(u.X, BoneSquadKiting.Stage.GroundHeight.Y(u.X, u.Z), u.Z);
             var size = ModelScale(Art, u.IsLeader);
             if (v.Root.localScale != size) v.Root.localScale = size;   // follows the art set, so it can be tuned while playing
             if (u.Facing.sqrMagnitude > 1e-4f)
@@ -86,7 +86,7 @@ namespace BoneSquadKiting.Squad
         void DriveCapsule(View v, SquadUnit u)
         {
             float scale = u.IsLeader ? UnitScale * LeaderScale : UnitScale;
-            v.Root.position = new Vector3(u.X, scale, u.Z);
+            v.Root.position = new Vector3(u.X, scale + BoneSquadKiting.Stage.GroundHeight.Y(u.X, u.Z), u.Z);
             if (v.Root.localScale.x != scale) v.Root.localScale = Vector3.one * scale;
             if (v.Capsule == null) return;
             // Brighten units that were just hit; the flash value decays in SquadUnit.MoveToward.

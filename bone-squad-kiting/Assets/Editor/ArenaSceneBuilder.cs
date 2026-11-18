@@ -28,21 +28,21 @@ namespace BoneSquadKiting.EditorTools
     public static class ArenaSceneBuilder
     {
         const string ScenePath = "Assets/Scenes/Arena.unity";
-        const string MatDir = "Assets/Prototype/Materials";
-        const string EnemyLayer = "Enemy";
-        const string GroundLayer = "Ground", ObstacleLayer = "Obstacle";
+        internal const string MatDir = "Assets/Prototype/Materials";
+        internal const string EnemyLayer = "Enemy";
+        internal const string GroundLayer = "Ground", ObstacleLayer = "Obstacle";
 
         // Camera framing. Tune here (or on the camera, once the scene is hand-authored).
-        const float CameraPitch = 60f;      // degrees down from horizontal
-        const float CameraYaw = 0f;         // degrees turned around Y; 0 = straight on, boss directly ahead
-        const float CameraFov = 30f;        // vertical field of view
-        const float CameraDistance = 34f;   // from the ground point at the center of the view
+        internal const float CameraPitch = 60f;      // degrees down from horizontal
+        internal const float CameraYaw = 0f;         // degrees turned around Y; 0 = straight on, boss directly ahead
+        internal const float CameraFov = 30f;        // vertical field of view
+        internal const float CameraDistance = 34f;   // from the ground point at the center of the view
         // Start between the squad (z = 3.4) and the boss (z = -7.4) so both are in frame.
         static readonly Vector2 CameraStartLookAt = new(0f, -0.1f);
 
         // Ranges as tuned by hand in the scene (2026-11-18). The squad has to close in on the boss to fire.
-        const float UnitFireRange = 5.5f;
-        const float SquadEngageRange = 5f;
+        internal const float UnitFireRange = 5.5f;
+        internal const float SquadEngageRange = 5f;
 
         /// <summary>
         /// A placeholder progress stage: a corridor with a few obstacles, a start and an end point, endless
@@ -400,14 +400,14 @@ namespace BoneSquadKiting.EditorTools
             mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
         }
 
-        static T Load<T>(string path) where T : Object
+        internal static T Load<T>(string path) where T : Object
         {
             var a = AssetDatabase.LoadAssetAtPath<T>(path);
             if (a == null) Debug.LogError("ArenaSceneBuilder: missing " + path + " (run Rebuild Default Data first)");
             return a;
         }
 
-        static Material Lit(string name, Color baseColor, Color? emission = null)
+        internal static Material Lit(string name, Color baseColor, Color? emission = null)
         {
             var m = Upsert($"{MatDir}/{name}.mat", Shader.Find("Universal Render Pipeline/Lit"));
             m.SetColor("_BaseColor", baseColor);
@@ -422,7 +422,7 @@ namespace BoneSquadKiting.EditorTools
             return m;
         }
 
-        static Material Upsert(string path, Shader shader)
+        internal static Material Upsert(string path, Shader shader)
         {
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (m != null) { m.shader = shader; return m; }
@@ -431,15 +431,15 @@ namespace BoneSquadKiting.EditorTools
             return m;
         }
 
-        static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
+        internal static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.magenta;
 
-        static void EnsureFolder(string parent, string child)
+        internal static void EnsureFolder(string parent, string child)
         {
             if (!AssetDatabase.IsValidFolder(parent + "/" + child)) AssetDatabase.CreateFolder(parent, child);
         }
 
         /// <summary>Find or create a user layer and return its index.</summary>
-        static int EnsureLayer(string name)
+        internal static int EnsureLayer(string name)
         {
             int existing = LayerMask.NameToLayer(name);
             if (existing >= 0) return existing;
