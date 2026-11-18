@@ -26,6 +26,7 @@ namespace BoneSquadKiting.Squad
 
         class View
         {
+            public HitFlash Flash;
             public Transform Root;
             public Renderer Capsule;       // placeholder only
             public UnitVisual Visual;      // model only
@@ -37,8 +38,6 @@ namespace BoneSquadKiting.Squad
         readonly List<View> _views = new();
         BoneSquadKiting.Game.GameDirector _director;
         MaterialPropertyBlock _block;
-        Color _baseEmission;
-        static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         void Awake()
         {
@@ -46,7 +45,6 @@ namespace BoneSquadKiting.Squad
             // Units already placed under this object (so they show in the editor) are reused in order.
             foreach (Transform child in transform) _views.Add(Wrap(child, _views.Count));
             _block = new MaterialPropertyBlock();
-            if (UnitMaterial != null && UnitMaterial.HasProperty(EmissionId)) _baseEmission = UnitMaterial.GetColor(EmissionId);
         }
 
         void LateUpdate()
@@ -74,6 +72,7 @@ namespace BoneSquadKiting.Squad
         // A model: feet on the ground, turned to face where it walks or shoots, animation by state.
         void DriveModel(View v, SquadUnit u)
         {
+            v.Visual.SetHitFlash(u.Flash, _block);
             v.Root.position = new Vector3(u.X, BoneSquadKiting.Stage.GroundHeight.Y(u.X, u.Z), u.Z);
             var size = ModelScale(Art, u.IsLeader);
             if (v.Root.localScale != size) v.Root.localScale = size;   // follows the art set, so it can be tuned while playing
@@ -100,18 +99,12 @@ namespace BoneSquadKiting.Squad
             if (v.Root.localScale.x != scale) v.Root.localScale = Vector3.one * scale;
             if (v.Capsule == null) return;
             // Brighten units that were just hit; the flash value decays in SquadUnit.MoveToward.
-            if (u.Flash > 0f)
-            {
-                _block.SetColor(EmissionId, Color.Lerp(_baseEmission, HitFlashColor, u.Flash));
-                v.Capsule.SetPropertyBlock(_block);
-            }
-            else if (u.Reviving)
+            if (u.Reviving && u.Flash <= 0f)
             {
                 float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f);
-                _block.SetColor(EmissionId, Color.Lerp(_baseEmission, ReviveColor, 0.35f + 0.65f * pulse));
-                v.Capsule.SetPropertyBlock(_block);
+                v.Flash.Apply(v.Capsule, _block, 0.35f + 0.65f * pulse, ReviveColor, reviving: true);
             }
-            else if (v.Capsule.HasPropertyBlock()) v.Capsule.SetPropertyBlock(null);
+            else v.Flash.Apply(v.Capsule, _block, u.Flash, HitFlashColor);
         }
 
         /// <summary>The size a unit model should have: its prefab's own scale times the art set's multiplier.</summary>

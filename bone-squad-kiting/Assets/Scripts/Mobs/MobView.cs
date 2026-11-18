@@ -23,6 +23,7 @@ namespace BoneSquadKiting.Mobs
 
         class View
         {
+            public HitFlash Flash;
             public Transform Root;
             public Renderer Sphere;        // placeholder only
             public UnitVisual Visual;      // model only
@@ -40,7 +41,6 @@ namespace BoneSquadKiting.Mobs
         /// <summary>How many enemy shots are being drawn right now.</summary>
         public int ShotsDrawn { get; private set; }
         MaterialPropertyBlock _block;
-        Color _baseEmission;
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         /// <summary>How many mobs are being drawn right now.</summary>
@@ -49,7 +49,6 @@ namespace BoneSquadKiting.Mobs
         void Awake()
         {
             _block = new MaterialPropertyBlock();
-            if (MobMaterial != null && MobMaterial.HasProperty(EmissionId)) _baseEmission = MobMaterial.GetColor(EmissionId);
         }
 
         void LateUpdate()
@@ -122,6 +121,7 @@ namespace BoneSquadKiting.Mobs
 
             if (v.Visual != null)
             {
+                v.Visual.SetHitFlash(m.Flash, _block);
                 v.Root.position = new Vector3(m.X, y, m.Z);
                 var size = m.Def.Prefab.transform.localScale * m.Def.ModelScale;
                 if (v.Root.localScale != size) v.Root.localScale = size;      // follows the definition, so it can be tuned while playing
@@ -140,12 +140,7 @@ namespace BoneSquadKiting.Mobs
                 float d = m.Radius * 2f;
                 v.Root.position = new Vector3(m.X, y + m.Radius, m.Z);
                 v.Root.localScale = new Vector3(d, d, d);
-                if (m.Flash > 0f)
-                {
-                    _block.SetColor(EmissionId, Color.Lerp(_baseEmission, HitFlashColor, m.Flash));
-                    v.Sphere.SetPropertyBlock(_block);
-                }
-                else if (v.Sphere.HasPropertyBlock()) v.Sphere.SetPropertyBlock(null);
+                v.Flash.Apply(v.Sphere, _block, m.Flash, HitFlashColor);
             }
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
         }

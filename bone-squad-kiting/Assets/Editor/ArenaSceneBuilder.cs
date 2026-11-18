@@ -115,7 +115,7 @@ namespace BoneSquadKiting.EditorTools
             EnsureFolder("Assets", "Prototype"); EnsureFolder("Assets/Prototype", "Materials");
 
             var ground = Lit("Ground", Hex("#0d2434"));
-            var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f);
+            var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f, faction: Faction.Ally);
             var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f, faction: Faction.Enemy);
             var shot = Lit("Shot", Hex("#ffe27a"), Hex("#ffd24a") * 2.5f);
             var telegraph = Upsert($"{MatDir}/Telegraph.mat", TelegraphShader());
@@ -403,11 +403,11 @@ namespace BoneSquadKiting.EditorTools
             var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();
             eliteView.Director = director;
             eliteView.EnemyLayer = EnsureLayer(EnemyLayer);
-            eliteView.EliteMaterial = Lit("MiniBoss", Hex("#c9722a"), Hex("#ff8a2a") * 1.4f);
+            eliteView.EliteMaterial = Lit("MiniBoss", Hex("#c9722a"), Hex("#ff8a2a") * 1.4f, faction: Faction.Enemy);
 
             var mobView = new GameObject("Mob View").AddComponent<MobView>();
             mobView.Director = director;
-            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
+            mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f, faction: Faction.Enemy);
         }
 
         // The wave plan a rebuilt stage keeps: the one its scene pointed at before the rebuild, else the

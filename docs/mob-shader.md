@@ -2,7 +2,9 @@
 
 몹 머티리얼의 Shader 메뉴에서 `Bone Squad/Mob PBR`을 선택한다. 아군은 가장자리와 피격 발광이 모두 밝은 하늘색이고, 적은 두 효과 모두 빨간색이다. 새 모델을 추가할 때는 몸과 장착 무기에 같은 진영 설정을 적용한다.
 
-`Assets/Art/Material/MobExamples`에는 병사 텍스처를 사용하는 `AllyMobExample`과 근접 적 텍스처를 사용하는 `EnemyMobExample`이 있다. 해당 진영의 예시를 복제한 뒤 `Base Map`을 새 모델의 텍스처로 교체한다.
+`Assets/Art/Material/MobExamples`의 `AllyMobExample`과 `EnemyMobExample`은 진영별 부모 머티리얼이다. 병사·분대장과 장착 무기는 아군 설정을 상속한다. 근접병·마법사·암흑 화염 마법사·투석기·창투척병과 창투척병의 창은 적 설정을 상속한다. 전용 프리팹이 없는 유닛과 보스의 기본 머티리얼에도 같은 설정을 적용한다.
+
+새 모델을 추가할 때는 해당 진영의 예시에서 **Create Material Variant**를 선택한다. 자식 머티리얼의 `Base Map`에 모델 고유 텍스처를 지정하고 해당 메시의 렌더러에 연결한다. 진영 전체의 프레넬과 피격색을 바꿀 때는 부모 머티리얼을 수정한다.
 
 | 진영 | 프레넬·피격 발광색 (Unity Color RGB) | Fresnel Intensity |
 | --- | --- | --- |

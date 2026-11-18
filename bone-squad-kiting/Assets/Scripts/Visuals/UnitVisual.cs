@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using BoneSquadKiting.Data;
 
@@ -43,6 +44,8 @@ namespace BoneSquadKiting.Visuals
 
         VisualState _current = (VisualState)(-1);
         float _attackUntil;
+        Renderer[] _flashRenderers;
+        float _lastFlash;
         int _attackLayer = -1;
         bool _varyLoops;
         float _loopPhase;
@@ -55,6 +58,21 @@ namespace BoneSquadKiting.Visuals
             _loopPhase = Mathf.Repeat((unitIndex + 1) * 0.61803399f, 1f);
             _loopSpeed = Mathf.Lerp(0.94f, 1.06f, Mathf.Repeat((unitIndex + 1) * 0.75487767f, 1f));
             _current = (VisualState)(-1);
+        }
+
+        /// <summary>Drive every Mob PBR surface on this model with its own material's hit color and intensity.</summary>
+        public void SetHitFlash(float amount, MaterialPropertyBlock block)
+        {
+            if (amount == _lastFlash) return;
+            _lastFlash = amount;
+            _flashRenderers ??= GetComponentsInChildren<Renderer>(true)
+                .Where(r => r.sharedMaterials.Any(HitFlash.IsSupported)).ToArray();
+            foreach (var renderer in _flashRenderers)
+            {
+                renderer.GetPropertyBlock(block);
+                block.SetFloat(HitFlash.AmountId, amount);
+                renderer.SetPropertyBlock(block);
+            }
         }
 
         /// <summary>Called by the animation event in the attack clip (see <see cref="AttackEventName"/>).</summary>
