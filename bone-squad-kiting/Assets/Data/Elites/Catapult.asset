@@ -19,7 +19,7 @@ MonoBehaviour:
   StopDistance: 3
   Patterns: {fileID: 11400000, guid: 437202b9ecf3ae049a7e59fffbd3c281, type: 2}
   FirstAttackDelay: 3
-  AttackGap: 3.5
+  AttackGap: 3
   AttackGapRandom: 3
   ZoneRotationSpeed: 0
   AttackRange: 14
