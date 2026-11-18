@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using BoneSquadKiting.Core;
@@ -7,14 +8,26 @@ using BoneSquadKiting.Stage;
 namespace BoneSquadKiting.UI
 {
     /// <summary>
-    /// The title screen of the game scene: new game, continue, quit. It builds its own widgets and shows
-    /// while the game is on its title (GamePhase.Menu). New game starts stage 1 from its start point;
-    /// continue starts the stage after the last one cleared, from that stage's start point.
+    /// The main menu, in a scene of its own: new game, continue, quit. No map and no game camera are
+    /// loaded here. A button loads the game scene with only the chosen stage's map set up, and play
+    /// starts at once from that stage's start point with a full squad.
     /// </summary>
     public class MainMenu : MonoBehaviour
     {
-        public StageRun Run;
+        [Tooltip("The scene that holds the stage maps.")]
+        public string GameScene = "Game";
         public string Title = "KITE SQUAD 25";
+        [Tooltip("The hand that bursts out of the ground when a game is started. Empty = start at once.")]
+        public CommanderHandBurst Burst;
+        [Tooltip("Seconds the burst is shown before the game loads.")]
+        public float BurstSeconds = 2f;
+        [Tooltip("Seconds at the end of the burst over which the screen goes dark.")]
+        public float FadeSeconds = 0.35f;
+
+        /// <summary>True from the click until the game scene loads.</summary>
+        public bool Starting { get; private set; }
+        Image _fade;
+        GameObject _widgets;
 
         public GameObject Root { get; private set; }
         public Button NewGameButton { get; private set; }
@@ -22,47 +35,61 @@ namespace BoneSquadKiting.UI
         public Button QuitButton { get; private set; }
         public Text ContinueLabel { get; private set; }
 
-        /// <summary>True while the menu is on screen.</summary>
-        public bool Showing => Root != null && Root.activeSelf;
-
         void Start()
         {
+            Time.timeScale = 1f;
             Build();
             Refresh();
         }
 
-        void Update() => Refresh();
-
-        /// <summary>Show or hide to match the game, and enable "continue" only when there is a save.</summary>
+        /// <summary>Enable "continue" only when there is a save, and say where it goes.</summary>
         public void Refresh()
         {
-            if (Root == null || Run == null || Run.Kit == null) return;
-            bool show = Run.Kit.Director.Phase == GamePhase.Menu && !Run.Switching;
-            if (Root.activeSelf != show) Root.SetActive(show);
-            if (!show) return;
+            if (Root == null || Starting) return;
             bool save = GameProgress.HasSave;
             ContinueButton.interactable = save;
             ContinueLabel.color = save ? Color.white : new Color(1f, 1f, 1f, 0.35f);
-            ContinueLabel.text = save ? $"이어하기  ({StageName(GameProgress.NextStage)})" : "이어하기";
+            string where = !string.IsNullOrEmpty(GameProgress.NextScene) ? "보스" : $"스테이지 {GameProgress.NextStage + 1}";
+            ContinueLabel.text = save ? $"이어하기  ({where})" : "이어하기";
         }
 
-        string StageName(int index)
-        {
-            if (index < Run.Stages.Count) return Run.Stages[index].Title;
-            return "보스";
-        }
-
+        /// <summary>Stage 1, from its start point. The old save is forgotten.</summary>
         public void NewGame()
         {
+            if (Starting) return;
             GameProgress.Clear();
-            Run.StartAt(0);
+            StartCoroutine(BurstThenLoad(GameScene, 0));
         }
 
+        /// <summary>The stage after the last one cleared, from its start point.</summary>
         public void Continue()
         {
-            if (!GameProgress.HasSave) return;
-            Run.StartAt(GameProgress.NextStage);
+            if (Starting || !GameProgress.HasSave) return;
+            if (!string.IsNullOrEmpty(GameProgress.NextScene)) StartCoroutine(BurstThenLoad(GameProgress.NextScene, -1));
+            else StartCoroutine(BurstThenLoad(GameScene, GameProgress.NextStage));
         }
+
+        // The buttons go away, the hand bursts out, the screen goes dark at the end, and the game loads.
+        IEnumerator BurstThenLoad(string scene, int stage)
+        {
+            Starting = true;
+            _widgets.SetActive(false);
+            if (Burst != null)
+            {
+                Burst.PlayBurst();
+                float fadeFrom = Mathf.Max(0f, BurstSeconds - FadeSeconds);
+                for (float t = 0f; t < BurstSeconds; t += Time.unscaledDeltaTime)
+                {
+                    if (t > fadeFrom && FadeSeconds > 0f) SetFade((t - fadeFrom) / FadeSeconds);
+                    yield return null;
+                }
+            }
+            SetFade(1f);
+            StageRun.RequestedStage = stage;
+            GameDirector.LoadStageScene(scene);
+        }
+
+        void SetFade(float a) { var c = _fade.color; c.a = Mathf.Clamp01(a); _fade.color = c; }
 
         public void Quit()
         {
@@ -80,24 +107,31 @@ namespace BoneSquadKiting.UI
             Root.transform.SetParent(transform, false);
             var canvas = Root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 1000;                       // over the game HUD, under the stage fade
-            var scaler = Root.GetComponent<CanvasScaler>();
+                        var scaler = Root.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.5f;
 
-            var dim = MakeImage(Root.transform, "Dim", new Color(0f, 0f, 0f, 0.55f));
-            dim.rectTransform.anchorMin = Vector2.zero; dim.rectTransform.anchorMax = Vector2.one;
-            dim.rectTransform.offsetMin = dim.rectTransform.offsetMax = Vector2.zero;
+            // Title and buttons sit to the left, so the middle of the screen is free for the hand.
+            _widgets = new GameObject("Widgets", typeof(RectTransform));
+            _widgets.transform.SetParent(Root.transform, false);
+            var wr = (RectTransform)_widgets.transform;
+            wr.anchorMin = Vector2.zero; wr.anchorMax = Vector2.one; wr.offsetMin = wr.offsetMax = Vector2.zero;
 
-            var title = MakeText(Root.transform, "Title", font, 72, Title);
+            var title = MakeText(_widgets.transform, "Title", font, 72, Title);
             title.fontStyle = FontStyle.Bold;
-            Place(title.rectTransform, new Vector2(0f, 230f), new Vector2(1200f, 120f));
+            title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            title.rectTransform.anchoredPosition = new Vector2(0f, -130f); title.rectTransform.sizeDelta = new Vector2(1200f, 120f);
 
-            NewGameButton = MakeButton("New Game", font, "새 게임", 60f, out _);
-            ContinueButton = MakeButton("Continue", font, "이어하기", -30f, out var continueLabel);
-            QuitButton = MakeButton("Quit", font, "게임 종료", -120f, out _);
+            NewGameButton = MakeButton("New Game", font, "새 게임", 90f, out _);
+            ContinueButton = MakeButton("Continue", font, "이어하기", 0f, out var continueLabel);
+            QuitButton = MakeButton("Quit", font, "게임 종료", -90f, out _);
             ContinueLabel = continueLabel;
+
+            _fade = MakeImage(Root.transform, "Fade", new Color(0f, 0f, 0f, 0f));
+            _fade.raycastTarget = false;
+            _fade.rectTransform.anchorMin = Vector2.zero; _fade.rectTransform.anchorMax = Vector2.one;
+            _fade.rectTransform.offsetMin = _fade.rectTransform.offsetMax = Vector2.zero;
             NewGameButton.onClick.AddListener(NewGame);
             ContinueButton.onClick.AddListener(Continue);
             QuitButton.onClick.AddListener(Quit);
@@ -105,8 +139,9 @@ namespace BoneSquadKiting.UI
 
         Button MakeButton(string name, Font font, string text, float y, out Text label)
         {
-            var img = MakeImage(Root.transform, name, new Color(0.12f, 0.16f, 0.22f, 0.95f));
-            Place(img.rectTransform, new Vector2(0f, y), new Vector2(420f, 72f));
+            var img = MakeImage(_widgets.transform, name, new Color(0.12f, 0.16f, 0.22f, 0.95f));
+            img.rectTransform.anchorMin = img.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            img.rectTransform.anchoredPosition = new Vector2(330f, y); img.rectTransform.sizeDelta = new Vector2(420f, 72f);
             var button = img.gameObject.AddComponent<Button>();
             button.targetGraphic = img;
             var colors = button.colors;

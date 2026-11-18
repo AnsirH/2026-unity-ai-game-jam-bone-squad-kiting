@@ -42,8 +42,12 @@ namespace BoneSquadKiting.Stage
         public string NextScene = "";
         [Tooltip("Seconds the screen takes to go dark, and again to come back.")]
         public float FadeSeconds = 0.35f;
-        [Tooltip("Show the main menu (new game / continue / quit) on this scene's title screen.")]
-        public bool ShowMainMenu = true;
+
+        /// <summary>
+        /// Set by the main menu before it loads this scene: the stage to begin on, instead of StartStage.
+        /// Used once, then forgotten (-1).
+        /// </summary>
+        public static int RequestedStage = -1;
 
         /// <summary>Index of the stage being played.</summary>
         public int Current { get; private set; }
@@ -65,7 +69,8 @@ namespace BoneSquadKiting.Stage
         void Awake()
         {
             if (Stages.Count == 0) { Debug.LogError("StageRun: the stage list is empty.", this); return; }
-            Current = Mathf.Clamp(StartStage, 0, Stages.Count - 1);
+            Current = Mathf.Clamp(RequestedStage >= 0 ? RequestedStage : StartStage, 0, Stages.Count - 1);
+            RequestedStage = -1;
             ShowOnly(Current);
             Kit = StageKit.Spawn(gameObject.scene);
             if (Kit == null) return;
@@ -74,11 +79,6 @@ namespace BoneSquadKiting.Stage
             Kit.gameObject.SetActive(true);      // StageSetup bakes the walk area and seats the squad
             FocusCamera();
             StageEntered?.Invoke(Current);
-            if (ShowMainMenu)
-            {
-                Kit.Director.HasMainMenu = true;
-                gameObject.AddComponent<BoneSquadKiting.UI.MainMenu>().Run = this;
-            }
         }
 
         /// <summary>Switch the maps so only one stage's is on. Also usable in the editor to look at one map.</summary>
@@ -177,23 +177,6 @@ namespace BoneSquadKiting.Stage
         {
             if (Switching || IsLast || Kit == null) return;
             StartCoroutine(SwitchTo(Current + 1));
-        }
-
-        /// <summary>
-        /// Start playing from a stage's start point with a full squad (the main menu's new game and
-        /// continue). A number past the last map means the scene that follows the maps.
-        /// </summary>
-        public void StartAt(int index)
-        {
-            if (Switching || Kit == null) return;
-            if (index >= Stages.Count)
-            {
-                if (string.IsNullOrEmpty(NextScene)) index = Stages.Count - 1;
-                else { Game.GameDirector.LoadStageScene(NextScene); return; }
-            }
-            index = Mathf.Max(0, index);
-            if (index == Current) Kit.Director.Restart();      // already set up and on screen
-            else StartCoroutine(SwitchTo(index));
         }
 
         IEnumerator SwitchTo(int index)

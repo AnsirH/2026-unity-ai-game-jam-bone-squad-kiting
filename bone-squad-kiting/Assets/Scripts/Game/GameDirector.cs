@@ -37,8 +37,6 @@ namespace BoneSquadKiting.Game
         [System.NonSerialized] public StageRun Run;
         /// <summary>While true nothing advances and orders are ignored (a stage switch is under way).</summary>
         [System.NonSerialized] public bool Frozen;
-        /// <summary>Set when a main menu stands in for the HUD's start overlay on the title screen.</summary>
-        [System.NonSerialized] public bool HasMainMenu;
 
         // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
         static bool _continueRun;
@@ -205,7 +203,7 @@ namespace BoneSquadKiting.Game
         // A cleared stage moves "continue" on to the next one; clearing the last stage ends the save.
         void SaveProgress()
         {
-            if (Run != null) GameProgress.Save(Run.Current + 1);
+            if (Run != null) GameProgress.Save(Run.Current + 1, Run.IsLast ? Run.NextScene : "");
             else if (IsFinalStage && HasBoss) GameProgress.Clear();   // the boss is down: the game is finished
         }
 

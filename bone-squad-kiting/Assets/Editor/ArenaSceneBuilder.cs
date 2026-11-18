@@ -306,6 +306,7 @@ namespace BoneSquadKiting.EditorTools
         internal static void SetBuildScenes()
         {
             var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+            if (System.IO.File.Exists(MainMenuSceneBuilder.Path)) scenes.Add(new EditorBuildSettingsScene(MainMenuSceneBuilder.Path, true));   // first: the game opens on it
             if (System.IO.File.Exists(StageKitBuilder.GamePath)) scenes.Add(new EditorBuildSettingsScene(StageKitBuilder.GamePath, true));
             scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
