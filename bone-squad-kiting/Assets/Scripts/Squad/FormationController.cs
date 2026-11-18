@@ -33,6 +33,15 @@ namespace BoneSquadKiting.Squad
         /// </summary>
         public Vector2 LeaderFacing = new(0f, -1f);
 
+        /// <summary>
+        /// Where the ring's leader place points right now. It swings toward <see cref="LeaderFacing"/>, and the
+        /// whole ring turns with it: units walk around the circle instead of the leader cutting across it.
+        /// </summary>
+        public Vector2 RingFacing { get; private set; } = new(0f, -1f);
+
+        [Tooltip("How fast the ring turns to bring the leader to the front, as a multiple of the pace that moves the rim at the squad's travel speed. 0 = instantly.")]
+        public float RingTurnFactor = 1f;
+
         public float SeatSize = 0.5f;   // spacing of the seats pressed units take along a wall (about one unit spacing)
 
         [Header("Movement feel (overridden by the GameTuning asset when the director has one)")]
@@ -79,7 +88,7 @@ namespace BoneSquadKiting.Squad
             Anchor = Destination = StartAnchor;
             Formation = DefaultFormation; _slotsFormation = DefaultFormation;
             RotationDegrees = 0; TargetRotationDegrees = 0;
-            LeaderFacing = new Vector2(0f, -1f);
+            LeaderFacing = RingFacing = new Vector2(0f, -1f);
             Order = SquadOrder.Move(StartAnchor);
             var slots = FormationSlots.Generate(def, GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
@@ -97,6 +106,7 @@ namespace BoneSquadKiting.Squad
             var def = Find(id);
             if (def == null) return false;
             Formation = id;
+            RingFacing = LeaderFacing;   // a fresh ring forms with the leader already at the front
             ApplySlots(def);
             return true;
         }
@@ -137,7 +147,7 @@ namespace BoneSquadKiting.Squad
             for (int i = 0; i < slots.Length; i++)
             {
                 float score = ring
-                    ? -Vector2.Dot(slots[i].normalized, LeaderFacing)   // most aligned with the facing
+                    ? -Vector2.Dot(slots[i].normalized, RingFacing)     // the place at the ring's front
                     : slots[i].sqrMagnitude;                            // closest to the center
                 if (score < bestScore) { bestScore = score; best = i; }
             }
@@ -154,7 +164,10 @@ namespace BoneSquadKiting.Squad
             if (dir.sqrMagnitude < 1e-4f) return;   // clicked on the anchor itself: keep the last direction
             LeaderFacing = dir.normalized;
             var def = Find(Formation);
-            if (HasLeader && def != null && def.Mode == FormationMode.Ring) ApplySlots(def);
+            if (!HasLeader || def == null || def.Mode != FormationMode.Ring) return;
+            if (RingTurnFactor > 0f) return;   // Tick turns the ring toward the new facing
+            RingFacing = LeaderFacing;
+            ApplySlots(def);
         }
 
         /// <summary>Stop where the anchor is now.</summary>
@@ -177,6 +190,18 @@ namespace BoneSquadKiting.Squad
             var alive = Units.FindAll(u => !u.Dead);
             if (alive.Count == 0) return;
             var slots = FormationSlots.Rotate(FormationSlots.Generate(def, alive.Count), RotationDegrees);
+            if (def.Mode == FormationMode.Ring && HasLeader && alive.Count > 0)
+            {
+                // A ring with a leader is laid out from its front: one place exactly at RingFacing, the rest
+                // evenly around. (A circle looks the same at any wheel angle, so that angle is not used here.)
+                float r = FormationSlots.RingRadius(def.Radius, alive.Count);
+                float a0 = Mathf.Atan2(RingFacing.y, RingFacing.x);
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    float a = a0 + Mathf.PI * 2f * i / slots.Length;
+                    slots[i] = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
+                }
+            }
 
             // The leader's slot is fixed and taken out before the others are matched to what is left.
             var leader = alive.Find(u => u.IsLeader);
@@ -250,6 +275,20 @@ namespace BoneSquadKiting.Squad
                 RotationDegrees = Mathf.Repeat(Mathf.MoveTowardsAngle(RotationDegrees, TargetRotationDegrees, RotationSpeed * dt), 360f);
                 var turning = Find(Formation);
                 if (turning != null) ApplySlots(turning);
+            }
+
+            // A ring turns to bring its leader to the front, by the shorter way round.
+            var ringDef = HasLeader ? Find(Formation) : null;
+            if (ringDef != null && ringDef.Mode == FormationMode.Ring && Vector2.Dot(RingFacing, LeaderFacing) < 0.99999f)
+            {
+                float radius = Mathf.Max(0.5f, FormationSlots.RingRadius(ringDef.Radius, AliveCount));
+                float maxTurn = RingTurnFactor > 0f ? AnchorSpeed / radius * RingTurnFactor * dt * Mathf.Rad2Deg : 360f;   // degrees this tick
+                float turn = Mathf.Clamp(Vector2.SignedAngle(RingFacing, LeaderFacing), -maxTurn, maxTurn) * Mathf.Deg2Rad;
+                float cos = Mathf.Cos(turn), sin = Mathf.Sin(turn);
+                RingFacing = new Vector2(RingFacing.x * cos - RingFacing.y * sin, RingFacing.x * sin + RingFacing.y * cos);
+                if (Mathf.Abs(Vector2.SignedAngle(RingFacing, LeaderFacing)) < 0.01f) RingFacing = LeaderFacing;
+                RingFacing.Normalize();
+                ApplySlots(ringDef);
             }
 
             Vector2 diff = Destination - Anchor;

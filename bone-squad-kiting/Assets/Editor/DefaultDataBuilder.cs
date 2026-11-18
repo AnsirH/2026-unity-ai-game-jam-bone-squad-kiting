@@ -91,7 +91,7 @@ namespace BoneSquadKiting.EditorTools
                 // State names as they are in the models' Animators today. Missing ones are skipped at runtime.
                 // The soldier shoots on an upper-body layer that is always on, so there is no attack state to play.
                 art.UnitStates = new AnimStates { Idle = "Idle", Run = "Soldier_MeshyAI_Run02", Attack = "", Die = "" };
-                art.LeaderStates = new AnimStates { Idle = "", Run = "Soldier_MeshyAI_Run02", Attack = "Commander_Thrrow", Die = "" };
+                art.LeaderStates = new AnimStates { Idle = "Idle", Run = "Soldier_MeshyAI_Run02", Attack = "Commander_Thrrow", Die = "" };
                 EditorUtility.SetDirty(art);
             }
 

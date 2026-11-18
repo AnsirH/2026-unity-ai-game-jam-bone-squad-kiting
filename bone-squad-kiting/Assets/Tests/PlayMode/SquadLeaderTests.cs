@@ -45,6 +45,7 @@ public class SquadLeaderTests
         Assert.That(Vector2.Dot(Leader.Slot.normalized, new Vector2(0, -1)), Is.GreaterThan(0.95f), "default: toward -z");
 
         _fc.FaceToward(_fc.Anchor + new Vector2(10f, 0f));
+        for (int i = 0; i < 300; i++) _fc.Tick(0.02f);        // the ring turns there, it does not jump
         Assert.That(Vector2.Dot(Leader.Slot.normalized, new Vector2(1, 0)), Is.GreaterThan(0.95f), "moved round to face the click");
 
         _fc.FaceToward(_fc.Anchor);                           // a click on the anchor carries no direction
@@ -114,8 +115,11 @@ public class SquadLeaderTests
         dir.Restart();
         dir.ChangeFormation("ring");
         dir.IssueOrder(SquadOrder.Move(_fc.Anchor + new Vector2(-6f, 0f)));
+        Assert.That(Vector2.Dot(_fc.LeaderFacing, new Vector2(-1, 0)), Is.GreaterThan(0.95f), "the order sets where the ring should face");
+        _fc.Halt(); for (int i = 0; i < 300; i++) _fc.Tick(0.02f);   // the ring turns there
         Assert.That(Vector2.Dot(_fc.Units[0].Slot.normalized, new Vector2(-1, 0)), Is.GreaterThan(0.95f));
         dir.IssueOrder(SquadOrder.AttackMove(_fc.Anchor + new Vector2(0f, 6f)));
+        _fc.Halt(); for (int i = 0; i < 300; i++) _fc.Tick(0.02f);
         Assert.That(Vector2.Dot(_fc.Units[0].Slot.normalized, new Vector2(0, 1)), Is.GreaterThan(0.95f), "attack-move clicks count too");
     }
 
@@ -130,38 +134,51 @@ public class SquadLeaderTests
     }
 
     [Test]
-    public void Ring_AClickInANewDirection_ShiftsUnitsByOnePlaceAtMost_AndNeverSwapsThem()
+    public void Ring_TurnsToBringTheLeaderToTheFront_UnitsKeepTheirPlacesAndNobodyCutsAcross()
     {
         var fc = SquadTestRig.MakeFc(leader: true);
         fc.SetFormation("ring");
-        for (int i = 0; i < 200; i++) fc.Tick(0.02f);                       // everyone settles on the ring
-        float spacing = float.MaxValue;
-        foreach (var u in fc.Units) if (!u.IsLeader && u != fc.Units[1]) spacing = Mathf.Min(spacing, (u.Slot - fc.Units[1].Slot).magnitude);
+        for (int i = 0; i < 300; i++) fc.Tick(0.02f);                       // everyone settles on the ring
+        float radius = fc.Units[0].Slot.magnitude;
+        // Each unit's place relative to the leader, as an angle around the ring.
+        float[] offset = new float[fc.Units.Count];
+        for (int i = 0; i < offset.Length; i++) offset[i] = Vector2.SignedAngle(fc.Units[0].Slot, fc.Units[i].Slot);
 
         var rng = new System.Random(7);
-        for (int click = 0; click < 40; click++)
+        for (int click = 0; click < 12; click++)
         {
-            var before = new Vector2[fc.Units.Count];
-            for (int i = 0; i < before.Length; i++) before[i] = fc.Units[i].Slot;
             float a = (float)(rng.NextDouble() * Mathf.PI * 2f);
             fc.FaceToward(fc.Anchor + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 5f);
-
-            int moved = 0;
-            for (int i = 1; i < before.Length; i++)
+            for (int t = 0; t < 500; t++)
             {
-                float d = (fc.Units[i].Slot - before[i]).magnitude;
-                Assert.That(d, Is.LessThan(spacing * 1.05f), "a unit steps to the next place at most");
-                if (d > 1e-3f) moved++;
+                fc.Tick(0.02f);
+                foreach (var u in fc.Units)
+                {
+                    Assert.That(u.Slot.magnitude, Is.EqualTo(radius).Within(1e-3f), "every place stays on the circle");
+                    float fromCenter = (new Vector2(u.X, u.Z) - fc.Anchor).magnitude;
+                    Assert.That(fromCenter, Is.GreaterThan(radius * 0.6f), "nobody cuts across the inside of the ring");
+                }
+                for (int i = 1; i < offset.Length; i++)
+                    Assert.That(Mathf.Abs(Mathf.DeltaAngle(offset[i], Vector2.SignedAngle(fc.Units[0].Slot, fc.Units[i].Slot))), Is.LessThan(0.5f),
+                        "units keep their place relative to the leader: the ring turns as one");
             }
-            // Only the units between the leader's old and new place move: never more than half the ring.
-            Assert.That(moved, Is.LessThanOrEqualTo(12));
-            var again = new Vector2[before.Length];
-            for (int i = 0; i < again.Length; i++) again[i] = fc.Units[i].Slot;
-            fc.FaceToward(fc.Anchor + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 9f);   // same direction, clicked again
-            for (int i = 0; i < again.Length; i++) Assert.AreEqual(again[i], fc.Units[i].Slot, "the same direction changes nothing");
-            if (click % 3 == 0) for (int i = 0; i < 5; i++) fc.Tick(0.02f);            // sometimes clicked while still walking
+            Assert.That(Vector2.Dot(fc.Units[0].Slot.normalized, fc.LeaderFacing), Is.GreaterThan(0.999f), "the leader ends at the front");
+            var leaderPos = new Vector2(fc.Units[0].X, fc.Units[0].Z) - fc.Anchor;
+            Assert.That(Vector2.Dot(leaderPos.normalized, fc.LeaderFacing), Is.GreaterThan(0.99f), "and has walked there");
         }
-        Assert.That(Vector2.Dot(fc.Units[0].Slot.normalized, fc.LeaderFacing), Is.GreaterThan(0.95f), "the leader is on the rim, facing the click");
+
+        // The exactly opposite direction still turns round the rim (it has to pick a side).
+        fc.FaceToward(fc.Anchor - fc.LeaderFacing * 5f);
+        for (int t = 0; t < 500; t++)
+        {
+            fc.Tick(0.02f);
+            Assert.That((new Vector2(fc.Units[0].X, fc.Units[0].Z) - fc.Anchor).magnitude, Is.GreaterThan(radius * 0.6f));
+        }
+        Assert.That(Vector2.Dot(fc.Units[0].Slot.normalized, fc.LeaderFacing), Is.GreaterThan(0.999f));
+
+        fc.RingTurnFactor = 0f;                                             // 0 = the old instant behaviour
+        fc.FaceToward(fc.Anchor + new Vector2(3f, 4f));
+        Assert.That(Vector2.Dot(fc.Units[0].Slot.normalized, fc.LeaderFacing), Is.GreaterThan(0.999f));
         Object.DestroyImmediate(fc.gameObject);
     }
 }
