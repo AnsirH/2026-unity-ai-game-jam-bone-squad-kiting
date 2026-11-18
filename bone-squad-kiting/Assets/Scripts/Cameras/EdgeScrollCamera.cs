@@ -11,6 +11,8 @@ namespace BoneSquadKiting.Cameras
     /// </summary>
     public class EdgeScrollCamera : MonoBehaviour
     {
+        [Tooltip("Shared numbers for every stage. When set, it overrides Scroll Speed, Edge Width and Distance below.")]
+        public BoneSquadKiting.Data.GameTuning Tuning;
         public float ScrollSpeed = 14f;   // world units per second
         public float EdgeWidth = 18f;     // pixels from the screen edge that count as "at the edge"
         public float Distance = 34f;      // from the look-at point, along the view direction
@@ -96,6 +98,7 @@ namespace BoneSquadKiting.Cameras
         /// <summary>Clamp the look-at point and place the camera for it.</summary>
         public void Apply()
         {
+            if (Tuning != null) { ScrollSpeed = Tuning.CameraScrollSpeed; EdgeWidth = Tuning.CameraEdgeWidth; Distance = Tuning.CameraDistance; }
             LookAt = new Vector2(Mathf.Clamp(LookAt.x, BoundsMin.x, BoundsMax.x), Mathf.Clamp(LookAt.y, BoundsMin.y, BoundsMax.y));
             if (Gates != null && !Focusing)   // a directed look (mini boss intro) may go past a closed gate
                 foreach (var gate in Gates) if (gate != null) LookAt = gate.Clamp(LookAt);

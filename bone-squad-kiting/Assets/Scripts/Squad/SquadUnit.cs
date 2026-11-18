@@ -10,6 +10,7 @@ namespace BoneSquadKiting.Squad
         public bool IsLeader;                      // stands at the formation's center; others take its damage (see SquadDamage)
         public float X, Z;
         public Vector2 Slot;                       // offset from the anchor, Vector2(x, z)
+        public Vector2 Facing = new(0f, -1f);      // which way it looks: where it walks, or what it last shot at
         public float Hp = GameConstants.UnitMax;
         public bool Dead;
         public bool Reviving;                      // busy bringing a dead unit back; cannot fire (see FireRules)
@@ -34,6 +35,7 @@ namespace BoneSquadKiting.Squad
                 float speed = GameConstants.UnitBaseSpeed
                               + Mathf.Min(GameConstants.UnitSpeedDistCap, dist * GameConstants.UnitSpeedDistGain);
                 float step = Mathf.Min(dist, speed * dt);
+                Facing = new Vector2(ux, uz) / dist;
                 X += ux / dist * step;
                 Z += uz / dist * step;
             }

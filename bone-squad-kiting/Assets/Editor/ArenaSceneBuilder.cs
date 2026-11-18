@@ -183,10 +183,13 @@ namespace BoneSquadKiting.EditorTools
             var director = game.AddComponent<GameDirector>();
             director.Squad = squad;
             director.UnitFireRange = UnitFireRange; director.SquadEngageRange = SquadEngageRange;
+            var tuning = AssetDatabase.LoadAssetAtPath<GameTuning>("Assets/Data/GameTuning.asset");
+            director.Tuning = tuning;   // the shared numbers; the two fields above are only the fallback
             director.Sequence = Load<AttackSequence>("Assets/Data/Sequences/BossMain.asset");
             // RTS camera: it does not follow the squad; the mouse at a screen edge slides it over the arena.
             var scroll = camGo.AddComponent<EdgeScrollCamera>();
             scroll.Distance = CameraDistance; scroll.LookAt = CameraStartLookAt;
+            scroll.Tuning = AssetDatabase.LoadAssetAtPath<GameTuning>("Assets/Data/GameTuning.asset");
             scroll.Apply();
 
             // Stage data: walkable grid from the floor collider, a no-go square around the boss, start point.
@@ -220,13 +223,17 @@ namespace BoneSquadKiting.EditorTools
 
             var squadView = new GameObject("Squad View").AddComponent<SquadView>();
             squadView.Squad = squad; squadView.UnitMaterial = unit;
+            var art = AssetDatabase.LoadAssetAtPath<ArtSet>("Assets/Data/Art/ArtSet.asset");
+            squadView.Art = art;
             // Pre-place the squad in its starting layout so it is visible without entering Play mode.
             var startSlots = FormationSlots.Generate(squad.Formations[0], GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
             {
-                var u = SquadView.BuildUnit(i, squadView.UnitScale, unit);
+                var u = SquadView.BuildUnit(i, art, squadView.UnitScale, squadView.LeaderScale, unit);
                 u.transform.SetParent(squadView.transform, false);
-                u.transform.position = new Vector3(squad.Anchor.x + startSlots[i].x, squadView.UnitScale, squad.Anchor.y + startSlots[i].y);
+                bool model = u.GetComponent<MeshFilter>() == null;   // a model stands on the ground; a capsule floats at its center
+                u.transform.position = new Vector3(squad.Anchor.x + startSlots[i].x, model ? 0f : squadView.UnitScale, squad.Anchor.y + startSlots[i].y);
+                if (model) u.transform.rotation = Quaternion.Euler(0f, 180f + (art != null ? art.ModelYawOffset : 0f), 0f);   // facing the far end
             }
 
             var shotView = new GameObject("Shot View").AddComponent<ShotView>();

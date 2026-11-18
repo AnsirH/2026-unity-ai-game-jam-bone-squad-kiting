@@ -70,6 +70,30 @@ namespace BoneSquadKiting.EditorTools
             Elite("TelekineticMageGate", "염동력 마법사", seq.Patterns[1], rotation: 40f);            // burst, turning gate
             Elite("TelekineticMageQuadrant", "염동력 마법사", seq.Patterns[2], rotation: -40f);       // burst, turning quadrants, the other way
 
+            // The shared tuning asset. Created once with the values in use so far; after that it is edited by
+            // hand (often while playing), so an existing one is left alone.
+            if (AssetDatabase.LoadAssetAtPath<GameTuning>(Root + "/GameTuning.asset") == null)
+            {
+                var tuning = Upsert<GameTuning>(Root + "/GameTuning.asset");
+                EditorUtility.SetDirty(tuning);
+            }
+
+            // The shared art set. Created once with the squad models if they are in the project; after that it
+            // is the artists' to edit, so an existing one is left alone.
+            EnsureFolder(Root, "Art");
+            if (AssetDatabase.LoadAssetAtPath<ArtSet>(Root + "/Art/ArtSet.asset") == null)
+            {
+                var art = Upsert<ArtSet>(Root + "/Art/ArtSet.asset");
+                art.UnitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Character/Soldier/Prefabs/Soldier.prefab");
+                art.LeaderPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Character/Commander/Prefabs/Commander.prefab");
+                // The models are much bigger than the game's unit spacing (0.5): shrink them to fit.
+                art.UnitScale = 0.36f; art.LeaderScale = 0.17f;
+                // State names as they are in the models' Animators today. Missing ones are skipped at runtime.
+                art.UnitStates = new AnimStates { Idle = "Idle", Run = "Soldier_Fire_SlowRun", Attack = "Fire", Die = "" };
+                art.LeaderStates = new AnimStates { Idle = "", Run = "Spear_Walk", Attack = "", Die = "" };
+                EditorUtility.SetDirty(art);
+            }
+
             AssetDatabase.SaveAssets();
             Debug.Log("DefaultDataBuilder: wrote 4 formations, 8 patterns, 1 sequence.");
         }

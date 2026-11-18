@@ -74,6 +74,7 @@ namespace BoneSquadKiting.Squad
                     Life = GameConstants.ShotLife, Owner = u.Id, Target = target,
                 });
                 target.Reserved += GameConstants.UnitDamage;
+                u.Facing = dir;   // turn to face what it shoots
                 u.ShotCount++;
             }
 

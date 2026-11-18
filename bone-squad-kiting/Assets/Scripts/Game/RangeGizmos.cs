@@ -22,6 +22,7 @@ namespace BoneSquadKiting.Game
         void OnDrawGizmos()
         {
             if (Director == null || Director.Squad == null) return;
+            if (!Application.isPlaying) Director.ApplyTuning();   // show the shared asset's values while editing
             var squad = Director.Squad;
             var anchor = squad.Anchor;
 

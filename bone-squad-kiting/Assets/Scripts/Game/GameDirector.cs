@@ -35,7 +35,9 @@ namespace BoneSquadKiting.Game
         // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
         static bool _continueRun;
 
-        [Header("Tuning (editable while playing)")]
+        [Header("Tuning")]
+        [Tooltip("Shared numbers for every stage. When set, it overrides the three fields below and the squad's and mobs' tuning.")]
+        public GameTuning Tuning;
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
         [Min(0f)] public float SquadEngageRange = GameConstants.SquadEngageRange;  // from the anchor: attack orders stop here
 
@@ -159,6 +161,7 @@ namespace BoneSquadKiting.Game
                 Waves.Begin(Squad.Grid, Squad.Anchor, end);
             }
             if (BossView != null && Boss != null) BossView.Bind(Boss);
+            ApplyTuning();
             Phase = GamePhase.Play;
             FormationChanged?.Invoke(Squad.Formation);
         }
@@ -243,8 +246,32 @@ namespace BoneSquadKiting.Game
             }
         }
 
+        /// <summary>
+        /// Copy the shared tuning asset's numbers into this stage's systems. Runs every step, so the asset
+        /// can be edited while playing. Without an asset the fields on the components themselves apply.
+        /// </summary>
+        public void ApplyTuning()
+        {
+            if (Tuning == null) return;
+            UnitFireRange = Tuning.UnitFireRange;
+            SquadEngageRange = Tuning.SquadEngageRange;
+            ReviveSeconds = Tuning.ReviveSeconds;
+            if (Squad != null)
+            {
+                Squad.RotationStepDegrees = Tuning.RotationStepDegrees;
+                Squad.RotationSpeed = Tuning.RotationSpeed;
+                Squad.SeatSize = Tuning.SeatSize;
+            }
+            if (Shots != null) { Shots.ThreatRadius = Tuning.ThreatRadius; Shots.AttackMoveRadius = Tuning.AttackMoveRadius; }
+            if (Revives != null) Revives.AppearRadius = Tuning.ReviveAppearRadius;
+            if (Mobs != null) { Mobs.SwitchDistance = Tuning.MobSwitchDistance; Mobs.MaxAlive = Tuning.MobMaxAlive; }
+        }
+
+        void OnValidate() => ApplyTuning();   // keeps the Scene-view range gizmos in step with the asset
+
         void Start()
         {
+            ApplyTuning();
             // Stand the squad on the field before the match starts, so the menu is not an empty arena.
             if (Squad != null && Squad.Units.Count == 0) Squad.Init();
             if (_continueRun) { _continueRun = false; Restart(); }
@@ -304,6 +331,7 @@ namespace BoneSquadKiting.Game
         public void Step(float dt)
         {
             if (Phase != GamePhase.Play || Paused) return;
+            ApplyTuning();
             if (InCutscene)
             {
                 _cutsceneRemaining -= dt;   // nothing else advances: nobody gets hit while the camera is away
