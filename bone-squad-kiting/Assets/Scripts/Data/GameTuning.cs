@@ -16,6 +16,14 @@ namespace BoneSquadKiting.Data
         [Min(0f)] public float ThreatRadius = 4f;         // a holding unit shoots mobs this close before anything else
         [Min(0f)] public float AttackMoveRadius = 4f;     // attack-move prefers mobs this close to the clicked point
 
+        [Header("Movement")]
+        [Min(0f)] public float AnchorSpeed = 7.4f;        // how fast the formation's center travels
+        [Min(0f)] public float UnitBaseSpeed = 9.7f;      // a unit's speed toward its slot; must exceed AnchorSpeed or units trail behind
+        [Min(0f)] public float UnitSpeedDistGain = 2.4f;  // extra unit speed per unit of distance from its slot (catching up)...
+        [Min(0f)] public float UnitSpeedDistCap = 9f;     // ...up to this much
+        [Min(0.001f)] public float AnchorArrive = 0.024f; // closer than this to the destination = the squad has arrived
+        [Min(0.001f)] public float UnitArrive = 0.015f;   // closer than this to its slot = the unit is standing and may fire
+
         [Header("Formation")]
         public float RotationStepDegrees = 15f;           // one mouse-wheel notch
         [Tooltip("Degrees per second the formation turns toward the wheel's angle. 0 = instantly.")]

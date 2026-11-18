@@ -35,6 +35,14 @@ namespace BoneSquadKiting.Squad
 
         public float SeatSize = 0.5f;   // spacing of the seats pressed units take along a wall (about one unit spacing)
 
+        [Header("Movement feel (overridden by the GameTuning asset when the director has one)")]
+        public float AnchorSpeed = GameConstants.AnchorSpeed;             // how fast the formation's center travels
+        public float AnchorArrive = GameConstants.AnchorArrive;           // closer than this to the destination = arrived
+        public float UnitBaseSpeed = GameConstants.UnitBaseSpeed;         // a unit's speed toward its slot when it is on it
+        public float UnitSpeedDistGain = GameConstants.UnitSpeedDistGain; // extra speed per unit of distance from its slot...
+        public float UnitSpeedDistCap = GameConstants.UnitSpeedDistCap;   // ...up to this much
+        public float UnitArrive = GameConstants.UnitArrive;               // closer than this to its slot = standing (can fire)
+
         FlowField _route;               // path to the current destination, used when the straight line is blocked
         readonly List<Vector2> _slotBuffer = new();
         readonly List<SquadUnit> _aliveBuffer = new();
@@ -54,7 +62,7 @@ namespace BoneSquadKiting.Squad
             get { int n = 0; foreach (var u in Units) if (!u.Dead) n++; return n; }
         }
 
-        public bool IsMoving => (Destination - Anchor).magnitude > GameConstants.AnchorArrive;
+        public bool IsMoving => (Destination - Anchor).magnitude > AnchorArrive;
 
         public FormationDefinition Find(string id) => Formations.Find(f => f != null && f.Id == id);
 
@@ -218,9 +226,9 @@ namespace BoneSquadKiting.Squad
 
             Vector2 diff = Destination - Anchor;
             float dist = diff.magnitude;
-            if (dist > GameConstants.AnchorArrive)
+            if (dist > AnchorArrive)
             {
-                float step = Mathf.Min(dist, GameConstants.AnchorSpeed * dt);
+                float step = Mathf.Min(dist, AnchorSpeed * dt);
                 var dir = diff / dist;
                 if (Grid != null && _route != null && !Grid.LineOpen(Anchor, Destination))
                 {
@@ -236,6 +244,8 @@ namespace BoneSquadKiting.Squad
                 }
                 Anchor = next;
             }
+
+            foreach (var u in Units) { u.BaseSpeed = UnitBaseSpeed; u.SpeedDistGain = UnitSpeedDistGain; u.SpeedDistCap = UnitSpeedDistCap; u.Arrive = UnitArrive; }
 
             if (Grid == null)
             {

@@ -32,6 +32,7 @@ namespace BoneSquadKiting.EditorTools
         public const string KitPath = "Assets/Resources/StageKit.prefab";
         public const string MarkerDir = "Assets/Prefabs/Stage";
         public const string GuidePath = "Assets/Scenes/StageSetupGuide.unity";
+        public const string MoveTuningPath = "Assets/Scenes/MoveTuning.unity";
 
         [MenuItem("BoneSquadKiting/Rebuild Stage Kit")]
         public static void BuildKit()
@@ -241,6 +242,71 @@ namespace BoneSquadKiting.EditorTools
                 EditorSceneManager.SaveScene(scene, GuidePath);
             });
             Debug.Log("StageKitBuilder: wrote " + GuidePath);
+        }
+
+        /// <summary>
+        /// A playground for tuning how the squad moves: open ground, walls to go around, a slanted edge and a
+        /// narrow passage, plus a dummy that cannot die for checking ranges. No waves, no mini bosses, not in
+        /// the build. Play it and edit Assets/Data/GameTuning.asset in the Inspector.
+        /// </summary>
+        [MenuItem("BoneSquadKiting/Rebuild Move Tuning Scene")]
+        public static void BuildMoveTuning()
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(KitPath) == null) BuildKit();
+            InTempScene(scene =>
+            {
+                var groundMat = A.Lit("GuideGround", A.Hex("#3d5a3a"));
+                var wallMat = A.Lit("GuideProp", A.Hex("#5b5f66"));
+                int obstacle = A.EnsureLayer(A.ObstacleLayer);
+                var map = new GameObject("Map");
+                var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                ground.name = "Ground"; ground.transform.SetParent(map.transform, false);
+                ground.transform.localScale = new Vector3(8f, 1f, 6f);   // 80 x 60
+                ground.GetComponent<Renderer>().sharedMaterial = groundMat;
+                void Wall(string n, float x, float z, float sx, float sz, float yaw = 0f)
+                {
+                    var b = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    b.name = n; b.transform.SetParent(map.transform, false);
+                    b.transform.position = new Vector3(x, 0.75f, z); b.transform.localScale = new Vector3(sx, 1.5f, sz);
+                    b.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                    b.layer = obstacle;                                   // walls block by collider, no outline needed
+                    b.GetComponent<Renderer>().sharedMaterial = wallMat;
+                }
+                Wall("Wall (long, go around)", -6f, 8f, 16f, 1.5f);
+                Wall("Pillar 1", 10f, 12f, 3f, 3f);
+                Wall("Pillar 2", 16f, 6f, 3f, 3f);
+                Wall("Slanted wall", -18f, -2f, 14f, 1.5f, 35f);
+                Wall("Passage left", 12f, -10f, 12f, 8f);                 // 3 wide gap between these two:
+                Wall("Passage right", 27f, -10f, 12f, 8f);                // narrower than the formation
+                Wall("Dead end back", 30f, 14f, 8f, 1.5f);
+                Wall("Dead end side A", 26f, 17f, 1.5f, 6f);
+                Wall("Dead end side B", 34f, 17f, 1.5f, 6f);
+
+                var lightGo = new GameObject("Directional Light");
+                var light = lightGo.AddComponent<Light>(); light.type = LightType.Directional; light.intensity = 1f;
+                lightGo.transform.rotation = Quaternion.Euler(55f, 150f, 0f);
+
+                var markers = new GameObject("Stage Markers");
+                var start = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(MarkerDir + "/Stage Start.prefab"), scene);
+                start.transform.SetParent(markers.transform, false);
+                start.transform.position = new Vector3(0f, 0f, 20f);
+                start.GetComponent<StageStart>().StageTitle = "Move Tuning";
+                // The playable area, with one slanted edge (south-west corner cut off).
+                Outline("Walk Area (Include)", WalkOutlineMode.Include, Vector3.zero,
+                    new Vector2(-38, 28), new Vector2(38, 28), new Vector2(38, -28), new Vector2(-14, -28), new Vector2(-38, -6))
+                    .transform.SetParent(markers.transform, true);
+
+                var dummy = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                dummy.name = "Training Dummy (cannot die)";
+                dummy.transform.position = new Vector3(-22f, 1f, 16f); dummy.transform.localScale = new Vector3(1.6f, 1f, 1.6f);
+                dummy.layer = A.EnsureLayer(A.EnemyLayer);
+                dummy.GetComponent<Renderer>().sharedMaterial = A.Lit("MiniBoss", A.Hex("#c9722a"), A.Hex("#ff8a2a") * 1.4f);
+                dummy.AddComponent<EnemyRef>();
+                dummy.AddComponent<TrainingDummy>();
+
+                EditorSceneManager.SaveScene(scene, MoveTuningPath);
+            });
+            Debug.Log("StageKitBuilder: wrote " + MoveTuningPath);
         }
 
         // The how-to, written on screen (Game view) so it is in front of whoever opens the scene.

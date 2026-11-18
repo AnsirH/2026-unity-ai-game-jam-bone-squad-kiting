@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ArtSet
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.ArtSet
   UnitPrefab: {fileID: 2410664768326594577, guid: 098688f04a233416d89062c6917b2931, type: 3}
-  UnitScale: 0.36
+  UnitScale: 0.9
   UnitStates:
     Idle: Idle
     Run: Soldier_Fire_SlowRun
@@ -22,7 +22,7 @@ MonoBehaviour:
     Revive: 
     CrossFade: 0.1
   LeaderPrefab: {fileID: 8713152118493524032, guid: 7ac79131680ca4d81a8c25c9c2dc237b, type: 3}
-  LeaderScale: 0.17
+  LeaderScale: 0.35
   LeaderStates:
     Idle: 
     Run: Spear_Walk

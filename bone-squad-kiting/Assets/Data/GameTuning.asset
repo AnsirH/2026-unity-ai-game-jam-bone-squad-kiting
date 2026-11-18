@@ -16,6 +16,12 @@ MonoBehaviour:
   SquadEngageRange: 5
   ThreatRadius: 4
   AttackMoveRadius: 4
+  AnchorSpeed: 7.4
+  UnitBaseSpeed: 9.7
+  UnitSpeedDistGain: 2.4
+  UnitSpeedDistCap: 9
+  AnchorArrive: 0.024
+  UnitArrive: 0.015
   RotationStepDegrees: 15
   RotationSpeed: 0
   SeatSize: 0.5
@@ -23,6 +29,6 @@ MonoBehaviour:
   ReviveAppearRadius: 0.6
   CameraScrollSpeed: 14
   CameraEdgeWidth: 18
-  CameraDistance: 34
+  CameraDistance: 20
   MobSwitchDistance: 5
   MobMaxAlive: 200

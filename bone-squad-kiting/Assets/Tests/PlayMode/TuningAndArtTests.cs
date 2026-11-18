@@ -35,9 +35,16 @@ public class TuningAndArtTests
         _tuning.UnitFireRange = 7f; _tuning.SquadEngageRange = 6f; _tuning.ReviveSeconds = 1.5f;
         _tuning.RotationSpeed = 90f; _tuning.RotationStepDegrees = 30f; _tuning.SeatSize = 0.7f;
         _tuning.ThreatRadius = 2f; _tuning.MobMaxAlive = 50; _tuning.MobSwitchDistance = 9f; _tuning.ReviveAppearRadius = 1.1f;
+        _tuning.AnchorSpeed = 3f; _tuning.UnitBaseSpeed = 5f; _tuning.UnitSpeedDistGain = 1f; _tuning.UnitSpeedDistCap = 2f; _tuning.UnitArrive = 0.05f; _tuning.AnchorArrive = 0.1f;
         _dir.Tuning = _tuning;
         _dir.Restart();
         _dir.Step(0.02f);
+        Assert.AreEqual(3f, _fc.AnchorSpeed); Assert.AreEqual(0.1f, _fc.AnchorArrive);
+        Assert.AreEqual(5f, _fc.Units[3].BaseSpeed); Assert.AreEqual(1f, _fc.Units[3].SpeedDistGain);
+        Assert.AreEqual(2f, _fc.Units[3].SpeedDistCap); Assert.AreEqual(0.05f, _fc.Units[3].Arrive);
+        var before = _fc.Anchor; _fc.SetDestination(_fc.Anchor + new Vector2(5f, 0f)); _dir.Step(0.1f);
+        Assert.That((_fc.Anchor - before).magnitude, Is.EqualTo(0.3f).Within(1e-3f), "the center travels at the asset's speed");
+        _fc.Halt();
 
         Assert.AreEqual(7f, _dir.UnitFireRange); Assert.AreEqual(6f, _dir.SquadEngageRange); Assert.AreEqual(1.5f, _dir.ReviveSeconds);
         Assert.AreEqual(90f, _fc.RotationSpeed); Assert.AreEqual(30f, _fc.RotationStepDegrees); Assert.AreEqual(0.7f, _fc.SeatSize);
