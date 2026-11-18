@@ -68,14 +68,15 @@ namespace BoneSquadKiting.Bosses
         void Resolve(DangerShape shape, float cx, float cz, IList<SquadUnit> units, Boss boss)
         {
             int hit = 0, lost = 0;
+            // Decide who is caught before dealing any damage, so a unit killed by the leader's share
+            // still counts as hit by its own.
+            var caught = new List<SquadUnit>();
             foreach (var u in units)
-            {
-                if (u.Dead || !DangerShapeEval.InDanger(shape, cx, cz, u.X, u.Z)) continue;
-                hit++;
-                u.Hp -= GameConstants.PatternUnitDamage;
-                u.Flash = 1;
-                if (u.Hp <= 0) { u.Dead = true; lost++; }
-            }
+                if (!u.Dead && DangerShapeEval.InDanger(shape, cx, cz, u.X, u.Z)) caught.Add(u);
+            int aliveBefore = 0; foreach (var u in units) if (!u.Dead) aliveBefore++;
+            foreach (var u in caught) SquadDamage.Apply(units, u, GameConstants.PatternUnitDamage);
+            int aliveAfter = 0; foreach (var u in units) if (!u.Dead) aliveAfter++;
+            hit = caught.Count; lost = aliveBefore - aliveAfter;
             Current = null;
             NextAttack = (boss != null && boss.HpFrac < GameConstants.FastAttackHpFrac)
                 ? GameConstants.NextAttackPhase2 : GameConstants.NextAttackPhase1;

@@ -9,6 +9,7 @@ namespace BoneSquadKiting.Squad
         public FormationController Squad;
         public Material UnitMaterial;
         public float UnitScale = 0.34f;
+        public float LeaderScale = 1.4f;   // the squad leader is drawn this much bigger
 
         public Color HitFlashColor = new(3f, 3f, 3f, 1f); // emission while a unit's hit flash is at full
         public Color ReviveColor = new(0.4f, 3f, 0.9f, 1f); // pulsing emission on a unit that is reviving a comrade
@@ -37,7 +38,9 @@ namespace BoneSquadKiting.Squad
                 if (_views[i].gameObject.activeSelf != alive) _views[i].gameObject.SetActive(alive);
                 if (!alive) continue;
                 var u = Squad.Units[i];
-                _views[i].position = new Vector3(u.X, UnitScale, u.Z);
+                float scale = u.IsLeader ? UnitScale * LeaderScale : UnitScale;
+                _views[i].position = new Vector3(u.X, scale, u.Z);
+                if (_views[i].localScale.x != scale) _views[i].localScale = Vector3.one * scale;
 
                 // Brighten units that were just hit; the flash value decays in SquadUnit.MoveToward.
                 while (_renderers.Count <= i) _renderers.Add(_views[_renderers.Count].GetComponent<Renderer>());

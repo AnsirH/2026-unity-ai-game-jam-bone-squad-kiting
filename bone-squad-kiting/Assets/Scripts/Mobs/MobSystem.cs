@@ -100,10 +100,9 @@ namespace BoneSquadKiting.Mobs
                 var target = NearestUnit(squad, m.Pos, m.Def.Radius + UnitRadius + m.Def.AttackReach);
                 if (target == null) continue;
                 m.AttackCd = m.Def.AttackPeriod;
-                target.Hp -= m.Def.AttackDamage;
-                target.Flash = 1f;
-                OnUnitHit?.Invoke(target, m.Def.AttackDamage);
-                if (target.Hp <= 0f) { target.Dead = true; UnitsKilledLastTick++; }
+                var took = SquadDamage.Apply(squad.Units, target, m.Def.AttackDamage);   // the leader's hits land on someone else
+                OnUnitHit?.Invoke(took, m.Def.AttackDamage);
+                if (took.Dead) UnitsKilledLastTick++;
             }
         }
 

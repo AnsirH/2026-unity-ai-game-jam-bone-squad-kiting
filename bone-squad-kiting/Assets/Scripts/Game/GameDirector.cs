@@ -142,6 +142,7 @@ namespace BoneSquadKiting.Game
         {
             if (Phase != GamePhase.Play || Paused) return;
             Squad.Order = o;
+            Squad.FaceToward(o.Kind == OrderKind.AttackTarget && o.Target != null ? o.Target.Pos : o.Point);
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
                 bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;

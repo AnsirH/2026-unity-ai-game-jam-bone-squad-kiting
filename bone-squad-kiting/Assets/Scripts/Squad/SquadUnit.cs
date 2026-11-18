@@ -7,6 +7,7 @@ namespace BoneSquadKiting.Squad
     public class SquadUnit
     {
         public int Id;
+        public bool IsLeader;                      // stands at the formation's center; others take its damage (see SquadDamage)
         public float X, Z;
         public Vector2 Slot;                       // offset from the anchor, Vector2(x, z)
         public float Hp = GameConstants.UnitMax;
