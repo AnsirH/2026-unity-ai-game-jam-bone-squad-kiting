@@ -10,6 +10,7 @@ namespace BoneSquadKiting.Squad
     /// moves and turns its root and tells it what the unit is doing (its size, height and materials are
     /// the prefab's own). Without one, each unit is a placeholder capsule that flashes when hit.
     /// </summary>
+    [ExecuteAlways]   // so a scale changed in the art set shows on the placed models without entering Play mode
     public class SquadView : MonoBehaviour
     {
         public FormationController Squad;
@@ -38,6 +39,7 @@ namespace BoneSquadKiting.Squad
 
         void Awake()
         {
+            if (!Application.isPlaying) return;
             // Units already placed under this object (so they show in the editor) are reused in order.
             foreach (Transform child in transform) _views.Add(Wrap(child, _views.Count));
             _block = new MaterialPropertyBlock();
@@ -46,6 +48,7 @@ namespace BoneSquadKiting.Squad
 
         void LateUpdate()
         {
+            if (!Application.isPlaying) { ApplyModelScaleInEditor(); return; }
             if (Squad == null) return;
             while (_views.Count < Squad.Units.Count)
             {
@@ -69,6 +72,8 @@ namespace BoneSquadKiting.Squad
         void DriveModel(View v, SquadUnit u)
         {
             v.Root.position = new Vector3(u.X, 0f, u.Z);
+            var size = ModelScale(Art, u.IsLeader);
+            if (v.Root.localScale != size) v.Root.localScale = size;   // follows the art set, so it can be tuned while playing
             if (u.Facing.sqrMagnitude > 1e-4f)
             {
                 var want = Quaternion.LookRotation(new Vector3(u.Facing.x, 0f, u.Facing.y)) * Quaternion.Euler(0f, Art.ModelYawOffset, 0f);
@@ -97,6 +102,28 @@ namespace BoneSquadKiting.Squad
                 v.Capsule.SetPropertyBlock(_block);
             }
             else if (v.Capsule.HasPropertyBlock()) v.Capsule.SetPropertyBlock(null);
+        }
+
+        /// <summary>The size a unit model should have: its prefab's own scale times the art set's multiplier.</summary>
+        public static Vector3 ModelScale(ArtSet art, bool leader)
+        {
+            bool useLeader = leader && art.LeaderPrefab != null;
+            var prefab = useLeader ? art.LeaderPrefab : art.UnitPrefab;
+            return prefab.transform.localScale * (useLeader ? art.LeaderScale : art.UnitScale);
+        }
+
+        // Outside Play mode: keep the models that are placed in the scene at the art set's current size.
+        void ApplyModelScaleInEditor()
+        {
+            if (Art == null || Art.UnitPrefab == null) return;
+            bool hasLeader = Squad == null || Squad.HasLeader;
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (child.GetComponent<MeshFilter>() != null) continue;   // a placeholder capsule, not a model
+                var size = ModelScale(Art, i == 0 && hasLeader);
+                if (child.localScale != size) child.localScale = size;
+            }
         }
 
         // Work out what kind of view an object is: a model (it gets a UnitVisual if the prefab has none) or a capsule.
@@ -131,7 +158,7 @@ namespace BoneSquadKiting.Squad
             {
                 var model = Instantiate(prefab);
                 model.name = (leader ? "Leader " : "Unit ") + index;
-                model.transform.localScale = prefab.transform.localScale * (leader && art.LeaderPrefab != null ? art.LeaderScale : art.UnitScale);
+                model.transform.localScale = ModelScale(art, leader);
                 return model;
             }
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
