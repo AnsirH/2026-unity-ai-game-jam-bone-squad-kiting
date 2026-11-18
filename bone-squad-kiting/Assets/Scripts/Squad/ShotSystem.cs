@@ -12,6 +12,7 @@ namespace BoneSquadKiting.Squad
         public IEnemy Target;
         public bool Heavy;      // thrown by the squad leader: drawn as its own projectile
         public Vector2 Dir;     // which way it is flying
+        public float Damage;    // what it deals when it lands, fixed when it is fired
     }
 
     /// <summary>
@@ -27,6 +28,7 @@ namespace BoneSquadKiting.Squad
         public System.Action<float> OnHit; // damage dealt to an enemy
 
         public float FireRange = GameConstants.FireRange; // per-unit range; the director keeps it in sync
+        public float DamageMultiplier = 1f;    // applied to shots as they are fired (the near-miss buff); the director sets it
         public float ThreatRadius = 4f;        // a stopped unit shoots mobs this close before anything else
         public float AttackMoveRadius = 4f;    // attack-move prefers mobs this close to the clicked point
 
@@ -99,8 +101,8 @@ namespace BoneSquadKiting.Squad
                 if (dist - step < s.Target.Radius)
                 {
                     Release(s);
-                    (s.Target as IDamageable)?.ApplyDamage(GameConstants.UnitDamage);
-                    OnHit?.Invoke(GameConstants.UnitDamage);
+                    (s.Target as IDamageable)?.ApplyDamage(s.Damage);
+                    OnHit?.Invoke(s.Damage);
                     Shots.RemoveAt(i);
                     continue;
                 }
@@ -126,6 +128,7 @@ namespace BoneSquadKiting.Squad
             {
                 X = u.X + dir.x * MuzzleOffset, Z = u.Z + dir.y * MuzzleOffset,
                 Life = GameConstants.ShotLife, Owner = u.Id, Target = target, Heavy = u.IsLeader, Dir = dir,
+                Damage = GameConstants.UnitDamage * DamageMultiplier,
             });
         }
 

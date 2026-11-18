@@ -47,6 +47,14 @@ namespace BoneSquadKiting.Game
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
         [Min(0f)] public float SquadEngageRange = GameConstants.SquadEngageRange;  // from the anchor: attack orders stop here
 
+        [Min(0f)] public float NearMissMargin = 1f;                               // how close outside a zone counts as a near miss (0 = off)
+        [Min(1f)] public float NearMissDamageMultiplier = 1.2f;                   // squad damage while the near-miss buff lasts
+        [Min(0f)] public float NearMissBuffSeconds = 5f;                          // buff length; a new near miss starts it over
+        /// <summary>Seconds of the near-miss damage buff left; 0 = no buff.</summary>
+        public float NearMissBuffLeft { get; private set; }
+        /// <summary>What the squad's shots are multiplied by right now.</summary>
+        public float DamageMultiplier => NearMissBuffLeft > 0f ? NearMissDamageMultiplier : 1f;
+
         [Min(0.1f)] public float ReviveSeconds = 3f;                              // how long one revive takes
 
         [Header("State")]
@@ -105,6 +113,8 @@ namespace BoneSquadKiting.Game
         public event System.Action<string> FormationChanged;
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
+        /// <summary>A zone just missed the squad (units that stood right outside it): the damage buff starts.</summary>
+        public event System.Action<int> NearMissed;
         public event System.Action<int, int> WaveStarted;    // wave number (1-based), mobs spawned
         /// <summary>Focus point, seconds, title to show (may be null), effect prefab to spawn (may be null).</summary>
         public event System.Action<Vector2, float, string, GameObject> CutsceneStarted;
@@ -131,6 +141,7 @@ namespace BoneSquadKiting.Game
                 if (lost > 0) Squad.Reform();
                 PatternResolved?.Invoke(hit, lost);
             };
+            Elites.OnNearMiss += (e, near) => OnNearMiss(near);
             Elites.OnDied += OnMiniBossDied;
             Elites.OnArrived += OnMiniBossArrived;
             // Mini boss markers placed in this director's own scene.
@@ -154,6 +165,7 @@ namespace BoneSquadKiting.Game
 
             Attacks = new BossAttackSystem { Sequence = Sequence };
             Attacks.OnStart += p => PatternStarted?.Invoke(p);
+            Attacks.OnNearMiss += OnNearMiss;
             Attacks.OnResolved += (hit, lost) =>
             {
                 if (lost > 0) Squad.Reform(); // close the formation up around the survivors
@@ -164,6 +176,7 @@ namespace BoneSquadKiting.Game
 
             _hits.Clear();
             TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1; Paused = false;
+            NearMissBuffLeft = 0f;
             Squad.Init();
             if (Waves != null)
             {
@@ -205,6 +218,14 @@ namespace BoneSquadKiting.Game
         {
             if (IsFinalStage) { if (Run != null || HasBoss) GameProgress.Clear(); }   // the last stage is cleared: the game is finished
             else if (Run != null) GameProgress.Save(Run.Current + 1, Run.IsLast ? Run.NextScene : "");
+        }
+
+        // A zone went off right next to the squad without catching anyone: the squad hits harder for a while.
+        void OnNearMiss(int unitsNear)
+        {
+            if (NearMissBuffSeconds <= 0f) return;
+            NearMissBuffLeft = NearMissBuffSeconds;      // not stacked: a new near miss starts the time over
+            NearMissed?.Invoke(unitsNear);
         }
 
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
@@ -290,6 +311,7 @@ namespace BoneSquadKiting.Game
             UnitFireRange = Tuning.UnitFireRange;
             SquadEngageRange = Tuning.SquadEngageRange;
             ReviveSeconds = Tuning.ReviveSeconds;
+            NearMissMargin = Tuning.NearMissMargin; NearMissDamageMultiplier = Tuning.NearMissDamageMultiplier; NearMissBuffSeconds = Tuning.NearMissBuffSeconds;
             if (Squad != null)
             {
                 Squad.RotationStepDegrees = Tuning.RotationStepDegrees;
@@ -421,6 +443,9 @@ namespace BoneSquadKiting.Game
             if (Revives.CompletedLastTick > 0) Squad.Reform();  // make room: the revived walk to free slots
 
             Shots.FireRange = UnitFireRange;
+            NearMissBuffLeft = Mathf.Max(0f, NearMissBuffLeft - dt);
+            Shots.DamageMultiplier = DamageMultiplier;
+            BossAttackSystem.NearMissMargin = NearMissMargin;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             if (Boss != null) Attacks.Tick(Squad, Boss, dt);
 

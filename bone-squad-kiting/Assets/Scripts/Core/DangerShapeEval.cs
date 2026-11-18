@@ -16,6 +16,24 @@ namespace BoneSquadKiting.Core
             return InDanger(s, cx, cz, cx + dx * cos - dz * sin, cz + dx * sin + dz * cos);
         }
 
+        /// <summary>
+        /// True when the point is outside the danger area but within <paramref name="margin"/> of it: a
+        /// close shave. The zone may be turned, as in InDanger.
+        /// </summary>
+        public static bool NearDanger(DangerShape s, float cx, float cz, float x, float z, float clockwiseDegrees, float margin)
+        {
+            if (margin <= 0f || InDanger(s, cx, cz, x, z, clockwiseDegrees)) return false;
+            var grown = s;
+            switch (s.Type)
+            {
+                case DangerShapeType.Disc: grown.RMax += margin; break;
+                case DangerShapeType.Annulus: grown.RMin = Mathf.Max(0f, s.RMin - margin); grown.ROut += margin; break;
+                case DangerShapeType.CrossBandsX: grown.Inner = s.Inner - margin; grown.Outer += margin; grown.HalfZ += margin; break;
+                case DangerShapeType.QuadrantBoxes: grown.Inner = s.Inner - margin; grown.Outer += margin; break;
+            }
+            return InDanger(grown, cx, cz, x, z, clockwiseDegrees);
+        }
+
         /// <summary>True when world point (x, z) is inside the danger area of a shape centered at (cx, cz).</summary>
         public static bool InDanger(DangerShape s, float cx, float cz, float x, float z)
         {

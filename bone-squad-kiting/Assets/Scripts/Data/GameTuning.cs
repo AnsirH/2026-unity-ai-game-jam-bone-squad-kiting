@@ -30,6 +30,11 @@ namespace BoneSquadKiting.Data
         [Min(0f)] public float RotationSpeed = 0f;
         [Min(0.1f)] public float SeatSize = 0.5f;         // spacing of the seats pressed units take along a wall
 
+        [Header("Near miss")]
+        [Min(0f)] public float NearMissMargin = 1f;           // a zone that catches nobody, with a unit this close outside its edge = near miss (0 = off)
+        [Min(1f)] public float NearMissDamageMultiplier = 1.2f; // the squad's damage while the near-miss buff lasts
+        [Min(0f)] public float NearMissBuffSeconds = 5f;      // how long the buff lasts; another near miss starts it over
+
         [Header("Revive")]
         [Min(0.1f)] public float ReviveSeconds = 3f;
         [Min(0f)] public float ReviveAppearRadius = 0.6f; // revived units appear this far from the formation's center
