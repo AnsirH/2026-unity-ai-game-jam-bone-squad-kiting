@@ -373,7 +373,8 @@ namespace BoneSquadKiting.EditorTools
                 run.NextScene = "Arena";
                 for (int i = 0; i < maps.Count; i++)
                 {
-                    run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd });
+                    run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd,
+                        Volume = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.VolumeProfile>($"Assets/Settings/Stage{i + 1}Volume.asset") });
                     maps[i].SetActive(i == 0);
                 }
                 EditorSceneManager.SaveScene(scene);

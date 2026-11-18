@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 using BoneSquadKiting.Data;
 
@@ -30,6 +31,8 @@ namespace BoneSquadKiting.Stage
             public StageClearRule ClearRule = StageClearRule.ReachEnd;
             [Tooltip("The game camera's turn around Y (its Rotation Y) while this stage is played. 0 = looking toward +Z.")]
             public float CameraYaw = 0f;
+            [Tooltip("Post-processing look of this stage (a Volume Profile). Empty = the project's default look.")]
+            public VolumeProfile Volume;
         }
 
         public List<Entry> Stages = new();
@@ -50,6 +53,9 @@ namespace BoneSquadKiting.Stage
         public StageKit Kit { get; private set; }
         /// <summary>Raised when a stage has been set up (index), before the screen comes back.</summary>
         public event System.Action<int> StageEntered;
+
+        /// <summary>The global volume that carries the current stage's post-processing; null until a stage has one.</summary>
+        public Volume StageVolume { get; private set; }
 
         WaveSpawner _waves;
         CanvasGroup _fade;
@@ -106,7 +112,25 @@ namespace BoneSquadKiting.Stage
             // The camera keeps its downward tilt; only which way it faces is the stage's.
             var cam = Kit.Cam.transform;
             cam.rotation = Quaternion.Euler(cam.eulerAngles.x, entry.CameraYaw, 0f);
+            WireVolume(entry);
             WireWaves(entry);
+        }
+
+        // One global volume for the whole run; each stage puts its own profile in it. Swapped while the
+        // screen is dark, so the look never changes in view.
+        void WireVolume(Entry entry)
+        {
+            if (entry.Volume == null) { if (StageVolume != null) StageVolume.gameObject.SetActive(false); return; }
+            if (StageVolume == null)
+            {
+                var go = new GameObject("Stage Volume");
+                go.transform.SetParent(transform, false);
+                StageVolume = go.AddComponent<Volume>();
+                StageVolume.isGlobal = true;
+                StageVolume.priority = 10f;      // over any default global volume
+            }
+            StageVolume.sharedProfile = entry.Volume;
+            StageVolume.gameObject.SetActive(true);
         }
 
         void WireWaves(Entry entry)

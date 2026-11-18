@@ -57,6 +57,12 @@ public class StageRunTests
         Assert.IsNotNull(director.Waves, "stage 1 has waves");
         Assert.AreSame(run.Stages[0].WavePlan, director.Waves.Plan, "from the stage list");
         var grid1 = director.Squad.Grid;
+        Assert.IsNotNull(run.Stages[0].Volume, "stage 1 has its post-processing profile");
+        Assert.IsNotNull(run.Stages[1].Volume, "stage 2 has its post-processing profile");
+        Assert.AreNotSame(run.Stages[0].Volume, run.Stages[1].Volume);
+        Assert.IsTrue(run.StageVolume.isGlobal && run.StageVolume.isActiveAndEnabled);
+        Assert.AreSame(run.Stages[0].Volume, run.StageVolume.sharedProfile, "stage 1's look is on");
+        Assert.IsTrue(run.Kit.Cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>().renderPostProcessing, "the game camera shows post-processing");
 
         hud.OverlayButton.onClick.Invoke();                     // start
         yield return null;
@@ -106,6 +112,7 @@ public class StageRunTests
         Assert.IsTrue(director.Squad.Grid.IsWalkable(Flat(start2.EndPoint.position)), "stage 2's end point is inside its walk area");
         Assert.AreSame(start2.EndPoint, director.Stage.EndPoint);
         Assert.AreSame(run.Stages[1].WavePlan, director.Waves.Plan);
+        Assert.AreSame(run.Stages[1].Volume, run.StageVolume.sharedProfile, "stage 2's look replaced stage 1's");
         Assert.That(Vector2.Distance(run.Kit.Cam.LookAt, director.Squad.Anchor), Is.LessThan(3f), "camera on the squad");
         var unit = Object.FindFirstObjectByType<BoneSquadKiting.Squad.SquadView>().transform.GetChild(3);
         Assert.That(unit.position.y, Is.EqualTo(GroundHeight.Y(unit.position.x, unit.position.z)).Within(0.05f), "units stand on stage 2's ground");
