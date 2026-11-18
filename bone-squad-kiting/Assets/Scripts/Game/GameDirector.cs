@@ -37,6 +37,8 @@ namespace BoneSquadKiting.Game
         [System.NonSerialized] public StageRun Run;
         /// <summary>While true nothing advances and orders are ignored (a stage switch is under way).</summary>
         [System.NonSerialized] public bool Frozen;
+        /// <summary>Set when a main menu stands in for the HUD's start overlay on the title screen.</summary>
+        [System.NonSerialized] public bool HasMainMenu;
 
         // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
         static bool _continueRun;
@@ -191,6 +193,20 @@ namespace BoneSquadKiting.Game
             string next = Run != null ? Run.NextScene : NextScene;
             if (IsFinalStage) { _continueRun = false; SceneManager.LoadScene(0); }
             else { _continueRun = true; SceneManager.LoadScene(next); }
+        }
+
+        /// <summary>Load a stage scene so that it starts playing at once, without its title screen.</summary>
+        public static void LoadStageScene(string scene)
+        {
+            _continueRun = true;
+            SceneManager.LoadScene(scene);
+        }
+
+        // A cleared stage moves "continue" on to the next one; clearing the last stage ends the save.
+        void SaveProgress()
+        {
+            if (Run != null) GameProgress.Save(Run.Current + 1);
+            else if (IsFinalStage && HasBoss) GameProgress.Clear();   // the boss is down: the game is finished
         }
 
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
@@ -439,6 +455,7 @@ namespace BoneSquadKiting.Game
 
             if (AliveCount == 0) Phase = GamePhase.Lose;
             else if (StageCleared()) Phase = GamePhase.Win;
+            if (Phase == GamePhase.Win) SaveProgress();
             if (Phase == GamePhase.Win || Phase == GamePhase.Lose)
             {
                 SoundManager.Current?.StopBgm();

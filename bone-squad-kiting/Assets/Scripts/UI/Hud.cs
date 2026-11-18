@@ -171,8 +171,9 @@ namespace BoneSquadKiting.UI
             if (Toast != null && Toast.text.Length > 0 && Time.unscaledTime >= _toastUntil) Toast.text = "";
             PauseLabel.SetActive(playing && Director.Paused);
 
-            Overlay.SetActive(!playing);
-            if (!playing)
+            bool overlay = !playing && !(Director.HasMainMenu && Director.Phase == GamePhase.Menu);   // the main menu is the title screen
+            Overlay.SetActive(overlay);
+            if (overlay)
             {
                 string stage = string.IsNullOrEmpty(Director.StageTitle) ? "" : Director.StageTitle + "  ";
                 OverlayTitle.text = Director.Phase switch

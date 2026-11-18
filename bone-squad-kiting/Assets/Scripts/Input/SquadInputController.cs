@@ -60,7 +60,8 @@ namespace BoneSquadKiting.Input
 
             // Pause has to stay reachable while paused; restart only outside a running match.
             if (Director.Phase == GamePhase.Play && Pressed(Key.P)) Director.TogglePause();
-            if (Director.Phase != GamePhase.Play && Pressed(Key.Enter))
+            bool onMainMenu = Director.HasMainMenu && Director.Phase == GamePhase.Menu;   // its buttons decide where to start
+            if (Director.Phase != GamePhase.Play && !onMainMenu && Pressed(Key.Enter))
             {
                 if (Director.Phase == GamePhase.Win) Director.Proceed();   // next stage (or back to the title after the last)
                 else Director.Restart();                                   // start, or retry this stage after a wipe

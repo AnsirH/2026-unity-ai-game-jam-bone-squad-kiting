@@ -42,6 +42,8 @@ namespace BoneSquadKiting.Stage
         public string NextScene = "";
         [Tooltip("Seconds the screen takes to go dark, and again to come back.")]
         public float FadeSeconds = 0.35f;
+        [Tooltip("Show the main menu (new game / continue / quit) on this scene's title screen.")]
+        public bool ShowMainMenu = true;
 
         /// <summary>Index of the stage being played.</summary>
         public int Current { get; private set; }
@@ -72,6 +74,11 @@ namespace BoneSquadKiting.Stage
             Kit.gameObject.SetActive(true);      // StageSetup bakes the walk area and seats the squad
             FocusCamera();
             StageEntered?.Invoke(Current);
+            if (ShowMainMenu)
+            {
+                Kit.Director.HasMainMenu = true;
+                gameObject.AddComponent<BoneSquadKiting.UI.MainMenu>().Run = this;
+            }
         }
 
         /// <summary>Switch the maps so only one stage's is on. Also usable in the editor to look at one map.</summary>
@@ -170,6 +177,23 @@ namespace BoneSquadKiting.Stage
         {
             if (Switching || IsLast || Kit == null) return;
             StartCoroutine(SwitchTo(Current + 1));
+        }
+
+        /// <summary>
+        /// Start playing from a stage's start point with a full squad (the main menu's new game and
+        /// continue). A number past the last map means the scene that follows the maps.
+        /// </summary>
+        public void StartAt(int index)
+        {
+            if (Switching || Kit == null) return;
+            if (index >= Stages.Count)
+            {
+                if (string.IsNullOrEmpty(NextScene)) index = Stages.Count - 1;
+                else { Game.GameDirector.LoadStageScene(NextScene); return; }
+            }
+            index = Mathf.Max(0, index);
+            if (index == Current) Kit.Director.Restart();      // already set up and on screen
+            else StartCoroutine(SwitchTo(index));
         }
 
         IEnumerator SwitchTo(int index)
