@@ -190,6 +190,7 @@ namespace BoneSquadKiting.EditorTools
             var fx = game.AddComponent<JuiceFx>();
             fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
             fx.HitParticles = particles; fx.Ring = ring;
+            A.AddPresentationManager(game, scroll);
 
             kit.Setup = stage; kit.Director = director; kit.Cam = scroll;
             return root;

@@ -803,6 +803,7 @@ GameObject:
   - component: {fileID: 32514562}
   - component: {fileID: 32514561}
   - component: {fileID: 32514560}
+  - component: {fileID: 32514565}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -966,6 +967,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &32514565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 32514557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68857a931c58a46c3982cb9ba9390817, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Fx.PresentationManager
+  Database: {fileID: 11400000, guid: 00f462a8b2895422185be1757f7f9185, type: 2}
+  Cam: {fileID: 1078785362}
 --- !u!1 &35234253
 GameObject:
   m_ObjectHideFlags: 0

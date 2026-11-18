@@ -287,6 +287,7 @@ namespace BoneSquadKiting.EditorTools
             var fx = game.AddComponent<JuiceFx>();
             fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
             fx.HitParticles = particles; fx.Ring = ring;
+            AddPresentationManager(game, scroll);
 
             if (mobStage != null) ConvertToMobStage(mobStage, plane, baker, stage, director, squad, squadView, scroll, bossGo, bossArea, teleGo, startPoint);
             else { director.StageTitle = ArenaTitle; director.NextScene = ""; director.Stage = stage; }
@@ -420,6 +421,13 @@ namespace BoneSquadKiting.EditorTools
             var m = System.Text.RegularExpressions.Regex.Match(System.IO.File.ReadAllText(scenePath),
                 @"\bPlan: \{fileID: 11400000, guid: ([0-9a-f]{32})");
             return m.Success ? m.Groups[1].Value : null;
+        }
+
+        internal static void AddPresentationManager(GameObject game, EdgeScrollCamera camera)
+        {
+            var manager = game.AddComponent<PresentationManager>();
+            manager.Cam = camera;
+            manager.Database = Load<PresentationDatabase>("Assets/Data/Fx/PresentationDatabase.asset");
         }
 
         internal static T Load<T>(string path) where T : Object
