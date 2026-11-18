@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BoneSquadKiting.Core;
 
@@ -10,6 +11,9 @@ namespace BoneSquadKiting.Stage
     ///
     /// Level rules: floors need a collider on the Ground layer; anything that blocks movement needs a
     /// collider on the Obstacle layer; this object's box (Size) must cover the whole playable area.
+    /// WalkOutline objects in the same scene narrow it further: a cell must also be inside an Include
+    /// outline (when any exist) and outside every Exclude outline. A flat terrain is one big Ground
+    /// collider, so outlines are how its playable area gets its shape.
     /// Select the object to see the result drawn in the Scene view.
     /// </summary>
     public class WalkGridBaker : MonoBehaviour
@@ -34,10 +38,21 @@ namespace BoneSquadKiting.Stage
             int h = Mathf.Max(1, Mathf.CeilToInt(Size.y / CellSize));
             var grid = new WalkGrid(min, CellSize, w, h);
             float top = transform.position.y + RayHeight;
+
+            // Outlines drawn in this scene. Shapes with fewer than three points are ignored.
+            var includes = new List<Vector2[]>(); var excludes = new List<Vector2[]>();
+            foreach (var outline in FindObjectsByType<WalkOutline>(FindObjectsSortMode.None))
+            {
+                if (outline.gameObject.scene != gameObject.scene) continue;
+                var points = outline.Points();
+                if (points.Length < 3) continue;
+                (outline.Mode == WalkOutlineMode.Include ? includes : excludes).Add(points);
+            }
             for (int z = 0; z < h; z++)
                 for (int x = 0; x < w; x++)
                 {
                     var c = grid.CellCenter(x, z);
+                    if (!InsideOutlines(c, includes, excludes)) continue; // stays blocked
                     var from = new Vector3(c.x, top, c.y);
                     bool ground = Physics.Raycast(from, Vector3.down, out var hit, RayHeight * 2f, GroundMask, QueryTriggerInteraction.Ignore);
                     grid.Walkable[grid.Index(x, z)] = ground
@@ -45,6 +60,14 @@ namespace BoneSquadKiting.Stage
                 }
             Grid = grid;
             return grid;
+        }
+
+        static bool InsideOutlines(Vector2 p, List<Vector2[]> includes, List<Vector2[]> excludes)
+        {
+            foreach (var hole in excludes) if (Polygon.Contains(hole, p)) return false;
+            if (includes.Count == 0) return true;
+            foreach (var area in includes) if (Polygon.Contains(area, p)) return true;
+            return false;
         }
 
         void Awake() { if (Grid == null) Bake(); }

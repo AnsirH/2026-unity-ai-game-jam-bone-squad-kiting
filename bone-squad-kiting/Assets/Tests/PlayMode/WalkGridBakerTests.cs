@@ -43,4 +43,94 @@ public class WalkGridBakerTests
         Assert.IsFalse(grid.IsWalkable(P(-3.5f, 0.5f)), "no floor under this cell");
         Assert.IsFalse(grid.IsWalkable(P(3.5f, 0.5f)), "no floor under this cell");
     }
+
+    WalkOutline Outline(WalkOutlineMode mode, params Vector2[] localPoints)
+    {
+        var go = new GameObject("outline " + mode);
+        go.transform.SetParent(_root.transform, false);
+        var outline = go.AddComponent<WalkOutline>();
+        outline.Mode = mode;
+        foreach (var p in localPoints)
+        {
+            var point = new GameObject("point");
+            point.transform.SetParent(go.transform, false);
+            point.transform.localPosition = new Vector3(p.x, 0, p.y);
+        }
+        return outline;
+    }
+
+    WalkGridBaker BigFloor(int ground, int obstacle)
+    {
+        _root = new GameObject("stage");
+        _root.transform.position = new Vector3(200f, 0f, 200f);
+        var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);   // 10 x 10 floor: one big slab, like a terrain
+        floor.transform.SetParent(_root.transform, false);
+        floor.transform.localPosition = new Vector3(0, -0.5f, 0);
+        floor.transform.localScale = new Vector3(10, 1, 10);
+        floor.layer = ground;
+        var baker = _root.AddComponent<WalkGridBaker>();
+        baker.Size = new Vector2(10, 10); baker.CellSize = 1f; baker.Clearance = 0.2f;
+        baker.GroundMask = 1 << ground; baker.ObstacleMask = 1 << obstacle;
+        return baker;
+    }
+
+    [Test]
+    public void Outlines_LimitTheAreaToIncludeShapes_AndCutExcludeHoles()
+    {
+        var baker = BigFloor(20, 21);
+        Vector2 P(float x, float z) => new(200f + x, 200f + z);
+
+        Assert.IsTrue(baker.Bake().IsWalkable(P(4.5f, 4.5f)), "no outlines: the whole slab is walkable");
+
+        Outline(WalkOutlineMode.Include, new Vector2(-3, -3), new Vector2(3, -3), new Vector2(3, 3), new Vector2(-3, 3));
+        Outline(WalkOutlineMode.Exclude, new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1));
+        var grid = baker.Bake();
+
+        Assert.IsTrue(grid.IsWalkable(P(2.5f, 2.5f)), "inside the include outline");
+        Assert.IsTrue(grid.IsWalkable(P(-2.5f, 0.5f)));
+        Assert.IsFalse(grid.IsWalkable(P(4.5f, 4.5f)), "on the slab but outside the outline");
+        Assert.IsFalse(grid.IsWalkable(P(0.5f, 0.5f)), "inside the exclude hole");
+        Assert.IsFalse(grid.IsWalkable(P(-0.5f, -0.5f)));
+    }
+
+    [Test]
+    public void Outlines_StillRespectObstacles_AndIgnoreUnfinishedShapes()
+    {
+        var baker = BigFloor(20, 21);
+        Vector2 P(float x, float z) => new(200f + x, 200f + z);
+        Outline(WalkOutlineMode.Include, new Vector2(-3, -3), new Vector2(3, -3), new Vector2(3, 3), new Vector2(-3, 3));
+        Outline(WalkOutlineMode.Exclude, new Vector2(-2, -2), new Vector2(2, 2));   // two points: not a shape
+
+        var rock = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rock.transform.SetParent(_root.transform, false);
+        rock.transform.localPosition = new Vector3(2.5f, 1f, 2.5f);
+        rock.transform.localScale = new Vector3(0.9f, 2f, 0.9f);
+        rock.layer = 21;
+
+        var grid = baker.Bake();
+        Assert.IsFalse(grid.IsWalkable(P(2.5f, 2.5f)), "obstacle inside the outline still blocks");
+        Assert.IsTrue(grid.IsWalkable(P(0.5f, 0.5f)), "the two-point exclude outline is ignored");
+    }
+
+    [Test]
+    public void FlatTerrain_CountsAsGround()
+    {
+        _root = new GameObject("stage");
+        _root.transform.position = new Vector3(300f, 0f, 300f);
+        var data = new TerrainData { heightmapResolution = 33, size = new Vector3(8, 10, 8) };
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.transform.SetParent(_root.transform, false);
+        terrain.transform.localPosition = new Vector3(-4, 0, -4);   // a terrain's origin is its corner
+        terrain.layer = 20;
+
+        var baker = _root.AddComponent<WalkGridBaker>();
+        baker.Size = new Vector2(12, 8); baker.CellSize = 1f;
+        baker.GroundMask = 1 << 20; baker.ObstacleMask = 1 << 21;
+        var grid = baker.Bake();
+
+        Assert.IsTrue(grid.IsWalkable(new Vector2(300.5f, 300.5f)), "terrain collider is hit by the ground ray");
+        Assert.IsTrue(grid.IsWalkable(new Vector2(296.5f, 303.5f)), "terrain corner");
+        Assert.IsFalse(grid.IsWalkable(new Vector2(305.5f, 300.5f)), "past the terrain's edge");
+        Object.DestroyImmediate(data);
+    }
 }
