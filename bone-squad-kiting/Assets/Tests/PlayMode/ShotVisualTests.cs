@@ -130,8 +130,10 @@ public class ShotVisualTests
         yield return null; yield return null;
 
         var leader = _fc.Units[0];
-        Assert.That(leader.AttackWindup, Is.EqualTo(0.933f).Within(0.01f), "wind-up read from the clip's event");
-        Assert.That(leader.AttackDuration, Is.EqualTo(2f).Within(0.01f));
+        // Times are the clip's, divided by the speed its state plays at (known once the state has played).
+        var leaderVisual = squadView.transform.GetChild(0).GetComponent<UnitVisual>();
+        Assert.That(leader.AttackWindup * leaderVisual.AttackSpeed, Is.EqualTo(0.933f).Within(0.01f), "wind-up read from the clip's event");
+        Assert.That(leader.AttackDuration * leaderVisual.AttackSpeed, Is.EqualTo(2f).Within(0.01f));
 
         Transform spear = null, arrow = null;
         float spearSeenAt = -1f, thrownAt = -1f; int shotsBefore = leader.ShotCount;
@@ -147,7 +149,10 @@ public class ShotVisualTests
             }
         }
         Assert.IsNotNull(spear, "the leader's spear flew");
-        Assert.That(spearSeenAt - thrownAt, Is.EqualTo(0.933f).Within(0.15f), "it left the hand at the animation's release point");
+        // The state may play faster or slower than the clip (its speed is set in the Animator).
+        Assert.That(leaderVisual.AttackSpeed, Is.GreaterThan(0f));
+        Assert.That(spearSeenAt - thrownAt, Is.EqualTo(0.933f / leaderVisual.AttackSpeed).Within(0.15f), "it left the hand at the animation's release point");
+        Assert.That(leader.AttackDuration, Is.EqualTo(2f / leaderVisual.AttackSpeed).Within(0.05f), "and the next throw waits for the motion as it actually plays");
         var toDummy = (dummy.transform.position - spear.position); toDummy.y = 0f;
         Assert.That(Vector3.Dot(spear.forward, toDummy.normalized), Is.GreaterThan(0.98f), "the holder points along the flight");
         // The spear mesh's tip is its local +Z end (checked against the model: the head is on that side).

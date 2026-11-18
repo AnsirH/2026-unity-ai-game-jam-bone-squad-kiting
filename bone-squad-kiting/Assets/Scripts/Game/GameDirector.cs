@@ -31,7 +31,12 @@ namespace BoneSquadKiting.Game
         public string StageTitle = "";      // shown when the stage starts and on its clear screen, e.g. "스테이지 1"
         public string NextScene = "";       // scene to load after this stage is cleared; empty = this is the last stage
 
-        public bool IsFinalStage => string.IsNullOrEmpty(NextScene);
+        public bool IsFinalStage => Run != null ? Run.IsLast && string.IsNullOrEmpty(Run.NextScene) : string.IsNullOrEmpty(NextScene);
+
+        /// <summary>Set when this director's stages are run by a StageRun (several stages in one scene).</summary>
+        [System.NonSerialized] public StageRun Run;
+        /// <summary>While true nothing advances and orders are ignored (a stage switch is under way).</summary>
+        [System.NonSerialized] public bool Frozen;
 
         // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
         static bool _continueRun;
@@ -127,6 +132,7 @@ namespace BoneSquadKiting.Game
                 PatternResolved?.Invoke(hit, lost);
             };
             Elites.OnDied += OnMiniBossDied;
+            Elites.OnArrived += OnMiniBossArrived;
             // Mini boss markers placed in this director's own scene.
             var found = new List<MiniBossSpawn>();
             foreach (var m in FindObjectsByType<MiniBossSpawn>(FindObjectsSortMode.None))
@@ -181,8 +187,10 @@ namespace BoneSquadKiting.Game
         public void Proceed()
         {
             if (Phase != GamePhase.Win) return;
+            if (Run != null && !Run.IsLast) { Run.Advance(); return; }   // next map in this same scene
+            string next = Run != null ? Run.NextScene : NextScene;
             if (IsFinalStage) { _continueRun = false; SceneManager.LoadScene(0); }
-            else { _continueRun = true; SceneManager.LoadScene(NextScene); }
+            else { _continueRun = true; SceneManager.LoadScene(next); }
         }
 
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
@@ -226,9 +234,12 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public void IssueOrder(SquadOrder o)
         {
-            if (Phase != GamePhase.Play || Paused || InCutscene) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return;
             Squad.Order = o;
-            Squad.FaceToward(o.Kind == OrderKind.AttackTarget && o.Target != null ? o.Target.Pos : o.Point);
+            // Only a plain move turns a ring to put its leader in front. An attack order leaves the ring as it
+            // stands (and stops a turn in progress): turning units cannot fire, and the point of the order is to.
+            if (o.Kind == OrderKind.Move) Squad.FaceToward(o.Point);
+            else Squad.HoldFacing();
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
                 bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
@@ -294,14 +305,42 @@ namespace BoneSquadKiting.Game
             foreach (var m in _miniBosses)
             {
                 if (m.Triggered || m.Definition == null || !m.Unlocked) continue;
-                if (!m.PresentFromStart && (m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
-                var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
-                var elite = Elites.Spawn(m.Definition, pos, Enemies);
-                m.MarkTriggered(elite);
-                MiniBossAppeared?.Invoke(elite);
-                if (m.PlayIntro && !m.PresentFromStart)
-                    StartCutscene(pos, m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+                if (!m.PresentFromStart)
+                {
+                    // By progress when asked for (and the stage measures it), otherwise by distance.
+                    bool byProgress = m.AtProgress >= 0f && Waves != null;
+                    if (byProgress ? Waves.MaxProgress < m.AtProgress : (m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
+                }
+                SpawnMiniBoss(m);
             }
+        }
+
+        /// <summary>Make a marker's mini boss appear now, whatever its conditions. Does nothing if it already has.</summary>
+        public Elite SpawnMiniBoss(MiniBossSpawn m)
+        {
+            if (m == null || m.Triggered || m.Definition == null || Elites == null) return null;
+            var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
+            var route = m.PresentFromStart ? null : m.RoutePoints();
+            if (route != null) route[route.Count - 1] = pos;
+            var elite = Elites.Spawn(m.Definition, pos, Enemies, route, m.EntrySpeed);
+            m.MarkTriggered(elite);
+            MiniBossAppeared?.Invoke(elite);
+            if (!m.PresentFromStart && (m.IntroWhen == MiniBossIntroWhen.OnAppear || !elite.Entering)) PlayMiniBossIntro(m, elite);
+            return elite;
+        }
+
+        // The intro moment: the game freezes, the camera goes to the mini boss, and the marker's effect plays.
+        void PlayMiniBossIntro(MiniBossSpawn m, Elite elite)
+        {
+            if (!m.PlayIntro) return;
+            if (!string.IsNullOrEmpty(m.IntroEffectId)) BoneSquadKiting.Fx.PresentationManager.Current?.Play(m.IntroEffectId);
+            StartCutscene(elite.Pos, m.IntroSeconds > 0f ? m.IntroSeconds : m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+        }
+
+        void OnMiniBossArrived(Elite elite)
+        {
+            foreach (var m in _miniBosses)
+                if (m.Elite == elite && m.IntroWhen == MiniBossIntroWhen.OnArrive) PlayMiniBossIntro(m, elite);
         }
 
         // A mini boss fell. Only the stage's last one gets the big finish: its death moment plays, the swarm
@@ -341,7 +380,7 @@ namespace BoneSquadKiting.Game
         /// <summary>Advance the match by dt. Public so tests can drive time.</summary>
         public void Step(float dt)
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || Frozen) return;
             ApplyTuning();
             if (InCutscene)
             {

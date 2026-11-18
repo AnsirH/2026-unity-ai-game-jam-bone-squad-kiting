@@ -27,3 +27,14 @@ MonoBehaviour:
   DeathDuration: 1.5
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
+  Prefab: {fileID: 7054389964794124197, guid: 7af334eceeb87449cacb8618dc4f1ed5, type: 3}
+  ModelScale: 1.4
+  ModelYawOffset: 0
+  States:
+    Idle: 
+    Run: 
+    Attack: SpellCast02
+    Die: 
+    Revive: 
+    CrossFade: 0.1
+  CastAnimSeconds: 3

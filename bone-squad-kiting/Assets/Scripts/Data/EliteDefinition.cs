@@ -28,5 +28,12 @@ namespace BoneSquadKiting.Data
         public float DeathDuration = 1.5f;
         public GameObject IntroFx;            // optional prefab spawned at the mini boss when it appears
         public GameObject DeathFx;            // optional prefab spawned where it dies
+
+        [Header("Looks (optional: empty = the placeholder cylinder)")]
+        public GameObject Prefab;             // model with an Animator; drawn with its feet on the ground, facing the squad
+        public float ModelScale = 1f;         // multiplies the prefab's own scale
+        public float ModelYawOffset = 0f;     // degrees around Y if the model's front is not +Z
+        public AnimStates States = new() { Idle = "", Run = "", Attack = "Attack", Die = "" };   // Attack plays when it starts a cast
+        public float CastAnimSeconds = 1.5f;  // how long the cast animation shows before going back to idle/run
     }
 }

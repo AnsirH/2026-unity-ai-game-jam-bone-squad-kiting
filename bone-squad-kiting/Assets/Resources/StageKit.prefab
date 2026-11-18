@@ -7460,6 +7460,7 @@ GameObject:
   - component: {fileID: 5715540094947791161}
   - component: {fileID: 7866019031898975673}
   - component: {fileID: 8229206929846441788}
+  - component: {fileID: 7451426893097852019}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -7616,6 +7617,20 @@ MonoBehaviour:
   ParticlesPerHit: 10
   RingSeconds: 0.5
   RingMaxRadius: 8
+--- !u!114 &7451426893097852019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7732318678778748607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68857a931c58a46c3982cb9ba9390817, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Fx.PresentationManager
+  Database: {fileID: 11400000, guid: 00f462a8b2895422185be1757f7f9185, type: 2}
+  Cam: {fileID: 7412895378599517927}
 --- !u!1 &8158781690346733401
 GameObject:
   m_ObjectHideFlags: 0

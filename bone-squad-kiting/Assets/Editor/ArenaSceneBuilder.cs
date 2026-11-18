@@ -59,7 +59,7 @@ namespace BoneSquadKiting.EditorTools
             public int[] GateUntil;                         // ...closed until these mini boss placements are dead
             public float Interval0 = 12f, Interval1 = 5f;   // seconds between waves at the start / at the end
             public float Count0 = 8f, Count1 = 30f;         // mobs per wave at the start / at the end
-            public string Path => $"Assets/Scenes/{Name}.unity";
+            public string Path => $"Assets/Scenes/Test_{Name}.unity";   // test scenes: the game itself runs in Game.unity
         }
 
         /// <summary>One mini boss on a stage. Along = 0 at the start point, 1 at the end point.</summary>
@@ -80,20 +80,20 @@ namespace BoneSquadKiting.EditorTools
         //  5: the boss arena
         static readonly StageSpec[] Stages =
         {
-            new() { Name = "Stage1", Title = "스테이지 1", Next = "Stage2", Length = 84f, Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f,
+            new() { Name = "Stage1", Title = "스테이지 1", Next = "", Length = 84f, Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f,
                     MiniBosses = new[] { new Placement("Catapult", -5f, 0.28f, true), new Placement("Catapult", 5f, 0.45f, true),
                                          new Placement("Catapult", 0f, 0.64f, true), new Placement("DarkFlameMage", 0f, 0.9f) },
                     GateAlong = 0.74f, GateUntil = new[] { 0, 1, 2 } },
-            new() { Name = "Stage2", Title = "스테이지 2", Next = "Stage3", Length = 96f, Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f,
+            new() { Name = "Stage2", Title = "스테이지 2", Next = "", Length = 96f, Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f,
                     MiniBosses = new[] { new Placement("ShadowSwordsman", 0f, 0.22f),
                                          new Placement("Catapult", -5f, 0.42f, true), new Placement("Catapult", 5f, 0.52f, true), new Placement("Catapult", 6f, 0.62f, true),
                                          new Placement("Catapult", 4f, 0.8f, true, new[] { 1, 2, 3 }), new Placement("SpearThrower", 0f, 0.9f, false, new[] { 1, 2, 3 }) },
                     GateAlong = 0.72f, GateUntil = new[] { 1, 2, 3 } },
-            new() { Name = "Stage3", Title = "스테이지 3", Next = "Stage4", Length = 108f, ReachEndOnly = true, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f,
+            new() { Name = "Stage3", Title = "스테이지 3", Next = "", Length = 108f, ReachEndOnly = true, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f,
                     MiniBosses = new[] { new Placement("Catapult", -5f, 0.2f, true), new Placement("Catapult", 5f, 0.32f, true), new Placement("Catapult", -5f, 0.46f, true),
                                          new Placement("Catapult", 5f, 0.58f, true), new Placement("Catapult", 0f, 0.72f, true), new Placement("TelekineticMage", 0f, 0.9f) },
                     GateAlong = 0.8f, GateUntil = new[] { 0, 1, 2, 3, 4 } },
-            new() { Name = "Stage4", Title = "스테이지 4", Next = "Arena", Length = 84f, Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f,
+            new() { Name = "Stage4", Title = "스테이지 4", Next = "", Length = 84f, Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f,
                     MiniBosses = new[] { new Placement("TelekineticMageGate", 0f, 0.45f), new Placement("TelekineticMageQuadrant", 0f, 0.9f) } },
         };
         const string ArenaTitle = "스테이지 5";
@@ -101,7 +101,7 @@ namespace BoneSquadKiting.EditorTools
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
         public static void Build() => BuildScene(ScenePath, null);
 
-        /// <summary>Stage 1 to 4 and then the arena (stage 5), in play order. The arena is left open.</summary>
+        /// <summary>The four test stages (Test_Stage1..4) and the arena. The arena is left open.</summary>
         [MenuItem("BoneSquadKiting/Rebuild All Stage Scenes")]
         public static void BuildAllStages()
         {
@@ -287,20 +287,28 @@ namespace BoneSquadKiting.EditorTools
             var fx = game.AddComponent<JuiceFx>();
             fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
             fx.HitParticles = particles; fx.Ring = ring;
+            AddPresentationManager(game, scroll);
 
             if (mobStage != null) ConvertToMobStage(mobStage, plane, baker, stage, director, squad, squadView, scroll, bossGo, bossArea, teleGo, startPoint);
             else { director.StageTitle = ArenaTitle; director.NextScene = ""; director.Stage = stage; }
 
             EditorSceneManager.SaveScene(scene, scenePath);
 
-            // Build order = play order: the stage scenes that exist, then the arena. The first one is the title screen.
-            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
-            foreach (var spec in Stages)
-                if (System.IO.File.Exists(spec.Path)) scenes.Add(new EditorBuildSettingsScene(spec.Path, true));
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
+            SetBuildScenes();
             AssetDatabase.SaveAssets();
             Debug.Log("ArenaSceneBuilder: wrote " + scenePath);
+        }
+
+        /// <summary>
+        /// Build order = play order: the game scene (stages 1.. in one scene; it opens on the title screen),
+        /// then the arena. The Test_Stage scenes are for testing and are not built.
+        /// </summary>
+        internal static void SetBuildScenes()
+        {
+            var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
+            if (System.IO.File.Exists(StageKitBuilder.GamePath)) scenes.Add(new EditorBuildSettingsScene(StageKitBuilder.GamePath, true));
+            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         // Reshape the freshly built arena into a corridor stage fought against rounds of mobs.
@@ -420,6 +428,13 @@ namespace BoneSquadKiting.EditorTools
             var m = System.Text.RegularExpressions.Regex.Match(System.IO.File.ReadAllText(scenePath),
                 @"\bPlan: \{fileID: 11400000, guid: ([0-9a-f]{32})");
             return m.Success ? m.Groups[1].Value : null;
+        }
+
+        internal static void AddPresentationManager(GameObject game, EdgeScrollCamera camera)
+        {
+            var manager = game.AddComponent<PresentationManager>();
+            manager.Cam = camera;
+            manager.Database = Load<PresentationDatabase>("Assets/Data/Fx/PresentationDatabase.asset");
         }
 
         internal static T Load<T>(string path) where T : Object

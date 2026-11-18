@@ -56882,6 +56882,7 @@ GameObject:
   - component: {fileID: 1733374655}
   - component: {fileID: 1733374654}
   - component: {fileID: 1733374653}
+  - component: {fileID: 1733374658}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -56909,7 +56910,7 @@ MonoBehaviour:
   Stage: {fileID: 727691948}
   Waves: {fileID: 727691947}
   StageTitle: "\uC2A4\uD14C\uC774\uC9C0 3"
-  NextScene: Stage4
+  NextScene: 
   Tuning: {fileID: 11400000, guid: 447ac52f31ce9ba479661e117a0526d8, type: 2}
   UnitFireRange: 5.5
   SquadEngageRange: 5
@@ -57044,6 +57045,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1733374658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733374650}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68857a931c58a46c3982cb9ba9390817, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Fx.PresentationManager
+  Database: {fileID: 11400000, guid: 00f462a8b2895422185be1757f7f9185, type: 2}
+  Cam: {fileID: 1646248146}
 --- !u!1 &1734076648
 GameObject:
   m_ObjectHideFlags: 0

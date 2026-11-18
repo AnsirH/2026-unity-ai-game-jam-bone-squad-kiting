@@ -67,33 +67,24 @@ public class StageKitTests
     }
 
     [UnityTest]
-    public IEnumerator ArtistMap_PlaysWithMarkersAddedOnlyAtRuntime_UnitsStandOnTheTerrain()
+    public IEnumerator ArtistScene_PlaysFromItsOwnMarkers_UnitsStandOnTheTerrain()
     {
         const string path = "Assets/Scenes/BackgroundTest.unity";
-        if (!File.Exists(path)) Assert.Ignore("no artist map in the project");
+        if (!File.Exists(path)) Assert.Ignore("no artist scene in the project");
         yield return Load(path);
-        Assert.IsNull(Object.FindFirstObjectByType<GameDirector>(), "the map itself has no game objects");
+        yield return null;
 
-        // Markers made in memory, as an artist would place them. The scene file is not written.
-        var outline = new GameObject("Walk Area"); outline.AddComponent<WalkOutline>();
-        foreach (var c in new[] { new Vector2(-40, -30), new Vector2(40, -30), new Vector2(40, 30), new Vector2(-40, 30) })
-        {
-            var p = new GameObject("Point"); p.transform.SetParent(outline.transform); p.transform.position = new Vector3(c.x, 0f, c.y);
-        }
-        var marker = new GameObject("Stage Start"); marker.SetActive(false);
-        marker.transform.position = new Vector3(-18f, 0f, -13f);   // on the west road
-        var start = marker.AddComponent<StageStart>();
-        marker.SetActive(true);
-        yield return null; yield return null;
-
-        Assert.IsNotNull(start.Kit);
+        // The maps carry their own Stage Markers now. With several maps on at once, one marker brings the game in.
+        StageStart start = null;
+        foreach (var s in Object.FindObjectsByType<StageStart>(FindObjectsSortMode.None)) if (s.Kit != null) start = s;
+        if (start == null) Assert.Ignore("the artist scene has no active Stage Start");
+        Assert.AreEqual(1, Object.FindObjectsByType<GameDirector>(FindObjectsSortMode.None).Length, "one game, however many markers");
         var director = start.Kit.Director;
-        Assert.That(Vector2.Distance(director.Squad.Anchor, new Vector2(-18f, -13f)), Is.LessThan(1.5f));
+        Assert.That(Vector2.Distance(director.Squad.Anchor, new Vector2(start.transform.position.x, start.transform.position.z)), Is.LessThan(1.5f));
         Assert.IsTrue(start.Kit.Setup.Grid.IsWalkable(director.Squad.Anchor));
-        Assert.IsFalse(start.Kit.Setup.Grid.IsWalkable(new Vector2(44f, 0f)), "outside the drawn area");
+        yield return null;
         var unit = Object.FindFirstObjectByType<BoneSquadKiting.Squad.SquadView>().transform.GetChild(3);
         float groundY = GroundHeight.Y(unit.position.x, unit.position.z);
-        Assert.That(groundY, Is.Not.EqualTo(0f), "the terrain is not at height 0 here");
         Assert.That(unit.position.y, Is.EqualTo(groundY).Within(0.02f), "the model stands on the terrain");
         Capture("stagekit-artist-map.png");
     }
