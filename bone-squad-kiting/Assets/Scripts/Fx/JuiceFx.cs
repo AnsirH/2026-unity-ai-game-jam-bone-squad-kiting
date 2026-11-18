@@ -39,6 +39,7 @@ namespace BoneSquadKiting.Fx
         void OnEnable()
         {
             if (Director == null) return;
+            Director.DefaultRingRequested += StartRing;
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
             Director.ReviveCompleted += OnRevived;
@@ -49,6 +50,7 @@ namespace BoneSquadKiting.Fx
         {
             if (Cam != null) Cam.CombatShakeStrength = 0f;
             if (Director == null) return;
+            Director.DefaultRingRequested -= StartRing;
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
             Director.ReviveCompleted -= OnRevived;
@@ -71,9 +73,10 @@ namespace BoneSquadKiting.Fx
             HitParticles.Emit(new ParticleSystem.EmitParams { position = new Vector3(revived.X, 0.4f, revived.Z), startColor = new Color(0.4f, 1f, 0.7f) }, ParticlesPerHit * 2);
         }
 
+        void StartRing() => _ringT = 0f;
+
         void OnResolved(int hit, int lost)
         {
-            _ringT = 0f;
             if (hit == 0) return;
             Shake = Mathf.Max(Shake, ShakeOnHit);
             Flash = Mathf.Max(Flash, FlashOnHit + (lost > 0 ? 0.15f : 0f));

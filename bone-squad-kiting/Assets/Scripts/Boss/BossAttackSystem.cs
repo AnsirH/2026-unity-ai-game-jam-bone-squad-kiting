@@ -41,6 +41,7 @@ namespace BoneSquadKiting.Bosses
 
         public System.Action<PatternDefinition> OnStart;
         public System.Action<int, int> OnResolved; // units hit, units lost (totals, once the pattern is over)
+        public System.Action<Active> OnImpact; // optional caster-specific impact at its resolved position and size
         public System.Action<int, int> OnDamage;   // units hit, units lost, every time damage lands (each sustained tick too)
         /// <summary>
         /// A zone went off, caught nobody, and this many units stood within NearMissMargin of it. Judged
@@ -152,6 +153,7 @@ namespace BoneSquadKiting.Bosses
 
         void Finish(Active a, Boss boss)
         {
+            OnImpact?.Invoke(a);
             Current = null;
             NextAttack = FixedGap > 0f ? FixedGap + Random.value * FixedGapRandom
                 : (boss != null && boss.HpFrac < GameConstants.FastAttackHpFrac)
