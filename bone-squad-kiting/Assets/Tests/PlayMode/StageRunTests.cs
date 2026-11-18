@@ -25,8 +25,9 @@ public class StageRunTests
     [Test]
     public void BuildOrder_IsTheGameSceneThenTheArena()
     {
-        Assert.AreEqual("Game", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(0)));
-        Assert.AreEqual("Arena", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(1)));
+        Assert.AreEqual("MainMenu", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(0)));
+        Assert.AreEqual("Game", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(1)));
+        Assert.AreEqual("Arena", System.IO.Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(2)));
         foreach (var scene in UnityEditor.EditorBuildSettings.scenes) StringAssert.DoesNotContain("Test_", scene.path, "test scenes are not built");
     }
 
@@ -148,12 +149,10 @@ public class StageRunTests
         arena.Phase = GamePhase.Win;
         arena.Proceed();
         until = Time.realtimeSinceStartup + 15f;
-        while (SceneManager.GetActiveScene().name != "Game" && Time.realtimeSinceStartup < until) yield return null;
+        while (SceneManager.GetActiveScene().name != "MainMenu" && Time.realtimeSinceStartup < until) yield return null;
         yield return null; yield return null;
-        Assert.AreEqual("Game", SceneManager.GetActiveScene().name);
-        var again = Object.FindFirstObjectByType<StageRun>();
-        Assert.AreEqual(0, again.Current);
-        Assert.AreEqual(GamePhase.Menu, again.Kit.Director.Phase, "a new run starts from the title screen");
+        Assert.AreEqual("MainMenu", SceneManager.GetActiveScene().name, "after the boss, back to the main menu");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.MainMenu>());
     }
 
     [UnityTest]

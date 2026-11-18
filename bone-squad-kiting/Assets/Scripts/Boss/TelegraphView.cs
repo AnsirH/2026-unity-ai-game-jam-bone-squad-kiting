@@ -50,7 +50,17 @@ namespace BoneSquadKiting.Bosses
                 z.Filter.transform.position = new Vector3(a.Cx, Height, a.Cz);
                 z.Filter.transform.rotation = Quaternion.Euler(0f, a.Angle, 0f);   // +Y turns clockwise seen from above
                 bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
-                _block.SetColor(ColorId, a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor);
+                var color = a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor;
+                if (a.Pattern != null && a.Pattern.LethalTelegraph)
+                {
+                    // Keep the warning readable as it moves from tracking to live damage.
+                    color = new Color(0.48f, 0.025f, 0.08f, Mathf.Lerp(0.5f, 1f, color.a));
+                }
+                else
+                {
+                    color.a *= 0.7f;
+                }
+                _block.SetColor(ColorId, color);
                 z.Renderer.SetPropertyBlock(_block);
                 z.Renderer.enabled = true;
             }

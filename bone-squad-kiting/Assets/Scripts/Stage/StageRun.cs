@@ -43,6 +43,12 @@ namespace BoneSquadKiting.Stage
         [Tooltip("Seconds the screen takes to go dark, and again to come back.")]
         public float FadeSeconds = 0.35f;
 
+        /// <summary>
+        /// Set by the main menu before it loads this scene: the stage to begin on, instead of StartStage.
+        /// Used once, then forgotten (-1).
+        /// </summary>
+        public static int RequestedStage = -1;
+
         /// <summary>Index of the stage being played.</summary>
         public int Current { get; private set; }
         public Entry CurrentEntry => Current >= 0 && Current < Stages.Count ? Stages[Current] : null;
@@ -63,7 +69,8 @@ namespace BoneSquadKiting.Stage
         void Awake()
         {
             if (Stages.Count == 0) { Debug.LogError("StageRun: the stage list is empty.", this); return; }
-            Current = Mathf.Clamp(StartStage, 0, Stages.Count - 1);
+            Current = Mathf.Clamp(RequestedStage >= 0 ? RequestedStage : StartStage, 0, Stages.Count - 1);
+            RequestedStage = -1;
             ShowOnly(Current);
             Kit = StageKit.Spawn(gameObject.scene);
             if (Kit == null) return;

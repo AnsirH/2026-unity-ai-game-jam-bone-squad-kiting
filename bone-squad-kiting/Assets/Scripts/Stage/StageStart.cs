@@ -37,6 +37,9 @@ namespace BoneSquadKiting.Stage
             // A scene that already has the game in it (the generated stages) needs nothing from this marker.
             foreach (var d in FindObjectsByType<GameDirector>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 if (d.gameObject.scene == gameObject.scene) return;
+            // Nor does a map that a StageRun switches on: the run brings the game in itself (the map may wake first).
+            foreach (var r in FindObjectsByType<StageRun>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (r.gameObject.scene == gameObject.scene) return;
 
             var prefab = Resources.Load<GameObject>(KitResource);
             if (prefab == null) { Debug.LogError("StageStart: Resources/" + KitResource + " is missing (menu BoneSquadKiting/Rebuild Stage Kit)."); return; }

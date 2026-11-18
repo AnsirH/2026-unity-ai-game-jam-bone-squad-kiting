@@ -193,6 +193,20 @@ namespace BoneSquadKiting.Game
             else { _continueRun = true; SceneManager.LoadScene(next); }
         }
 
+        /// <summary>Load a stage scene so that it starts playing at once, without its title screen.</summary>
+        public static void LoadStageScene(string scene)
+        {
+            _continueRun = true;
+            SceneManager.LoadScene(scene);
+        }
+
+        // A cleared stage moves "continue" on to the next one; clearing the last stage ends the save.
+        void SaveProgress()
+        {
+            if (Run != null) GameProgress.Save(Run.Current + 1, Run.IsLast ? Run.NextScene : "");
+            else if (IsFinalStage && HasBoss) GameProgress.Clear();   // the boss is down: the game is finished
+        }
+
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
 
         public void ChangeFormation(string id)
@@ -232,9 +246,9 @@ namespace BoneSquadKiting.Game
         /// AttackTarget walks toward the target. Both attack orders stop once their enemy is within squad
         /// range of the anchor (see Step); an AttackTarget already in range never starts walking.
         /// </summary>
-        public void IssueOrder(SquadOrder o)
+        public bool IssueOrder(SquadOrder o)
         {
-            if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return false;
             Squad.Order = o;
             // Only a plain move turns a ring to put its leader in front. An attack order leaves the ring as it
             // stands (and stops a turn in progress): turning units cannot fire, and the point of the order is to.
@@ -246,6 +260,7 @@ namespace BoneSquadKiting.Game
                 Squad.SetDestination(inRange ? Squad.Anchor : o.Target.Pos);
             }
             else Squad.SetDestination(o.Point);
+            return true;
         }
 
         /// <summary>
@@ -439,6 +454,7 @@ namespace BoneSquadKiting.Game
 
             if (AliveCount == 0) Phase = GamePhase.Lose;
             else if (StageCleared()) Phase = GamePhase.Win;
+            if (Phase == GamePhase.Win) SaveProgress();
             if (Phase == GamePhase.Win || Phase == GamePhase.Lose)
             {
                 SoundManager.Current?.StopBgm();
