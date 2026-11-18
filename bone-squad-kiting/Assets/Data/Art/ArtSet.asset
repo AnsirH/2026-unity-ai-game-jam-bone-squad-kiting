@@ -32,9 +32,9 @@ MonoBehaviour:
     CrossFade: 0.1
   ModelYawOffset: 0
   TurnSpeed: 720
-  ShotPrefab: {fileID: 8840637158823545160, guid: ccdd1bc509a24224cbfebc7b02df1752, type: 3}
+  ShotPrefab: {fileID: 7822528670591677059, guid: c6112f38edaf7473499fac52da164040, type: 3}
   ShotScale: 0.5
   ShotRotation: {x: 0, y: 0, z: 0}
-  LeaderShotPrefab: {fileID: 919132149155446097, guid: e1a1561909e0f4d84865eba415e2f22e, type: 3}
+  LeaderShotPrefab: {fileID: 5103038034401474429, guid: caaf328b479ec427fad5784c318ab6c2, type: 3}
   LeaderShotScale: 1.25
   LeaderShotRotation: {x: 90, y: 0, z: 0}
