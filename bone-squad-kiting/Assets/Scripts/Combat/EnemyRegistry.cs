@@ -24,5 +24,20 @@ namespace BoneSquadKiting.Combat
             }
             return best;
         }
+
+        /// <summary>Closest living enemy within range that passes the filter, or null.</summary>
+        public IEnemy Nearest(Vector2 from, float range, System.Func<IEnemy, bool> filter)
+        {
+            IEnemy best = null;
+            float bestSqr = range * range;
+            foreach (var e in Enemies)
+            {
+                if (!e.Alive) continue;
+                float d = (e.Pos - from).sqrMagnitude;
+                if (d > bestSqr || !filter(e)) continue;
+                bestSqr = d; best = e;
+            }
+            return best;
+        }
     }
 }
