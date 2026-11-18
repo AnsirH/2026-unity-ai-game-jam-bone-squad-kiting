@@ -18,6 +18,10 @@ namespace BoneSquadKiting.Data
         public float AttackRange = 0f;      // stops this far from a unit and shoots instead of walking up to it
         public float ShotSpeed = 6f;        // the shot flies straight at where the unit was; a moving squad can step out of it
         public float ShotRadius = 0.25f;
+        [Tooltip("0 keeps the existing constant-speed, distance-limited shot.")]
+        [Min(0f)] public float ShotLifetime;
+        public AnimationCurve ShotSpeedCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+        [Range(0f, 0.99f)] public float ShotFadeStart = 0.55f;
         public bool IsRanged => AttackRange > 0f;
 
         [Header("Looks (optional: empty = the placeholder sphere)")]
