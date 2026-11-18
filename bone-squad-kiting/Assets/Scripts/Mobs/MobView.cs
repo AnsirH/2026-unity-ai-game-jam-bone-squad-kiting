@@ -132,7 +132,7 @@ namespace BoneSquadKiting.Mobs
                     var want = Quaternion.Euler(0f, Mathf.Atan2(face.x, face.y) * Mathf.Rad2Deg + m.Def.ModelYawOffset, 0f);
                     v.Root.rotation = Quaternion.RotateTowards(v.Root.rotation, want, TurnSpeed * Time.deltaTime);
                 }
-                if (m.AttackCd > v.LastCd + 1e-4f) v.Visual.PlayAttack();     // the cooldown jumped back up: it just hit
+                if (m.AttackCd > v.LastCd + 1e-4f) v.Visual.PlayAttack(m.Def.AttackAnimSeconds);     // the cooldown jumped back up: it just hit
                 else v.Visual.SetState(moving ? VisualState.Run : VisualState.Idle);
             }
             else

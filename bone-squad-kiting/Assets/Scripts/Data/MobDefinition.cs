@@ -24,6 +24,7 @@ namespace BoneSquadKiting.Data
         public GameObject Prefab;           // model with an Animator; drawn with its feet on the ground
         public float ModelScale = 1f;       // multiplies the prefab's own scale
         public float ModelYawOffset = 0f;   // degrees around Y if the model's front is not +Z
+        public float AttackAnimSeconds = 0.35f;   // how long the attack animation shows before going back to idle/run
         public AnimStates States = new() { Idle = "", Run = "Run", Attack = "Attack", Die = "" };
     }
 }

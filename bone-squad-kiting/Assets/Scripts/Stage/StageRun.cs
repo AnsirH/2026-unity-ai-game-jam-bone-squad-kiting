@@ -28,6 +28,8 @@ namespace BoneSquadKiting.Stage
             [Tooltip("This stage's waves. Empty = no waves.")]
             public WavePlan WavePlan;
             public StageClearRule ClearRule = StageClearRule.ReachEnd;
+            [Tooltip("The game camera's turn around Y (its Rotation Y) while this stage is played. 0 = looking toward +Z.")]
+            public float CameraYaw = 0f;
         }
 
         public List<Entry> Stages = new();
@@ -101,6 +103,9 @@ namespace BoneSquadKiting.Stage
             Kit.Director.StageTitle = entry.Title;
             Kit.Director.ClearRule = entry.ClearRule;
             Kit.Director.HasBoss = false;
+            // The camera keeps its downward tilt; only which way it faces is the stage's.
+            var cam = Kit.Cam.transform;
+            cam.rotation = Quaternion.Euler(cam.eulerAngles.x, entry.CameraYaw, 0f);
             WireWaves(entry);
         }
 

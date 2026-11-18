@@ -170,7 +170,7 @@ public class StageRunTests
         var a = Map("A", 0f); var b = Map("B", 200f);
         var run = holder.AddComponent<StageRun>();
         run.Stages.Add(new StageRun.Entry { Map = a, Title = "A" });
-        run.Stages.Add(new StageRun.Entry { Map = b, Title = "B" });
+        run.Stages.Add(new StageRun.Entry { Map = b, Title = "B", CameraYaw = 90f });
         run.StartStage = 1; run.FadeSeconds = 0.05f;
         holder.SetActive(true);
         yield return null; yield return null;
@@ -181,6 +181,11 @@ public class StageRunTests
         Assert.AreEqual("B", director.StageTitle);
         Assert.That(Vector2.Distance(director.Squad.Anchor, new Vector2(200f, 12f)), Is.LessThan(1f));
         Assert.IsNull(director.Waves, "a stage without a wave plan has no waves");
+        var cam = run.Kit.Cam.transform;
+        Assert.That(Mathf.DeltaAngle(cam.eulerAngles.y, 90f), Is.EqualTo(0f).Within(0.01f), "the stage's own camera direction");
+        Assert.That(cam.eulerAngles.x, Is.EqualTo(60f).Within(0.01f), "the downward tilt is kept");
+        var seen = cam.GetComponent<Camera>().WorldToViewportPoint(new Vector3(director.Squad.Anchor.x, 0f, director.Squad.Anchor.y));
+        Assert.That(seen.x, Is.InRange(0.2f, 0.8f)); Assert.That(seen.y, Is.InRange(0.2f, 0.8f), "and the squad is in view from there");
         Assert.IsTrue(director.IsFinalStage, "last map, and no scene after it");
         Assert.IsTrue(director.Squad.Grid.IsWalkable(new Vector2(200f, 0f)));
         Assert.IsFalse(director.Squad.Grid.IsWalkable(new Vector2(0f, 0f)), "the other map's area is not part of this stage");
@@ -190,6 +195,7 @@ public class StageRunTests
         run.Enter(0);
         Assert.IsTrue(a.activeSelf); Assert.IsFalse(b.activeSelf);
         Assert.That(Vector2.Distance(director.Squad.Anchor, new Vector2(0f, 12f)), Is.LessThan(1f));
+        Assert.That(Mathf.DeltaAngle(run.Kit.Cam.transform.eulerAngles.y, 0f), Is.EqualTo(0f).Within(0.01f), "a stage starts with the camera's Rotation Y at 0 unless it says otherwise");
         Assert.IsFalse(director.IsFinalStage);
     }
 }
