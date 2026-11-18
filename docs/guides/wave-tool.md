@@ -109,6 +109,8 @@
 - 잡몹 종류는 `Assets/Data/Mobs/`의 `Grunt`(근접, EnemyMelee 모델)와 `Caster`(원거리, EnemyMage 모델) 둘이다. `Caster`는 사거리 안에 들어오면 멈춰서 투사체를 쏜다. 투사체는 쏜 순간 유닛이 있던 곳으로 **직선으로** 날아가므로 분대가 움직이면 피할 수 있고, 처음 닿은 유닛 하나가 피해를 받는다.
 - 원거리 값은 잡몹 파일의 **Ranged attack** 칸: Attack Range(0이면 근접. 실제로는 사거리의 85% 거리에서 멈춘다), Shot Speed, Shot Radius. 피해와 발사 간격은 Attack Damage, Attack Period를 같이 쓴다. `Caster` 시작값: 사거리 6.5, 투사체 속도 6, 피해 10, 간격 2.5초, 체력 44, 이동 3.
 - 잡몹 모델은 잡몹 파일의 **Looks** 칸에서 바꾼다: Prefab(비우면 임시 구), Model Scale, Model Yaw Offset, States(Run·Attack 등 애니메이터 상태 이름. 없는 이름은 무시된다).
+- MageC(`DarkFlameMage`), 창투척병(`Thrower`, 미니 보스 `SpearThrower`), 투석기(`Catapult`)는 각자 머리 위에 남은 체력이 표시된다. 막대 모양은 `Assets/Art/UI/EnemyHealthBar.prefab`에서, 지면으로부터의 높이는 각 적 정의의 **Health Bar Height**에서 조절한다.
+- 피격 순간 빨간 막대는 남은 체력까지 바로 줄고 끝이 잠깐 빛난다. 방금 잃은 체력은 금빛으로 0.12초간 남았다가 0.32초 동안 줄어든다. 연속으로 맞으면 남아 있던 금빛 구간에 새 피해가 더해진다.
 - `Stage1_v02`는 근접+원거리를 섞은 초안이고 Stage1 씬이 이것을 쓴다. 숫자는 플레이로 확인한 값이 아니다.
 - 동시에 살아 있는 잡몹은 `GameTuning.asset`의 **Mob Max Alive**(지금 200)를 넘지 못한다. 넘으면 그 웨이브는 잘린다.
 - 미니 보스는 웨이브 플랜에 넣지 않는다. 맵 위의 표식으로 놓는다. 스테이지의 마지막 미니 보스가 죽으면 웨이브가 멈춘다(결정 #42·#46).

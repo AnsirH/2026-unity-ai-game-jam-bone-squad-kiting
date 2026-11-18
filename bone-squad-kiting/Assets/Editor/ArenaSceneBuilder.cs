@@ -118,9 +118,7 @@ namespace BoneSquadKiting.EditorTools
             var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f);            // faction look: squad leader and mini bosses up only
             var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f, faction: Faction.Enemy);
             var shot = Lit("Shot", Hex("#ffe27a"), Hex("#ffd24a") * 2.5f);
-            var telegraph = Upsert($"{MatDir}/Telegraph.mat", TelegraphShader());
-            telegraph.color = Color.white;
-            EditorUtility.SetDirty(telegraph);
+            var telegraph = TelegraphMaterial();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -470,9 +468,13 @@ namespace BoneSquadKiting.EditorTools
             return m;
         }
 
-        /// <summary>Danger zones draw over everything (no depth test), so terrain never hides them.</summary>
-        internal static Shader TelegraphShader() =>
-            Shader.Find("BoneSquadKiting/TelegraphOverlay") ?? Shader.Find("Sprites/Default");
+        /// <summary>
+        /// The material danger zones are drawn with: the animated telegraph (grows in, rim, honeycomb). Its
+        /// shader draws a zone above the ground but behind anything standing on it. TelegraphView sets the
+        /// shape and state per zone, so this one material serves every shape.
+        /// </summary>
+        internal static Material TelegraphMaterial() =>
+            AssetDatabase.LoadAssetAtPath<Material>($"{MatDir}/TelegraphPreviewRectangle.mat");
 
         internal static Material Upsert(string path, Shader shader)
         {

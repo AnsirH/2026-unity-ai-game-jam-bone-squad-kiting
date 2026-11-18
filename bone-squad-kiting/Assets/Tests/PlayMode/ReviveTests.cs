@@ -1,8 +1,14 @@
+using System.Collections;
+using System.Linq;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using BoneSquadKiting.Bosses;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
+using BoneSquadKiting.Data;
+using BoneSquadKiting.Fx;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Squad;
 
@@ -119,13 +125,44 @@ public class ReviveTests
     }
 
     [Test]
-    public void GaugeKeepsFilling_WhileTheSquadMoves()
+    public void MovingSquad_RevivesAtTheOffsetSelectedAtStart()
     {
         Kill(9);
-        _dir.TryRevive();
-        _dir.IssueOrder(SquadOrder.Move(_fc.Anchor + new Vector2(6f, 0)));
+        var startAnchor = _fc.Anchor;
+        Vector2 startOffset = default;
+        Vector2? completedOffset = null;
+        _dir.ReviveStarted += (reviver, target) => startOffset = _dir.Revives.Active[0].AppearOffset;
+        _dir.ReviveCompleted += (reviver, target) =>
+        {
+            Assert.That(Vector2.Distance(startAnchor, _fc.Anchor), Is.GreaterThan(0.1f));
+            completedOffset = new Vector2(target.X, target.Z) - _fc.Anchor;
+        };
+        Assert.IsTrue(_dir.TryRevive());
+        Assert.That(startOffset.magnitude, Is.EqualTo(_dir.Revives.AppearRadius).Within(0.001f));
+        _dir.IssueOrder(SquadOrder.Move(startAnchor + new Vector2(6f, 0)));
         Run(3.1f);
         Assert.AreEqual(0, _dir.DeadCount);
+        Assert.IsTrue(completedOffset.HasValue);
+        Assert.That(Vector2.Distance(completedOffset.Value, startOffset), Is.LessThan(0.001f));
+    }
+
+    [Test]
+    public void CancellingOneOfTwoRevives_LeavesTheOtherRunning()
+    {
+        Kill(3, 4);
+        Assert.IsTrue(_dir.TryRevive());
+        Run(1f);
+        Assert.IsTrue(_dir.TryRevive());
+        var first = _dir.Revives.Active[0];
+        var second = _dir.Revives.Active[1];
+        first.Reviver.Dead = true;
+        Run(0.1f);
+
+        CollectionAssert.AreEqual(new[] { second }, _dir.Revives.Active);
+        Run(3f);
+        Assert.IsTrue(first.Target.Dead);
+        Assert.IsFalse(second.Target.Dead);
+        Assert.IsEmpty(_dir.Revives.Active);
     }
 
     [Test]
@@ -179,5 +216,79 @@ public class ReviveTests
         Assert.AreEqual(0, _dir.Revives.Active.Count);
         Assert.AreEqual(0, _dir.DeadCount);
         foreach (var u in _fc.Units) Assert.IsFalse(u.Reviving);
+    }
+
+    ReviveBoneFx BindBoneFx()
+    {
+        if (Camera.main == null)
+        {
+            var camera = new GameObject("Revive test camera").AddComponent<Camera>();
+            camera.transform.SetParent(_fc.transform);
+            camera.transform.position = new Vector3(0, 8, -8);
+            camera.transform.LookAt(Vector3.zero);
+            camera.tag = "MainCamera";
+        }
+        var fx = new GameObject("Revive bones").AddComponent<ReviveBoneFx>();
+        fx.transform.SetParent(_fc.transform);
+        fx.Bind(_dir, AssetDatabase.LoadAssetAtPath<ArtSet>("Assets/Data/Art/ArtSet.asset"));
+        return fx;
+    }
+
+    static void AssertFragments(ReviveBoneFx fx, params string[] expected)
+    {
+        var visible = fx.GetComponentsInChildren<MeshRenderer>().Select(renderer => renderer.gameObject.name);
+        CollectionAssert.AreEquivalent(expected.Select(name => name + "(Clone)"), visible);
+    }
+
+    [UnityTest]
+    public IEnumerator FragmentsEnterAtZeroQuarterAndHalfProgress_AndHoldWhilePaused()
+    {
+        var fx = BindBoneFx();
+        Kill(5);
+        Assert.IsTrue(_dir.TryRevive());
+        yield return null;
+        AssertFragments(fx, "BrokenBone");
+
+        _dir.Step(0.625f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone");
+        var first = fx.GetComponentInChildren<MeshRenderer>().transform;
+        var pausedPosition = first.position;
+        _dir.TogglePause();
+        _dir.Step(1f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone");
+        Assert.AreEqual(pausedPosition, first.position);
+
+        _dir.TogglePause();
+        _dir.Step(0.125f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone", "Vertebra");
+        _dir.Step(0.625f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone", "Vertebra");
+        _dir.Step(0.125f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone", "Vertebra", "Scapula");
+    }
+
+    [UnityTest]
+    public IEnumerator CancelBeforeTheSecondFragment_NoMoreBonesArrive()
+    {
+        var fx = BindBoneFx();
+        Kill(5);
+        Assert.IsTrue(_dir.TryRevive());
+        _dir.Step(0.625f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone");
+
+        _dir.Revives.Active[0].Reviver.Dead = true;
+        _dir.Step(0.125f);
+        yield return null;
+        AssertFragments(fx, "BrokenBone");
+        _dir.Step(1f);
+        yield return null;
+        AssertFragments(fx);
+        Assert.IsTrue(_fc.Units[5].Dead);
     }
 }

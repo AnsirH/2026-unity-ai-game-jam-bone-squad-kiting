@@ -25,6 +25,7 @@ namespace BoneSquadKiting.Bosses
         class View
         {
             public HitFlash Flash;
+            public EnemyHealthBar HealthBar;
             public GameObject Root;
             public EnemyRef Ref;
             public Renderer Cylinder;          // placeholder only
@@ -51,6 +52,7 @@ namespace BoneSquadKiting.Bosses
 
         void LateUpdate()
         {
+            var camera = Camera.main;
             foreach (var v in _live.Values) v.Seen = false;
 
             var elites = Director != null && Director.Elites != null ? Director.Elites.Elites : null;
@@ -60,7 +62,7 @@ namespace BoneSquadKiting.Bosses
                     if (!e.Alive || e.Def == null) continue;
                     if (!_live.TryGetValue(e, out var v)) { v = Take(e); _live[e] = v; }
                     v.Seen = true;
-                    Draw(e, v);
+                    Draw(e, v, camera);
                 }
 
             _gone.Clear();
@@ -69,6 +71,7 @@ namespace BoneSquadKiting.Bosses
             {
                 var v = _live[e];
                 _live.Remove(e);
+                if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 v.Root.SetActive(false);
                 v.Ref.Enemy = null;
                 if (!_free.TryGetValue(e.Def, out var stack)) _free[e.Def] = stack = new Stack<View>();
@@ -76,10 +79,12 @@ namespace BoneSquadKiting.Bosses
             }
         }
 
-        void Draw(Elite e, View v)
+        void Draw(Elite e, View v, Camera camera)
         {
             v.Ref.Enemy = e;
             float y = GroundHeight.Y(e.X, e.Z);
+            if (v.HealthBar != null)
+                v.HealthBar.Draw(new Vector3(e.X, y + e.Def.HealthBarHeight, e.Z), camera, e.Health, e.Def.MaxHp);
 
             if (v.Visual == null)
             {
@@ -121,7 +126,12 @@ namespace BoneSquadKiting.Bosses
                 v = stack.Pop();
                 v.Root.SetActive(true);
             }
-            else v = Create(e.Def);
+            else
+            {
+                v = Create(e.Def);
+                if (e.Def.HealthBarPrefab != null)
+                    v.HealthBar = Instantiate(e.Def.HealthBarPrefab, transform);
+            }
             v.LastPos = e.Pos; v.WasCasting = false;
             if (v.Visual != null)
             {

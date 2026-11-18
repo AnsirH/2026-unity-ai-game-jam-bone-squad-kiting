@@ -67,6 +67,8 @@ MonoBehaviour:
     m_RotationOrder: 4
   ShotFadeStart: 0.55
   Prefab: {fileID: 7652423654242403680, guid: e4f8b5ef4bd15412fa11049ec225be2b, type: 3}
+  HealthBarPrefab: {fileID: 6218836204645062609, guid: 854e94014f6744ce38ab12dcf4bb4799, type: 3}
+  HealthBarHeight: 2.05
   ModelScale: 1
   ModelYawOffset: 0
   AttackAnimSeconds: 1.5333334

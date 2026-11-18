@@ -28,6 +28,8 @@ MonoBehaviour:
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
   Prefab: {fileID: 5736227486350466048, guid: 128bba935906c450f9906835be963833, type: 3}
+  HealthBarPrefab: {fileID: 6218836204645062609, guid: 854e94014f6744ce38ab12dcf4bb4799, type: 3}
+  HealthBarHeight: 3.65
   ModelScale: 3
   ModelYawOffset: 90
   ModelGroundOffset: 0.28

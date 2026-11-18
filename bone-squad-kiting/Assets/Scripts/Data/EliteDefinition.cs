@@ -1,4 +1,5 @@
 using UnityEngine;
+using BoneSquadKiting.Visuals;
 
 namespace BoneSquadKiting.Data
 {
@@ -12,8 +13,10 @@ namespace BoneSquadKiting.Data
         public string DisplayName = "미니 보스";
         public float MaxHp = 4000f;
         public float Speed = 2f;              // slower than mobs (3.2): the swarm arrives first. 0 = fixed in place (a cannon)
+        /// <summary>True for one that never moves. It may be placed off walkable ground.</summary>
+        public bool Fixed => Speed <= 0f;
         public float Radius = 0.8f;
-        public float StopDistance = 3f;       // stops walking this close to the nearest unit
+        public float StopDistance = 3f;      // stops walking this close to the nearest unit
 
         [Header("Area attacks")]
         public AttackSequence Patterns;
@@ -31,6 +34,8 @@ namespace BoneSquadKiting.Data
 
         [Header("Looks (optional: empty = the placeholder cylinder)")]
         public GameObject Prefab;             // model with an Animator; drawn with its feet on the ground, facing the squad
+        public EnemyHealthBar HealthBarPrefab;
+        [Min(0f)] public float HealthBarHeight = 2f; // world units above the ground
         public float ModelScale = 1f;         // multiplies the prefab's own scale
         public float ModelYawOffset = 0f;     // degrees around Y if the model's front is not +Z
         public float ModelGroundOffset = 0f;  // lifts the model, in its own units (scaled with it), if its origin is not at its feet

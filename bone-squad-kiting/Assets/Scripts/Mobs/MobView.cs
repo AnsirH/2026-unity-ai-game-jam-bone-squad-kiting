@@ -25,6 +25,7 @@ namespace BoneSquadKiting.Mobs
         class View
         {
             public HitFlash Flash;
+            public EnemyHealthBar HealthBar;
             public Transform Root;
             public Renderer Sphere;        // placeholder only
             public UnitVisual Visual;      // model only
@@ -97,6 +98,7 @@ namespace BoneSquadKiting.Mobs
 
         void LateUpdate()
         {
+            var camera = Camera.main;
             foreach (var v in _live.Values) v.Seen = false;
 
             var mobs = Director != null && Director.Mobs != null ? Director.Mobs.Mobs : null;
@@ -106,7 +108,7 @@ namespace BoneSquadKiting.Mobs
                     if (!m.Alive || m.Def == null) continue;
                     if (!_live.TryGetValue(m, out var v)) { v = Take(m); _live[m] = v; }
                     v.Seen = true;
-                    Draw(m, v);
+                    Draw(m, v, camera);
                 }
 
             DrawShots();
@@ -117,6 +119,7 @@ namespace BoneSquadKiting.Mobs
             {
                 var v = _live[m];
                 _live.Remove(m);
+                if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 v.Root.gameObject.SetActive(false);
                 if (!_free.TryGetValue(m.Def, out var stack)) _free[m.Def] = stack = new Stack<View>();
                 stack.Push(v);
@@ -215,9 +218,11 @@ namespace BoneSquadKiting.Mobs
 
         void OnDestroy() { if (_shotMaterial != null) Destroy(_shotMaterial); }
 
-        void Draw(Mob m, View v)
+        void Draw(Mob m, View v, Camera camera)
         {
             float y = GroundHeight.Y(m.X, m.Z);
+            if (v.HealthBar != null)
+                v.HealthBar.Draw(new Vector3(m.X, y + m.Def.HealthBarHeight, m.Z), camera, m.Health, m.Def.Hp);
             var moved = m.Pos - v.LastPos;
             bool moving = moved.sqrMagnitude > 1e-8f;
 
@@ -256,7 +261,12 @@ namespace BoneSquadKiting.Mobs
                 v = stack.Pop();
                 v.Root.gameObject.SetActive(true);
             }
-            else v = Create(m.Def);
+            else
+            {
+                v = Create(m.Def);
+                if (m.Def.HealthBarPrefab != null)
+                    v.HealthBar = Instantiate(m.Def.HealthBarPrefab, transform);
+            }
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
             if (v.Visual != null)
             {

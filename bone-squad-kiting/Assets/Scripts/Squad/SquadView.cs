@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using BoneSquadKiting.Data;
+using BoneSquadKiting.Fx;
+using BoneSquadKiting.Game;
 using BoneSquadKiting.Visuals;
 
 namespace BoneSquadKiting.Squad
@@ -36,7 +38,7 @@ namespace BoneSquadKiting.Squad
         }
 
         readonly List<View> _views = new();
-        BoneSquadKiting.Game.GameDirector _director;
+        GameDirector _director;
         MaterialPropertyBlock _block;
 
         void Awake()
@@ -45,6 +47,25 @@ namespace BoneSquadKiting.Squad
             // Units already placed under this object (so they show in the editor) are reused in order.
             foreach (Transform child in transform) _views.Add(Wrap(child, _views.Count));
             _block = new MaterialPropertyBlock();
+        }
+
+        void Start()
+        {
+            if (!Application.isPlaying || Art == null) return;
+            _director = FindSquadDirector();
+            if (_director == null) return;
+            var reviveFx = GetComponent<ReviveBoneFx>();
+            if (reviveFx == null) reviveFx = gameObject.AddComponent<ReviveBoneFx>();
+            reviveFx.Bind(_director, Art);
+        }
+
+        GameDirector FindSquadDirector()
+        {
+            if (Squad == null) return null;
+            if (Squad.TryGetComponent<GameDirector>(out var director) && director.Squad == Squad) return director;
+            foreach (var candidate in FindObjectsByType<GameDirector>(FindObjectsSortMode.None))
+                if (candidate.Squad == Squad) return candidate;
+            return null;
         }
 
         void LateUpdate()
@@ -151,7 +172,7 @@ namespace BoneSquadKiting.Squad
                     // The animation's release event lets the shot go at the exact frame the hand opens.
                     view.Visual.AttackReleased = () =>
                     {
-                        if (_director == null) _director = FindAnyObjectByType<BoneSquadKiting.Game.GameDirector>();
+                        if (_director == null) _director = FindSquadDirector();
                         if (_director != null && _director.Shots != null && Squad != null && index < Squad.Units.Count)
                         {
                             RegisterMuzzle(view, Squad.Units[index]);
@@ -167,7 +188,7 @@ namespace BoneSquadKiting.Squad
         void RegisterMuzzle(View view, SquadUnit unit)
         {
             if (view.SpawnPoint == null) return;
-            if (_director == null) _director = FindAnyObjectByType<BoneSquadKiting.Game.GameDirector>();
+            if (_director == null) _director = FindSquadDirector();
             if (_director != null && _director.Shots != null)
                 _director.Shots.SetMuzzlePosition(unit.Id, view.SpawnPoint.position);
         }
