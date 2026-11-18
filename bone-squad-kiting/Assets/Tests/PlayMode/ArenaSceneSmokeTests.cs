@@ -163,7 +163,13 @@ public class ArenaSceneSmokeTests
         var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
         hud.OverlayButton.onClick.Invoke();
         yield return null;
-        Assert.IsFalse(hud.BossBar.activeSelf, "no boss bar on a stage without a boss");
+        yield return null;
+        // No boss here, but the fixed catapults are on the stage from the start: the bar shows one of them.
+        Assert.IsTrue(hud.BossBar.activeSelf);
+        StringAssert.Contains("투석병", hud.BossText.text);
+        Assert.AreEqual(3, director.Elites.Elites.Count, "three catapults present from the start");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Stage.CameraGate>(), "camera gate placed");
+        Assert.IsTrue(Object.FindFirstObjectByType<BoneSquadKiting.Stage.CameraGate>().Closed);
 
         float until = Time.time + director.Waves.FirstWaveDelay + 2f;
         while (director.Mobs.AliveCount == 0 && Time.time < until) yield return null;

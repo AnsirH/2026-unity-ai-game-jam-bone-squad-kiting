@@ -16,6 +16,7 @@ namespace BoneSquadKiting.Bosses
         public Material Material;
         public Color TrackingColor = new(1f, 0.25f, 0.2f, 0.28f);
         public Color LockedColor = new(1f, 0.15f, 0.1f, 0.6f);
+        public Color LiveColor = new(1f, 0.55f, 0.1f, 0.8f);   // a sustained zone that is dealing damage right now
         public float Height = 0.03f;
 
         class Zone
@@ -47,8 +48,9 @@ namespace BoneSquadKiting.Bosses
                     z.Pattern = a.Pattern; z.Shape = a.Shape;
                 }
                 z.Filter.transform.position = new Vector3(a.Cx, Height, a.Cz);
+                z.Filter.transform.rotation = Quaternion.Euler(0f, a.Angle, 0f);   // +Y turns clockwise seen from above
                 bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
-                _block.SetColor(ColorId, locked ? LockedColor : TrackingColor);
+                _block.SetColor(ColorId, a.Sustaining ? LiveColor : locked ? LockedColor : TrackingColor);
                 z.Renderer.SetPropertyBlock(_block);
                 z.Renderer.enabled = true;
             }

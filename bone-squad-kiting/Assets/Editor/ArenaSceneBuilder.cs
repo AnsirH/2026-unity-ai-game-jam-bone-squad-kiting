@@ -55,6 +55,8 @@ namespace BoneSquadKiting.EditorTools
             public float Width = 18f, Length = 64f;
             public bool ReachEndOnly;                       // clear by reaching the end point even if mini bosses live
             public Placement[] MiniBosses = new Placement[0];
+            public float GateAlong = -1f;                   // >= 0: a camera gate here (0 = start, 1 = end)...
+            public int[] GateUntil;                         // ...closed until these mini boss placements are dead
             public float Interval0 = 12f, Interval1 = 5f;   // seconds between waves at the start / at the end
             public float Count0 = 8f, Count1 = 30f;         // mobs per wave at the start / at the end
             public string Path => $"Assets/Scenes/{Name}.unity";
@@ -80,16 +82,19 @@ namespace BoneSquadKiting.EditorTools
         {
             new() { Name = "Stage1", Title = "스테이지 1", Next = "Stage2", Length = 84f, Interval0 = 12f, Interval1 = 7f, Count0 = 6f, Count1 = 18f,
                     MiniBosses = new[] { new Placement("Catapult", -5f, 0.28f, true), new Placement("Catapult", 5f, 0.45f, true),
-                                         new Placement("Catapult", 0f, 0.64f, true), new Placement("DarkFlameMage", 0f, 0.9f) } },
+                                         new Placement("Catapult", 0f, 0.64f, true), new Placement("DarkFlameMage", 0f, 0.9f) },
+                    GateAlong = 0.74f, GateUntil = new[] { 0, 1, 2 } },
             new() { Name = "Stage2", Title = "스테이지 2", Next = "Stage3", Length = 96f, Interval0 = 11f, Interval1 = 6f, Count0 = 8f, Count1 = 24f,
                     MiniBosses = new[] { new Placement("ShadowSwordsman", 0f, 0.22f),
                                          new Placement("Catapult", -5f, 0.42f, true), new Placement("Catapult", 5f, 0.52f, true), new Placement("Catapult", 6f, 0.62f, true),
-                                         new Placement("Catapult", 4f, 0.8f, true, new[] { 1, 2, 3 }), new Placement("SpearThrower", 0f, 0.9f, false, new[] { 1, 2, 3 }) } },
+                                         new Placement("Catapult", 4f, 0.8f, true, new[] { 1, 2, 3 }), new Placement("SpearThrower", 0f, 0.9f, false, new[] { 1, 2, 3 }) },
+                    GateAlong = 0.72f, GateUntil = new[] { 1, 2, 3 } },
             new() { Name = "Stage3", Title = "스테이지 3", Next = "Stage4", Length = 108f, ReachEndOnly = true, Interval0 = 9f, Interval1 = 3.5f, Count0 = 12f, Count1 = 40f,
                     MiniBosses = new[] { new Placement("Catapult", -5f, 0.2f, true), new Placement("Catapult", 5f, 0.32f, true), new Placement("Catapult", -5f, 0.46f, true),
-                                         new Placement("Catapult", 5f, 0.58f, true), new Placement("Catapult", 0f, 0.72f, true), new Placement("TelekineticMage", 0f, 0.9f) } },
+                                         new Placement("Catapult", 5f, 0.58f, true), new Placement("Catapult", 0f, 0.72f, true), new Placement("TelekineticMage", 0f, 0.9f) },
+                    GateAlong = 0.8f, GateUntil = new[] { 0, 1, 2, 3, 4 } },
             new() { Name = "Stage4", Title = "스테이지 4", Next = "Arena", Length = 84f, Interval0 = 10f, Interval1 = 5f, Count0 = 10f, Count1 = 30f,
-                    MiniBosses = new[] { new Placement("TelekineticMage", 0f, 0.45f), new Placement("TelekineticMage", 0f, 0.9f) } },
+                    MiniBosses = new[] { new Placement("TelekineticMageGate", 0f, 0.45f), new Placement("TelekineticMageQuadrant", 0f, 0.9f) } },
         };
         const string ArenaTitle = "스테이지 5";
 
@@ -366,6 +371,16 @@ namespace BoneSquadKiting.EditorTools
                 var after = spec.MiniBosses[i].After;
                 if (after == null) continue;
                 spawns[i].ActivateAfter = System.Array.ConvertAll(after, k => spawns[k]);
+            }
+
+            // A camera gate: the view cannot be scrolled past this line until the listed mini bosses are dead.
+            if (spec.GateAlong >= 0f && spec.GateUntil != null)
+            {
+                var gateGo = new GameObject("Camera Gate");
+                gateGo.transform.SetParent(stage.transform, false);
+                gateGo.transform.position = new Vector3(0f, 0f, Mathf.Lerp(start.y, end.y, spec.GateAlong));
+                gateGo.transform.rotation = Quaternion.Euler(0f, 180f, 0f);   // arrow toward -z: the far side is closed
+                gateGo.AddComponent<CameraGate>().Until = System.Array.ConvertAll(spec.GateUntil, k => spawns[k]);
             }
 
             var eliteView = new GameObject("Mini Boss View").AddComponent<EliteView>();

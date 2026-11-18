@@ -41,6 +41,10 @@ namespace BoneSquadKiting.Squad
         public string Formation = DefaultFormation;
         public float RotationStepDegrees = 15f;              // one mouse-wheel notch (initial value, not final)
         public float RotationDegrees;                         // clockwise seen from above; 0 = as authored
+        public float TargetRotationDegrees;                   // where the wheel has asked the formation to turn to
+
+        [Tooltip("How fast the formation turns toward the angle set with the wheel, in degrees per second. 0 = instantly.")]
+        public float RotationSpeed = 0f;
         public SquadOrder Order;
         public readonly List<SquadUnit> Units = new();
 
@@ -66,7 +70,7 @@ namespace BoneSquadKiting.Squad
             Units.Clear();
             Anchor = Destination = StartAnchor;
             Formation = DefaultFormation;
-            RotationDegrees = 0;
+            RotationDegrees = 0; TargetRotationDegrees = 0;
             LeaderFacing = new Vector2(0f, -1f);
             Order = SquadOrder.Move(StartAnchor);
             var slots = FormationSlots.Generate(def, GameConstants.SquadSize);
@@ -97,7 +101,9 @@ namespace BoneSquadKiting.Squad
         {
             var def = Find(Formation);
             if (def == null || clockwiseNotches == 0) return;
-            RotationDegrees = Mathf.Repeat(RotationDegrees + clockwiseNotches * RotationStepDegrees, 360f);
+            TargetRotationDegrees = Mathf.Repeat(TargetRotationDegrees + clockwiseNotches * RotationStepDegrees, 360f);
+            if (RotationSpeed > 0f) return;   // Tick turns the formation toward the target at RotationSpeed
+            RotationDegrees = TargetRotationDegrees;
             ApplySlots(def);
         }
 
@@ -202,6 +208,14 @@ namespace BoneSquadKiting.Squad
 
         public void Tick(float dt)
         {
+            // With a turning speed set, the formation swings toward the wheel's target angle a little each frame.
+            if (RotationSpeed > 0f && Mathf.Abs(Mathf.DeltaAngle(RotationDegrees, TargetRotationDegrees)) > 0.01f)
+            {
+                RotationDegrees = Mathf.Repeat(Mathf.MoveTowardsAngle(RotationDegrees, TargetRotationDegrees, RotationSpeed * dt), 360f);
+                var turning = Find(Formation);
+                if (turning != null) ApplySlots(turning);
+            }
+
             Vector2 diff = Destination - Anchor;
             float dist = diff.magnitude;
             if (dist > GameConstants.AnchorArrive)

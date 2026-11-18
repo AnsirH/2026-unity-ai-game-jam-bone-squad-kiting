@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Elite_TelekineticMage
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.AttackSequence
   Patterns:
-  - {fileID: 11400000, guid: 41a7d0346008cd149983678aeb54ff1d, type: 2}
+  - {fileID: 11400000, guid: 53200b1b295cac74495338a0073b8c06, type: 2}

@@ -21,6 +21,7 @@ MonoBehaviour:
   FirstAttackDelay: 3
   AttackGap: 3.5
   AttackGapRandom: 3
+  ZoneRotationSpeed: 0
   AttackRange: 14
   IntroDuration: 2
   DeathDuration: 1.5

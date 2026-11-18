@@ -53,6 +53,10 @@ namespace BoneSquadKiting.Stage
             {
                 Cam.BoundsMin = Grid.Origin;
                 Cam.BoundsMax = Grid.Origin + new Vector2(Grid.Width, Grid.Height) * Grid.CellSize;
+                var gates = new System.Collections.Generic.List<CameraGate>();
+                foreach (var g in FindObjectsByType<CameraGate>(FindObjectsSortMode.None))
+                    if (g.gameObject.scene == gameObject.scene) gates.Add(g);
+                Cam.Gates = gates.ToArray();
                 Cam.Apply();
             }
         }
