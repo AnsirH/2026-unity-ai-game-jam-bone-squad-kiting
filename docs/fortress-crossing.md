@@ -18,6 +18,10 @@
 
 흐름 보간은 [Catlike Coding의 Texture Distortion](https://catlikecoding.com/unity/tutorials/flow/texture-distortion/), 수심과 포말 처리는 [Unity Boat Attack의 물 셰이더](https://github.com/Unity-Technologies/BoatAttack/blob/master/Packages/com.verasl.water-system/Shaders/WaterCommon.hlsl)를 참고했다.
 
+## 다리 아래 물안개
+
+`Rocky River Gorge/River Surface/River Mist`는 수면 위 3.4m에 놓이며 강의 굽이를 따라간다. 안개는 교각 주변에서 천천히 흐르고 강둑과 강 양끝에서 옅어진다. 물속 바위 위로는 안개가 이어지고, 수면 위로 솟은 바위와 교각에서는 카메라 깊이를 읽어 표면까지의 거리에 따라 부드럽게 옅어진다. `River Mist` 머티리얼의 `Density`로 농도를, `Mesh intersection softness (m)`로 바위와 교각 앞에서 안개가 사라지는 거리를 조절한다. 이 경계 처리에는 URP의 카메라 깊이 텍스처가 필요하다.
+
 ## 강둑과 돌 재질
 
 강둑은 Terrain의 `Gorge Stone` 레이어와 `Rocky River Gorge/Rock Shelves` 아래의 층상 암반, 물가 자갈로 구성한다.
