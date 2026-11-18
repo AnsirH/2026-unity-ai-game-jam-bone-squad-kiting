@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Utils;
 using BoneSquadKiting.Cameras;
 using BoneSquadKiting.Squad;
 
@@ -33,6 +34,14 @@ public class QuarterViewCameraTests
         var toAnchor = anchor - _cam.transform.position;
         Assert.That(toAnchor.magnitude, Is.EqualTo(30f).Within(1e-3f));
         Assert.That(Vector3.Angle(toAnchor, _cam.transform.forward), Is.LessThan(0.01f));
+    }
+
+    [Test]
+    public void LookOffset_ShiftsTheLookAtPoint()
+    {
+        var before = _cam.DesiredPosition;
+        _cam.LookOffset = new Vector3(0, 0, -3f);
+        Assert.That(_cam.DesiredPosition - before, Is.EqualTo(new Vector3(0, 0, -3f)).Using(Vector3EqualityComparer.Instance));
     }
 
     [Test]

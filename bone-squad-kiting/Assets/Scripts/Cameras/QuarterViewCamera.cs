@@ -4,7 +4,7 @@ using BoneSquadKiting.Squad;
 namespace BoneSquadKiting.Cameras
 {
     /// <summary>
-    /// Keeps a fixed-angle camera looking at the squad's formation anchor, easing toward it so small
+    /// Keeps a fixed-angle camera looking at the squad's formation anchor (plus an optional offset), easing toward it so small
     /// moves do not jerk the view. The camera's rotation is whatever it was given in the scene.
     /// </summary>
     public class QuarterViewCamera : MonoBehaviour
@@ -12,6 +12,7 @@ namespace BoneSquadKiting.Cameras
         public FormationController Squad;
         public float Distance = 34f;      // from the anchor, along the view direction
         public float SmoothTime = 0.35f;  // seconds to roughly catch up; 0 = locked to the anchor
+        public Vector3 LookOffset;        // world-space shift of the look-at point from the anchor (e.g. toward the boss)
 
         Vector3 _velocity;
 
@@ -20,8 +21,8 @@ namespace BoneSquadKiting.Cameras
         {
             get
             {
-                var anchor = new Vector3(Squad.Anchor.x, 0f, Squad.Anchor.y);
-                return anchor - transform.forward * Distance;
+                var lookAt = new Vector3(Squad.Anchor.x, 0f, Squad.Anchor.y) + LookOffset;
+                return lookAt - transform.forward * Distance;
             }
         }
 

@@ -29,11 +29,13 @@ namespace BoneSquadKiting.EditorTools
         const string EnemyLayer = "Enemy";
 
         // Camera framing. Tune here (or on the camera, once the scene is hand-authored).
-        const float CameraPitch = 50f;      // degrees down from horizontal
-        const float CameraYaw = 25f;        // degrees turned around Y, away from straight-on
-        const float CameraFov = 35f;        // vertical field of view
+        const float CameraPitch = 60f;      // degrees down from horizontal
+        const float CameraYaw = 0f;         // degrees turned around Y; 0 = straight on, boss directly ahead
+        const float CameraFov = 30f;        // vertical field of view
         const float CameraDistance = 34f;   // from the squad anchor it follows
         const float CameraSmoothTime = 0.35f;
+        // Look a little ahead of the squad, toward the boss side, so the boss stays in frame at this zoom.
+        static readonly Vector3 CameraLookOffset = new(0f, 0f, -3.5f);
 
         [MenuItem("BoneSquadKiting/Rebuild Arena Scene")]
         public static void Build()
@@ -59,8 +61,9 @@ namespace BoneSquadKiting.EditorTools
                 (GameConstants.LimitZMax - GameConstants.LimitZMin) / 10f);
             plane.GetComponent<Renderer>().sharedMaterial = ground;
 
-            // Quarter view: a perspective camera looking down at an angle, turned a little around Y so the
-            // arena reads as a diagonal. It sits on the +z side, so the boss (negative z) is at the far end.
+            // Quarter view: a perspective camera looking down at a steep angle (framing modelled on
+            // Shape of Dreams: ~60 degrees, narrow FOV, no Y turn). It sits on the +z side, so the boss
+            // (negative z) is at the far end and world +x is screen-left.
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camGo.AddComponent<Camera>();
             camGo.AddComponent<AudioListener>();
@@ -111,6 +114,7 @@ namespace BoneSquadKiting.EditorTools
             // The camera eases after the formation anchor; it starts already centered on the squad.
             var follow = camGo.AddComponent<QuarterViewCamera>();
             follow.Squad = squad; follow.Distance = CameraDistance; follow.SmoothTime = CameraSmoothTime;
+            follow.LookOffset = CameraLookOffset;
             camGo.transform.position = follow.DesiredPosition;
 
             var input = game.AddComponent<SquadInputController>();
