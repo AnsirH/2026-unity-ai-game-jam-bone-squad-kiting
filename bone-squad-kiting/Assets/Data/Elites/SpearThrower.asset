@@ -27,3 +27,5 @@ MonoBehaviour:
   DeathDuration: 1.5
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
+  HealthBarPrefab: {fileID: 6218836204645062609, guid: 854e94014f6744ce38ab12dcf4bb4799, type: 3}
+  HealthBarHeight: 2.65

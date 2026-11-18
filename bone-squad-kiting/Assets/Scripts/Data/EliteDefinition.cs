@@ -1,4 +1,5 @@
 using UnityEngine;
+using BoneSquadKiting.Visuals;
 
 namespace BoneSquadKiting.Data
 {
@@ -31,6 +32,8 @@ namespace BoneSquadKiting.Data
 
         [Header("Looks (optional: empty = the placeholder cylinder)")]
         public GameObject Prefab;             // model with an Animator; drawn with its feet on the ground, facing the squad
+        public EnemyHealthBar HealthBarPrefab;
+        [Min(0f)] public float HealthBarHeight = 2f; // world units above the ground
         public float ModelScale = 1f;         // multiplies the prefab's own scale
         public float ModelYawOffset = 0f;     // degrees around Y if the model's front is not +Z
         public float ModelGroundOffset = 0f;  // lifts the model, in its own units (scaled with it), if its origin is not at its feet

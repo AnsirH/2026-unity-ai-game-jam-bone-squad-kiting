@@ -1,4 +1,5 @@
 using UnityEngine;
+using BoneSquadKiting.Visuals;
 
 namespace BoneSquadKiting.Data
 {
@@ -26,6 +27,8 @@ namespace BoneSquadKiting.Data
 
         [Header("Looks (optional: empty = the placeholder sphere)")]
         public GameObject Prefab;           // model with an Animator; drawn with its feet on the ground
+        public EnemyHealthBar HealthBarPrefab;
+        [Min(0f)] public float HealthBarHeight = 2f; // world units above the ground
         public float ModelScale = 1f;       // multiplies the prefab's own scale
         public float ModelYawOffset = 0f;   // degrees around Y if the model's front is not +Z
         public float AttackAnimSeconds = 0.35f;   // how long the attack animation shows before going back to idle/run
