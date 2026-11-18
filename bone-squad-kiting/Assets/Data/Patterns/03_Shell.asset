@@ -18,16 +18,25 @@ MonoBehaviour:
   Detail: "\uBC14\uAE65\uBD80\uD130 \uD3ED\uBC1C\uD569\uB2C8\uB2E4. \uC911\uC2EC\uC73C\uB85C
     \uBAA8\uC774\uC138\uC694!"
   Recommend: dense
-  Time: 2.1
+  Time: 1.2
   Shape:
     Type: 1
     RMax: 0
     RMin: 1.73
     ROut: 6.05
+    LaneSpacing: 0
+    LaneHalfWidth: 0
     Inner: 0
     Outer: 0
     HalfZ: 0
   ScaleWithSquad: 0
+  LethalTelegraph: 0
+  BurstEffect: {fileID: 0}
+  LaneWarningMaterial: {fileID: 0}
+  FillEffect: {fileID: 7042135556935085144, guid: 394bdd7da3e07435c870f744606115a2, type: 3}
+  FillSpacing: 2
+  FillScale: 1
+  FillSeconds: 1
   Kind: 0
   SustainSeconds: 4
   TickInterval: 0.5

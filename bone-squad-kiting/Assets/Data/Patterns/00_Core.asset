@@ -18,7 +18,7 @@ MonoBehaviour:
   Detail: "\uC911\uC559\uC774 \uD3ED\uBC1C\uD569\uB2C8\uB2E4. \uC6D0\uD615\uC73C\uB85C
     \uD769\uC5B4\uC9C0\uC138\uC694!"
   Recommend: ring
-  Time: 2.15
+  Time: 1.2
   Shape:
     Type: 0
     RMax: 3.1
@@ -28,6 +28,7 @@ MonoBehaviour:
     Outer: 0
     HalfZ: 0
   ScaleWithSquad: 1
+  LethalTelegraph: 0
   Kind: 0
   SustainSeconds: 4
   TickInterval: 0.5

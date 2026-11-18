@@ -389,7 +389,9 @@ namespace BoneSquadKiting.Game
         public Elite SpawnMiniBoss(MiniBossSpawn m)
         {
             if (m == null || m.Triggered || m.Definition == null || Elites == null) return null;
-            var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
+            // One that never moves (a cannon) stands exactly on its marker, walkable ground or not: it has
+            // nowhere to walk, so it cannot get stuck. One that moves is put on the nearest walkable point.
+            var pos = Squad.Grid != null && !m.Definition.Fixed ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
             var route = m.PresentFromStart ? null : m.RoutePoints();
             if (route != null) route[route.Count - 1] = pos;
             var elite = Elites.Spawn(m.Definition, pos, Enemies, route, m.EntrySpeed);

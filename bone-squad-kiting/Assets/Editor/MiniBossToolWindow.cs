@@ -257,7 +257,12 @@ namespace BoneSquadKiting.EditorTools
             EditorGUILayout.EndHorizontal();
 
             if (!InWalkArea(root, m.transform.position))
-                EditorGUILayout.HelpBox("이동 가능 영역 밖에 있습니다. 등장할 때 가장 가까운 이동 가능 지점으로 옮겨집니다.", MessageType.Warning);
+            {
+                if (m.Definition != null && m.Definition.Fixed)
+                    EditorGUILayout.HelpBox("이동 가능 영역 밖에 있습니다. 움직이지 않는 미니 보스라 이 자리에 그대로 섭니다. 분대가 다가갈 수 없으니 사거리 안에서 쏠 수 있는지 확인하세요.", MessageType.Info);
+                else
+                    EditorGUILayout.HelpBox("이동 가능 영역 밖에 있습니다. 등장할 때 가장 가까운 이동 가능 지점으로 옮겨집니다.", MessageType.Warning);
+            }
 
             // How it appears.
             int appear = m.PresentFromStart ? 0 : m.AtProgress >= 0f ? 2 : 1;

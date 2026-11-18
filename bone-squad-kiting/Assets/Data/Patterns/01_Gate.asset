@@ -18,16 +18,36 @@ MonoBehaviour:
   Detail: "\uC88C\uC6B0\uAC00 \uD729\uC4F8\uB9BD\uB2C8\uB2E4. \uC77C\uC790\uB85C
     \uC904\uC774\uC138\uC694!"
   Recommend: line
-  Time: 2.05
+  Time: 1.2
   Shape:
     Type: 2
     RMax: 0
     RMin: 0
     ROut: 0
+    LaneSpacing: 0
+    LaneHalfWidth: 0
     Inner: 0.83
     Outer: 6.4
     HalfZ: 7.1
   ScaleWithSquad: 0
+  LethalTelegraph: 0
+  BurstEffect: {fileID: 0}
+  LaneWarningMaterial: {fileID: 0}
+  FillEffect: {fileID: 0}
+  FillSpacing: 2
+  FillScale: 1
+  FillSeconds: 1
+  StrikeEffect: {fileID: 280308009859959783, guid: 991af6a8465264b639448824cf66dfe7, type: 3}
+  StrikeFlightSeconds: 0.35
+  StrikeSize: 1
+  StrikePitch: 12
+  StrikeTravel: 1
+  StrikeStaySeconds: 0.8
+  StrikeFadeSeconds: 0.4
+  StrikeImpactEffect: {fileID: 3666559964730717098, guid: d4e565c6a19fb8f43a643f3d89cecc81, type: 3}
+  StrikeImpactScale: 0.3
+  StrikeShake: 0.35
+  StrikeShakeSeconds: 0.3
   Kind: 0
   SustainSeconds: 4
   TickInterval: 0.5

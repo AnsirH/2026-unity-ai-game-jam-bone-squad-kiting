@@ -17,16 +17,25 @@ MonoBehaviour:
   Advice: "R \xB7 \uC2ED\uC790\uAC00"
   Detail: "\uC2ED\uC790 \uD1B5\uB85C\uB9CC \uC548\uC804\uD569\uB2C8\uB2E4!"
   Recommend: cross
-  Time: 2
+  Time: 1.2
   Shape:
     Type: 3
     RMax: 0
     RMin: 0
     ROut: 0
+    LaneSpacing: 0
+    LaneHalfWidth: 0
     Inner: 0.56
     Outer: 5.7
     HalfZ: 0
   ScaleWithSquad: 0
+  LethalTelegraph: 0
+  BurstEffect: {fileID: 0}
+  LaneWarningMaterial: {fileID: 0}
+  FillEffect: {fileID: 7042135556935085144, guid: 394bdd7da3e07435c870f744606115a2, type: 3}
+  FillSpacing: 2
+  FillScale: 1
+  FillSeconds: 1
   Kind: 0
   SustainSeconds: 4
   TickInterval: 0.5
