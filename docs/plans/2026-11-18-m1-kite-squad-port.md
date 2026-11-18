@@ -10,6 +10,8 @@
 
 **조작·전투(결정 #9):** 자동 평타(사거리 내 자동 사격)는 유지하되, 교전 지휘를 **분대 오더 상태머신**(`Move`/`AttackMove`/`AttackTarget`)으로 모델링한다. 적은 **`IEnemy`/`IDamageable` + `EnemyRegistry`** 로 추상화한다(M1은 보스 1개만 등록 → M2 잡몹 드롭인). 입력은 **우클릭 스마트 커맨드**(적 콜라이더 피킹→`AttackTarget`, 지면→`Move`)와 **어택땅 A+좌클릭**(→`AttackMove`). 타겟 획득은 `ShotSystem`이 현재 오더를 참조.
 
+**이동 중 사격 금지(결정 #15):** `Move` 오더로 분대 중심이 이동하는 동안에는 사격하지 않고, 도착하면 자동 사격한다. 판정은 순수 함수 한 곳(`FireRules.CanFire`)에 둔다. 이 문서의 아래 코드 블록과 주석 중 "Move 오더에서도 자동 사격"으로 적힌 부분은 이 결정으로 무효다. 프로토타입과 달라지는 지점이다.
+
 **Tech Stack:** Unity 6000.3.28f1, URP, Unity Test Framework(EditMode/PlayMode), uGUI(HUD), TextMeshPro, unity-cli(헤드리스 빌드/테스트).
 
 **좌표 매핑 규약(전 태스크 공통):** 원본 `world.x → Unity x`, `world.z → Unity z`, 높이 `h → Unity y`. 즉 지면은 XZ 평면(y=0). 원본의 모든 속도/거리/반경 상수를 Unity 월드 유닛으로 그대로 사용한다. 화면→월드 변환(`unproject`)은 카메라 레이를 y=0 평면과 교차시켜 구한다.
