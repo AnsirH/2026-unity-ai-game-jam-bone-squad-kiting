@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.PatternDefinition
   Id: 0
   DisplayName: "\uC911\uC559 \uD575\uD3ED\uBC1C"
-  Advice: "3 \xB7 \uC6D0\uD615"
+  Advice: "E \xB7 \uC6D0\uD615"
   Detail: "\uC911\uC559\uC774 \uD3ED\uBC1C\uD569\uB2C8\uB2E4. \uC6D0\uD615\uC73C\uB85C
     \uD769\uC5B4\uC9C0\uC138\uC694!"
   Recommend: ring
@@ -27,3 +27,4 @@ MonoBehaviour:
     Inner: 0
     Outer: 0
     HalfZ: 0
+  ScaleWithSquad: 1

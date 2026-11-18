@@ -22,8 +22,8 @@ public class SquadMovementTests
     {
         Assert.AreEqual(GameConstants.SquadSize, _fc.Units.Count);
         Assert.AreEqual(new Vector2(0, 3.4f), _fc.Anchor);
-        Assert.That(_fc.Units[12].X, Is.EqualTo(0f).Within(1e-4f));   // center slot sits on the anchor
-        Assert.That(_fc.Units[12].Z, Is.EqualTo(3.4f).Within(1e-4f));
+        Assert.That(_fc.Units[0].X, Is.EqualTo(0f).Within(1e-4f));   // slot 0 sits on the anchor
+        Assert.That(_fc.Units[0].Z, Is.EqualTo(3.4f).Within(1e-4f));
     }
 
     [UnityTest]
@@ -72,19 +72,25 @@ public class SquadMovementTests
         Assert.AreEqual(x, u.X); Assert.AreEqual(z, u.Z);
     }
 
+    static bool HasSlot(FormationController fc, Vector2 slot)
+    {
+        foreach (var u in fc.Units) if (!u.Dead && Vector2.Distance(u.Slot, slot) < 1e-3f) return true;
+        return false;
+    }
+
     [Test]
     public void Rotate_TurnsSlotsAroundAnchor_AndSurvivesFormationChange()
     {
         _fc.SetFormation("line");
-        var before = _fc.Units[24].Slot;                       // far end of the line, on +z
+        Assert.IsTrue(HasSlot(_fc, new Vector2(-0.12f, 5.88f)), "far end of the line is on +z");
         _fc.RotationStepDegrees = 90f;
         _fc.Rotate(1);
         Assert.AreEqual(90f, _fc.RotationDegrees);
-        Assert.That(_fc.Units[24].Slot.x, Is.EqualTo(before.y).Within(1e-3f), "+z end swings to +x");
+        Assert.IsTrue(HasSlot(_fc, new Vector2(5.88f, 0.12f)), "+z end swings to +x");
         Assert.AreEqual(new Vector2(0, 3.4f), _fc.Anchor, "the anchor does not move");
 
         _fc.SetFormation("cross");
-        Assert.That(Vector2.Distance(_fc.Units[4].Slot, new Vector2(0.61f, 0)), Is.LessThan(1e-3f), "new formation keeps the rotation");
+        Assert.IsTrue(HasSlot(_fc, new Vector2(0.61f, 0)), "new formation keeps the rotation");
 
         _fc.Rotate(-1);
         Assert.AreEqual(0f, _fc.RotationDegrees);
@@ -99,10 +105,52 @@ public class SquadMovementTests
     public void Rotate_MakesUnitsMove_SoTheyHoldFire()
     {
         for (int i = 0; i < 10; i++) _fc.Tick(0.016f);
-        Assert.IsFalse(_fc.Units[0].Moving);
+        foreach (var u in _fc.Units) Assert.IsFalse(u.Moving);
         _fc.Rotate(1);
         _fc.Tick(0.016f);
-        Assert.IsTrue(_fc.Units[0].Moving);
-        Assert.IsFalse(_fc.Units[12].Moving, "the center slot stays put");
+        Assert.IsFalse(_fc.Units[0].Moving, "the unit on the anchor stays put");
+        int moving = 0; foreach (var u in _fc.Units) if (u.Moving) moving++;
+        Assert.AreEqual(GameConstants.SquadSize - 1, moving);
+    }
+
+    [Test]
+    public void FormationChange_EveryUnitGetsItsOwnSlot()
+    {
+        foreach (var id in new[] { "line", "ring", "cross", "dense" })
+        {
+            _fc.SetFormation(id);
+            for (int i = 0; i < _fc.Units.Count; i++)
+                for (int j = i + 1; j < _fc.Units.Count; j++)
+                    Assert.That(Vector2.Distance(_fc.Units[i].Slot, _fc.Units[j].Slot), Is.GreaterThan(1e-3f), $"{id}: units {i},{j} share a slot");
+        }
+    }
+
+    [Test]
+    public void Reform_ClosesUpAroundTheAnchor_WhenUnitsDie()
+    {
+        _fc.SetFormation("ring");
+        for (int i = 0; i < 15; i++) _fc.Units[i].Dead = true;   // 10 survivors
+        _fc.Reform();
+        float expected = FormationSlots.RingRadius(3.7f, 10);
+        foreach (var u in _fc.Units)
+            if (!u.Dead) Assert.That(u.Slot.magnitude, Is.EqualTo(expected).Within(1e-3f));
+
+        _fc.SetFormation("dense");
+        float reach = 0; foreach (var u in _fc.Units) if (!u.Dead) reach = Mathf.Max(reach, u.Slot.magnitude);
+        Assert.That(reach, Is.LessThan(2 * 0.53f + 1e-3f), "10 units fit within two cells of the anchor");
+        Assert.IsTrue(HasSlot(_fc, Vector2.zero), "the anchor slot is always filled");
+    }
+
+    [Test]
+    public void Reform_MovesSurvivorsAsLittleAsPossible()
+    {
+        for (int i = 0; i < 10; i++) _fc.Tick(0.016f);
+        var corner = _fc.Units[24];                      // outermost slot of the dense grid
+        Assert.That(corner.Slot.magnitude, Is.GreaterThan(1.4f));
+        corner.Dead = true;
+        var before = new Vector2[24];
+        for (int i = 0; i < 24; i++) before[i] = _fc.Units[i].Slot;
+        _fc.Reform();
+        for (int i = 0; i < 24; i++) Assert.AreEqual(before[i], _fc.Units[i].Slot, $"unit {i} keeps its slot");
     }
 }

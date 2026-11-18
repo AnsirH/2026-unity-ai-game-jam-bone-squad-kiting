@@ -25,6 +25,11 @@ namespace BoneSquadKiting.Squad
         public readonly List<SquadUnit> Units = new();
 
         /// <summary>True while the anchor has not yet reached its destination.</summary>
+        public int AliveCount
+        {
+            get { int n = 0; foreach (var u in Units) if (!u.Dead) n++; return n; }
+        }
+
         public bool IsMoving => (Destination - Anchor).magnitude > GameConstants.AnchorArrive;
 
         public FormationDefinition Find(string id) => Formations.Find(f => f != null && f.Id == id);
@@ -43,7 +48,7 @@ namespace BoneSquadKiting.Squad
             Formation = DefaultFormation;
             RotationDegrees = 0;
             Order = SquadOrder.Move(StartAnchor);
-            var slots = FormationSlots.Generate(def);
+            var slots = FormationSlots.Generate(def, GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
                 Units.Add(new SquadUnit
                 {
@@ -78,10 +83,27 @@ namespace BoneSquadKiting.Squad
         /// <summary>Stop where the anchor is now.</summary>
         public void Halt() { Destination = Anchor; }
 
+        /// <summary>
+        /// Rebuild the formation for the units still alive. Call after units die: the shape closes up
+        /// around the anchor instead of leaving gaps.
+        /// </summary>
+        public void Reform()
+        {
+            var def = Find(Formation);
+            if (def != null) ApplySlots(def);
+        }
+
+        // Slots are generated for the living units only, and each unit takes the slot nearest to where it
+        // stands, so a change moves the squad as little as possible (moving units cannot fire).
         void ApplySlots(FormationDefinition def)
         {
-            var slots = FormationSlots.Rotate(FormationSlots.Generate(def), RotationDegrees);
-            for (int i = 0; i < Units.Count; i++) Units[i].Slot = slots[i];
+            var alive = Units.FindAll(u => !u.Dead);
+            if (alive.Count == 0) return;
+            var slots = FormationSlots.Rotate(FormationSlots.Generate(def, alive.Count), RotationDegrees);
+            var positions = new Vector2[alive.Count];
+            for (int i = 0; i < alive.Count; i++) positions[i] = new Vector2(alive[i].X, alive[i].Z) - Anchor;
+            var assignment = FormationSlots.AssignNearest(positions, slots);
+            for (int i = 0; i < alive.Count; i++) alive[i].Slot = slots[assignment[i]];
         }
 
         /// <summary>Set where the anchor walks to, clamped to the commander's allowed area.</summary>

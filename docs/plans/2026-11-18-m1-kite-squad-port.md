@@ -1206,21 +1206,23 @@ git add bone-squad-kiting/Assets/Scripts/Game bone-squad-kiting/Assets/Scripts/C
 
 ## Task 10: HUD (uGUI)
 
+> **구현 메모(2026-11-18):** HUD는 `Assets/Scripts/UI/Hud.cs`, 계층은 `Assets/Editor/HudBuilder.cs`가 코드로 만든다. 한국어 문구(결정 #10) 때문에 TextMeshPro 대신 **레거시 uGUI Text + 내장 동적 폰트**를 썼다(TMP 기본 폰트 에셋에는 한글 글리프가 없다). IMGUI `TestHud`는 F1로 켜고 끄는 테스트 정보창으로 남겼다. 남은 것은 Step 3 수동 확인.
+
 **Files:**
 - Create: `Assets/Scripts/UI/Hud.cs`
 - Create: `bone-squad-kiting/Assets/Prefabs/HudCanvas.prefab` (또는 씬 내 Canvas)
 
-- [ ] **Step 1: Canvas 구성**
+- [x] **Step 1: Canvas 구성**
 
 `unity:ui-ugui` 스킬을 따라 Screen Space - Overlay Canvas에 배치: 상단 보스 HP 바(Image fill)+퍼센트+수치(TMP), 생존수 TMP, DPS TMP, 하단 진형 패널(버튼 4개 dense/line/ring/cross, 선택/추천 하이라이트), 중앙 상단 패턴 경고(이름+카운트다운+진행바), 중앙 토스트 TMP, 시작/승패 오버레이 패널(제목/설명/시작 버튼). 원본 HUD 레이아웃·문구 참고.
 
-- [ ] **Step 2: Hud.cs 바인딩**
+- [x] **Step 2: Hud.cs 바인딩**
 
 `GameDirector`를 참조해 매 프레임 갱신: 보스 fill=`Boss.HpFrac`, 퍼센트=`Ceil(frac*100)`, 생존=`Units.Count(!Dead)`(10 미만 붉게), DPS=`Round(LastDps)`. `Attacks.OnStart`→경고 표시(이름/추천 버튼 하이라이트), `Tick` 중 `Current.Remaining`→카운트다운/진행바, `OnResolved(hit,lost)`→토스트("PERFECT DODGE!" 또는 "피격 n명 · 전사 m명"). 진형 버튼 클릭→`Director.ChangeFormation`. 오버레이: Phase Menu/Win/Lose에 표시, 시작 버튼→`Director.Restart`.
 
 - [ ] **Step 3: 수동 검증** — 플레이로 보스바 감소·생존수·DPS·경고·토스트·진형 하이라이트 동작 확인(스크린샷).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/UI bone-squad-kiting/Assets/Prefabs bone-squad-kiting/Assets/Scenes && git commit -m "feat: ugui hud (boss bar, alive, dps, formation panel, warnings, overlay)"
@@ -1230,16 +1232,18 @@ git add bone-squad-kiting/Assets/Scripts/UI bone-squad-kiting/Assets/Prefabs bon
 
 ## Task 11: 연출(임시) — 플래시·파티클·셰이크·링
 
+> **구현 메모(2026-11-18):** `Assets/Scripts/Fx/JuiceFx.cs` — 셰이크·플래시·피격 파티클·확산 링, 유닛/보스 피격 발광. 세기와 감쇠 값은 프로토타입에서 옮긴 것이 아니라 임시로 정한 값이고 인스펙터에서 조절한다. 남은 것은 Step 2 수동 확인.
+
 **Files:**
 - Create: `Assets/Scripts/Fx/JuiceFx.cs`
 
-- [ ] **Step 1: 구현**
+- [x] **Step 1: 구현**
 
 원본 효과를 임시로: 패턴 resolve/페이즈 전환 시 스크린셰이크(카메라 흔들림, 원본 `shake` 감쇠 `dt*32`), 피격 플래시(화면 붉은 오버레이 Image alpha `flash` 감쇠 `dt*2.7`), 유닛/보스 피격 파티클(URP ParticleSystem 버스트), resolve 확산 링(LineRenderer 원 확대). 수치는 원본 상수 유지. 비주얼만이므로 테스트 없음, 플레이 확인.
 
 - [ ] **Step 2: 수동 검증** — 패턴 명중/페이즈 전환에서 셰이크·플래시·링·파티클 확인.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add bone-squad-kiting/Assets/Scripts/Fx && git commit -m "feat: temp juice fx (shake, flash, particles, rings)"
@@ -1249,10 +1253,12 @@ git add bone-squad-kiting/Assets/Scripts/Fx && git commit -m "feat: temp juice f
 
 ## Task 12: 통합 플레이스루 + 튜닝 패스
 
+> **구현 메모(2026-11-18):** 자동 통합 검증은 `FullMatchTests`가 한다 — 추천 진형만 따라가면 무피해 승리(약 26초), 진형을 안 바꾸면 전멸. 남은 것은 Step 2 사람의 풀 플레이스루와 Step 3 결정 상태 갱신.
+
 **Files:**
 - Modify: 필요한 수치 파일(상수와 원본 대조)
 
-- [ ] **Step 1: 전체 EditMode+PlayMode 테스트**
+- [x] **Step 1: 전체 EditMode+PlayMode 테스트**
 
 Run: `unity:unity-cli`로 EditMode·PlayMode 전체 실행.
 Expected: 전부 PASS.

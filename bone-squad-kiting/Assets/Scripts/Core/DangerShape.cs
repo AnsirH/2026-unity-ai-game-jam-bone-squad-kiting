@@ -17,6 +17,13 @@ namespace BoneSquadKiting.Core
         public float Inner, Outer, HalfZ;  // CrossBandsX: Inner < |dx| < Outer and |dz| < HalfZ
                                            // QuadrantBoxes: |dx| and |dz| both in (Inner, Outer)
 
+        /// <summary>The same shape with every dimension multiplied by <paramref name="k"/>.</summary>
+        public DangerShape Scaled(float k) => new()
+        {
+            Type = Type, RMax = RMax * k, RMin = RMin * k, ROut = ROut * k,
+            Inner = Inner * k, Outer = Outer * k, HalfZ = HalfZ * k,
+        };
+
         public static DangerShape Disc(float r) => new() { Type = DangerShapeType.Disc, RMax = r };
         public static DangerShape Annulus(float rMin, float rOut) => new() { Type = DangerShapeType.Annulus, RMin = rMin, ROut = rOut };
         public static DangerShape BandsX(float inner, float outer, float halfZ) => new() { Type = DangerShapeType.CrossBandsX, Inner = inner, Outer = outer, HalfZ = halfZ };

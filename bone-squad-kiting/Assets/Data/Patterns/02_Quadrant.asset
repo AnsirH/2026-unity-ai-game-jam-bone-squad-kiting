@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.PatternDefinition
   Id: 2
   DisplayName: "\uC0AC\uBD84\uBA74 \uD3ED\uACA9"
-  Advice: "4 \xB7 \uC2ED\uC790\uAC00"
+  Advice: "R \xB7 \uC2ED\uC790\uAC00"
   Detail: "\uC2ED\uC790 \uD1B5\uB85C\uB9CC \uC548\uC804\uD569\uB2C8\uB2E4!"
   Recommend: cross
   Time: 2
@@ -26,3 +26,4 @@ MonoBehaviour:
     Inner: 0.56
     Outer: 5.7
     HalfZ: 0
+  ScaleWithSquad: 0

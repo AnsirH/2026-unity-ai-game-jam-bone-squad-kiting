@@ -76,6 +76,30 @@ public class PatternResolveTests
     }
 
     [Test]
+    public void ScalingPattern_ShrinksWithTheSquad_AndIsFixedForTheCast()
+    {
+        var sys = new BossAttackSystem { Sequence = Seq((2.0f, DangerShape.Disc(3.10f))) };
+        sys.Sequence.Patterns[0].ScaleWithSquad = true;
+        for (int i = 0; i < 15; i++) _fc.Units[i].Dead = true;   // 10 of 25 alive
+        var boss = new Boss();
+        for (float t = 0; t < GameConstants.FirstAttackDelay + 0.05f; t += 0.02f) sys.Tick(_fc, boss, 0.02f);
+
+        Assert.IsNotNull(sys.Current);
+        Assert.That(sys.Current.Value.Shape.RMax, Is.EqualTo(3.10f * 10 / 25).Within(1e-4f));
+        Assert.That(sys.Sequence.Patterns[0].Shape.RMax, Is.EqualTo(3.10f).Within(1e-4f), "the asset itself is not changed");
+    }
+
+    [Test]
+    public void NonScalingPattern_KeepsItsFullSize()
+    {
+        var sys = new BossAttackSystem { Sequence = Seq((2.0f, DangerShape.Annulus(1.73f, 6.05f))) };
+        for (int i = 0; i < 15; i++) _fc.Units[i].Dead = true;
+        var boss = new Boss();
+        for (float t = 0; t < GameConstants.FirstAttackDelay + 0.05f; t += 0.02f) sys.Tick(_fc, boss, 0.02f);
+        Assert.That(sys.Current.Value.Shape.ROut, Is.EqualTo(6.05f).Within(1e-4f));
+    }
+
+    [Test]
     public void LowBossHp_ShortensGapBetweenAttacks()
     {
         var sys = new BossAttackSystem { Sequence = Seq((0.5f, DangerShape.Disc(1f))) };

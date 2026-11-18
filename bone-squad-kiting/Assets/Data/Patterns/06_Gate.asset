@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.PatternDefinition
   Id: 1
   DisplayName: "\uC30D\uBCBD \uC555\uCC29"
-  Advice: "2 \xB7 \uC77C\uC790"
+  Advice: "W \xB7 \uC77C\uC790"
   Detail: "\uC88C\uC6B0\uAC00 \uD729\uC4F8\uB9BD\uB2C8\uB2E4. \uC77C\uC790\uB85C
     \uC904\uC774\uC138\uC694!"
   Recommend: line
@@ -27,3 +27,4 @@ MonoBehaviour:
     Inner: 0.83
     Outer: 6.4
     HalfZ: 7.1
+  ScaleWithSquad: 0
