@@ -9,6 +9,13 @@ public class ProjectileTrailController : MonoBehaviour
 
     private void OnEnable()
     {
+        RestartTrail();
+    }
+
+    public void RestartTrail()
+    {
+        if (startRoutine != null)
+            StopCoroutine(startRoutine);
         if (trail == null)
             trail = GetComponentInChildren<TrailRenderer>(true);
         if (trail == null)

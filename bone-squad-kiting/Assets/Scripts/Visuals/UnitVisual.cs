@@ -43,6 +43,19 @@ namespace BoneSquadKiting.Visuals
 
         VisualState _current = (VisualState)(-1);
         float _attackUntil;
+        int _attackLayer = -1;
+        bool _varyLoops;
+        float _loopPhase;
+        float _loopSpeed = 1f;
+
+        /// <summary>Stable per-soldier variation; never changes attack playback speed.</summary>
+        public void SetLoopVariation(int unitIndex)
+        {
+            _varyLoops = true;
+            _loopPhase = Mathf.Repeat((unitIndex + 1) * 0.61803399f, 1f);
+            _loopSpeed = Mathf.Lerp(0.94f, 1.06f, Mathf.Repeat((unitIndex + 1) * 0.75487767f, 1f));
+            _current = (VisualState)(-1);
+        }
 
         /// <summary>Called by the animation event in the attack clip (see <see cref="AttackEventName"/>).</summary>
         public void AttackRelease() => AttackReleased?.Invoke();
@@ -64,11 +77,40 @@ namespace BoneSquadKiting.Visuals
             ReadAttackTiming();
         }
 
+        void Start()
+        {
+            // Prefab/controller defaults must not leave an upper-body attack permanently blended in.
+            int layer = FindStateLayer(States.Attack);
+            if (layer > 0) Animator.SetLayerWeight(layer, 0f);
+        }
+
         void Update()
         {
+            if (_varyLoops && Animator != null && (_current == VisualState.Idle || _current == VisualState.Run)
+                && Has(_current))
+                Animator.speed = Time.time < _attackUntil || _attackLayer > 0 ? 1f : _loopSpeed;
+            // A sped-up attack (AttackPlaybackScale) runs the Animator faster only while the attack shows.
+            if (Animator != null && AttackPlaybackScale != 1f)
+            {
+                if (Time.time < _attackUntil) Animator.speed = Scale;
+                else if (Mathf.Approximately(Animator.speed, Scale))
+                    Animator.speed = _varyLoops && (_current == VisualState.Idle || _current == VisualState.Run) ? _loopSpeed : 1f;
+            }
+            if (_attackLayer > 0)
+            {
+                float targetWeight = Time.time < _attackUntil ? 1f : 0f;
+                float fadeSeconds = Mathf.Max(0.01f, States.CrossFade);
+                float weight = Mathf.MoveTowards(
+                    Animator.GetLayerWeight(_attackLayer), targetWeight, Time.deltaTime / fadeSeconds);
+                Animator.SetLayerWeight(_attackLayer, weight);
+                if (targetWeight == 0f && weight <= 0f) _attackLayer = -1;
+            }
+
             // Learn the attack state's speed while it plays.
             if (_clipLength <= 0f || Animator == null || string.IsNullOrEmpty(States.Attack)) return;
-            var info = Animator.GetCurrentAnimatorStateInfo(0);
+            int layer = FindStateLayer(States.Attack);
+            if (layer < 0) return;
+            var info = Animator.GetCurrentAnimatorStateInfo(layer);
             if (info.shortNameHash == Animator.StringToHash(States.Attack) && info.speed > 0.01f) AttackSpeed = info.speed;   // the state's own speed; the playback scale is applied on top
         }
 
@@ -78,16 +120,43 @@ namespace BoneSquadKiting.Visuals
         /// <summary>Show a one-off attack, then return to whatever SetState asks for.</summary>
         public void PlayAttack(float holdSeconds = 0.35f)
         {
+            if (Animator != null) Animator.speed = Scale;        // a sped-up attack plays its whole motion in less time
             if (AttackLength > 0f) holdSeconds = AttackLength;   // a full motion with a release point plays to its end
             _attackUntil = Time.time + holdSeconds;
+            int layer = FindStateLayer(States.Attack);
+            if (layer > 0)
+            {
+                _attackLayer = layer;
+                Animator.CrossFadeInFixedTime(Animator.StringToHash(States.Attack), States.CrossFade, layer, 0f);
+                return;
+            }
             Apply(VisualState.Attack, restart: true);
         }
 
         /// <summary>Ask for a looping state. Ignored while a one-off attack is still showing.</summary>
+        public void CancelAttack()
+        {
+            if (_attackUntil <= 0f && _attackLayer < 0) return;
+            _attackUntil = 0f;
+            if (_attackLayer > 0 && Animator != null) Animator.SetLayerWeight(_attackLayer, 0f);
+            _attackLayer = -1;
+            _current = (VisualState)(-1);
+        }
+
         public void SetState(VisualState state)
         {
-            if (Time.time < _attackUntil && state != VisualState.Die) return;
+            // An upper-body attack is an overlay, so the base layer must still switch between Run and Idle.
+            if (_attackLayer <= 0 && Time.time < _attackUntil && state != VisualState.Die) return;
             Apply(state, restart: false);
+        }
+
+        int FindStateLayer(string name)
+        {
+            if (Animator == null || string.IsNullOrEmpty(name)) return -1;
+            int hash = Animator.StringToHash(name);
+            for (int i = 0; i < Animator.layerCount; i++)
+                if (Animator.HasState(i, hash)) return i;
+            return -1;
         }
 
         void Apply(VisualState state, bool restart)
@@ -104,8 +173,12 @@ namespace BoneSquadKiting.Visuals
                 if (state == VisualState.Idle) Animator.speed = 0f;
                 return;
             }
-            Animator.speed = state == VisualState.Attack ? Scale : 1f;
+            bool variedLoop = _varyLoops && (state == VisualState.Idle || state == VisualState.Run);
+            Animator.speed = state == VisualState.Attack ? Scale
+                : variedLoop && Time.time >= _attackUntil && _attackLayer < 0 ? _loopSpeed : 1f;
             if (restart) Animator.CrossFadeInFixedTime(hash, States.CrossFade, 0, 0f);
+            else if (variedLoop)
+                Animator.CrossFade(hash, States.CrossFade, 0, _loopPhase);
             else Animator.CrossFadeInFixedTime(hash, States.CrossFade);
         }
 
@@ -123,7 +196,7 @@ namespace BoneSquadKiting.Visuals
         public bool Has(VisualState state)
         {
             string name = NameOf(state);
-            return Animator != null && !string.IsNullOrEmpty(name) && Animator.HasState(0, Animator.StringToHash(name));
+            return FindStateLayer(name) >= 0;
         }
     }
 }

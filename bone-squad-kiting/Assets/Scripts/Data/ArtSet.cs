@@ -39,6 +39,7 @@ namespace BoneSquadKiting.Data
 
         [Header("Projectile")]
         public GameObject ShotPrefab;
+        public GameObject LaunchFxPrefab;
         public float ShotScale = 1f;
         [Tooltip("Turn the model so its tip points along +Z (the way it flies).")]
         public Vector3 ShotRotation;

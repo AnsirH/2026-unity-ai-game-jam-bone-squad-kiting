@@ -5234,7 +5234,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectileTrailController
   trail: {fileID: 7252058976535831282}
-  startDelay: 0.04
+  startDelay: 0.08
 --- !u!1 &9191872924059052660
 GameObject:
   m_ObjectHideFlags: 0

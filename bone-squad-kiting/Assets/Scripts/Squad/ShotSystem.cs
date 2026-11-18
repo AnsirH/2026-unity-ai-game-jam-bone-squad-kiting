@@ -7,7 +7,10 @@ namespace BoneSquadKiting.Squad
 {
     public struct Shot
     {
+        public long VisualId;
         public float X, Z, Life;
+        public float StartY, InitialDistance, Travelled;
+        public bool HasWorldOrigin;
         public int Owner;
         public IEnemy Target;
         public bool Heavy;      // thrown by the squad leader: drawn as its own projectile
@@ -23,10 +26,14 @@ namespace BoneSquadKiting.Squad
     /// </summary>
     public class ShotSystem
     {
+        static long nextVisualId;
         const float MuzzleOffset = 0.29f;
 
         public readonly List<Shot> Shots = new();
+        readonly Dictionary<int, Vector3> _muzzlePositions = new();
         public System.Action<float> OnHit; // damage dealt to an enemy
+        public event System.Action<Shot> OnLaunched;
+        public event System.Action<Vector2, float, Vector2> OnImpact;
 
         public float FireRange = GameConstants.FireRange; // per-unit range; the director keeps it in sync
         public float UnitDamage = GameConstants.UnitDamage;        // a soldier's shot
@@ -36,6 +43,9 @@ namespace BoneSquadKiting.Squad
         public float DamageMultiplier = 1f;    // applied to shots as they are fired (the near-miss buff); the director sets it
         public float ThreatRadius = 4f;        // a stopped unit shoots mobs this close before anything else
         public float AttackMoveRadius = 4f;    // attack-move prefers mobs this close to the clicked point
+
+        /// <summary>Updates the animated model's projectile spawn point for one unit.</summary>
+        public void SetMuzzlePosition(int owner, Vector3 worldPosition) => _muzzlePositions[owner] = worldPosition;
 
         /// <summary>
         /// Who a unit shoots, by order:
@@ -108,6 +118,9 @@ namespace BoneSquadKiting.Squad
                 float dist = to.magnitude, step = GameConstants.ShotSpeed * dt;
                 if (dist - step < s.Target.Radius)
                 {
+                    var impactDir = dist > 1e-6f ? to / dist : s.Dir;
+                    var impactPosition = s.Target.Pos - impactDir * Mathf.Min(dist, s.Target.Radius);
+                    OnImpact?.Invoke(impactPosition, s.Target.Radius, impactDir);
                     Release(s);
                     (s.Target as IDamageable)?.ApplyDamage(s.Damage);
                     OnHit?.Invoke(s.Damage);
@@ -116,6 +129,7 @@ namespace BoneSquadKiting.Squad
                 }
                 var dir = to / dist;
                 s.Dir = dir;
+                s.Travelled += Mathf.Min(step, dist);
                 s.X += dir.x * step; s.Z += dir.y * step;
                 Shots[i] = s;
             }
@@ -132,12 +146,20 @@ namespace BoneSquadKiting.Squad
             u.PendingTarget = null;
             if (u.Dead || target is not { Alive: true }) { ReleaseReserve(target, u.PendingReserve); return; }
             var dir = (target.Pos - new Vector2(u.X, u.Z)).normalized;
+            bool hasMuzzle = _muzzlePositions.TryGetValue(u.Id, out var muzzle);
+            var start = hasMuzzle
+                ? new Vector2(muzzle.x, muzzle.z)
+                : new Vector2(u.X, u.Z) + dir * MuzzleOffset;
             Shots.Add(new Shot
             {
-                X = u.X + dir.x * MuzzleOffset, Z = u.Z + dir.y * MuzzleOffset,
+                VisualId = ++nextVisualId,
+                X = start.x, Z = start.y, StartY = hasMuzzle ? muzzle.y : 0f,
+                InitialDistance = Mathf.Max(0.01f, Vector2.Distance(start, target.Pos)),
+                HasWorldOrigin = hasMuzzle,
                 Life = GameConstants.ShotLife, Owner = u.Id, Target = target, Heavy = u.IsLeader, Dir = dir,
                 Damage = u.PendingReserve * DamageMultiplier, Reserve = u.PendingReserve,
             });
+            OnLaunched?.Invoke(Shots[Shots.Count - 1]);
         }
 
         void CancelPending(SquadUnit u)
