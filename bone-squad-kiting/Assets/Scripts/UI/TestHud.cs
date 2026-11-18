@@ -16,9 +16,11 @@ namespace BoneSquadKiting.UI
 
         public GameDirector Director;
         public SquadInputController Input; // optional: shows the attack-move cursor state
-        public bool Visible = true;
+        public bool Visible = false;
 
         GUIStyle _label, _center, _box;
+
+        void Start() => Visible = false;
 
         void Update()
         {

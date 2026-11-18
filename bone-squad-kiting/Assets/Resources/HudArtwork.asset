@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5019f5997518441aa9c627397961da70, type: 3}
+  m_Name: HudArtwork
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.UI.HudArtwork
+  Menu: {fileID: 21300000, guid: e7bc953c19c804542a8748ae5ae0797c, type: 3}
+  Stats: {fileID: 21300000, guid: 39d6aacb6faa44f7eb1a2863f445634d, type: 3}
+  StartButton: {fileID: 21300000, guid: 9653bd210ab494ef9ad86dfccb533933, type: 3}
+  Divider: {fileID: 21300000, guid: 9dea296eaff024abea9e2164a66756b4, type: 3}
+  Formations:
+  - {fileID: 21300000, guid: b68a7484d57fa4fe5bd7f755fbd6a997, type: 3}
+  - {fileID: 21300000, guid: 1a068fd2e881d4b3ca53988022aaf734, type: 3}
+  - {fileID: 21300000, guid: 473a2ba10baf04e01b1e8fbf8f72e686, type: 3}
+  - {fileID: 21300000, guid: a110a68775a8b4ddf9f768870ef39a02, type: 3}
+  KoreanFont: {fileID: 12800000, guid: d02f8389e2d584503b7045795cc7a24c, type: 3}
+  TitleFont: {fileID: 12800000, guid: c069f7a7ef31741dba6167536e7d7998, type: 3}
