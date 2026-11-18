@@ -26,4 +26,14 @@ namespace BoneSquadKiting.Mobs
             Flash = 1f;
         }
     }
+
+    /// <summary>A ranged mob's shot in the air. Plain data; MobSystem moves it.</summary>
+    public class MobShot
+    {
+        public MobDefinition Def;
+        public float X, Z;
+        public Vector2 Dir;
+        public float Left;      // distance it may still travel
+        public Vector2 Pos => new(X, Z);
+    }
 }

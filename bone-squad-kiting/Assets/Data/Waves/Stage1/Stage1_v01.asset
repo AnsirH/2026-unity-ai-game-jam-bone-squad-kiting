@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d3e5a91c4b24f6e8a1b0c2d9e4f6a71, type: 3}
+  m_Name: Stage1_v01
+  m_EditorClassIdentifier: 
+  Note: "v01: the old curve values (12 s -> 7 s, 6 -> 18 mobs) as four rows."
+  FirstWaveDelay: 3
+  Blend: 0
+  Sections:
+  - FromProgress: 0
+    Interval: 12
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 6
+  - FromProgress: 0.25
+    Interval: 10.75
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 9
+  - FromProgress: 0.5
+    Interval: 9.5
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 12
+  - FromProgress: 0.75
+    Interval: 8.25
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 15
+  Bursts: []
+  MinSpawnDistance: 14
+  MaxSpawnDistance: 22
+  AheadShare: 0.7
+  GroupSize: 8
+  GroupSpread: 1.5

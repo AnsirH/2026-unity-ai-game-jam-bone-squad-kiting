@@ -23,6 +23,10 @@ namespace BoneSquadKiting.Stage
     /// </summary>
     public class WaveSpawner : MonoBehaviour
     {
+        [Tooltip("This stage's wave setting (one asset = one version). When set, it replaces every field below.")]
+        public WavePlan Plan;
+
+        [Header("Without a plan: one mob kind, paced by two curves")]
         public MobDefinition Mob;
 
         [Header("Pace by progress (x: 0 = start point, 1 = end point)")]
@@ -37,7 +41,27 @@ namespace BoneSquadKiting.Stage
         public int GroupSize = 8;              // mobs per spawn cluster
         public float GroupSpread = 1.5f;
 
+        [Header("Testing")]
+        [Tooltip("Hold the wave timer (bursts wait too). For looking at one wave at a time.")]
+        public bool Hold;
+
         public int WavesSpawned { get; private set; }
+        /// <summary>Mobs that have appeared this match, waves and bursts together.</summary>
+        public int MobsSpawned { get; private set; }
+        /// <summary>The plan row in use, −1 without a plan or before its first row starts.</summary>
+        public int SectionIndex => Plan != null ? Plan.SectionIndexAt(MaxProgress) : -1;
+
+        float MinDistance => Plan != null ? Plan.MinSpawnDistance : MinSpawnDistance;
+        float MaxDistance => Plan != null ? Plan.MaxSpawnDistance : MaxSpawnDistance;
+        float Ahead => Plan != null ? Plan.AheadShare : AheadShare;
+        int Group => Mathf.Max(1, Plan != null ? Plan.GroupSize : GroupSize);
+        float Spread => Plan != null ? Plan.GroupSpread : GroupSpread;
+
+        readonly List<WaveEntry> _wave = new();
+        readonly HashSet<int> _burstsDone = new();
+
+        /// <summary>Make the next wave arrive on the next step.</summary>
+        public void SpawnNow() => TimeToNextWave = 0f;
         /// <summary>Furthest progress reached this match, 0..1. Never goes down.</summary>
         public float MaxProgress { get; private set; }
         public float TimeToNextWave { get; private set; }
@@ -50,7 +74,9 @@ namespace BoneSquadKiting.Stage
         /// <summary>Call at match start. Without a grid or an end point, progress stays at 0.</summary>
         public void Begin(WalkGrid grid, Vector2 start, Vector2? end)
         {
-            WavesSpawned = 0; MaxProgress = 0f; TimeToNextWave = FirstWaveDelay; Stopped = false;
+            WavesSpawned = 0; MobsSpawned = 0; MaxProgress = 0f; Stopped = false;
+            TimeToNextWave = Plan != null ? Plan.FirstWaveDelay : FirstWaveDelay;
+            _burstsDone.Clear();
             _toEnd = null; _startDistance = 0;
             if (grid == null || end == null) return;
             _toEnd = new FlowField(grid);
@@ -71,18 +97,43 @@ namespace BoneSquadKiting.Stage
         public int Tick(FormationController squad, MobSystem mobs, EnemyRegistry registry, float dt)
         {
             MaxProgress = Mathf.Max(MaxProgress, ProgressAt(squad.Anchor));
-            if (!Stopped) TimeToNextWave -= dt;
-            if (Stopped) return 0;
-            if (TimeToNextWave > 0f || Mob == null) return 0;
+            if (Stopped || Hold) return 0;
+            int spawned = 0;
 
-            TimeToNextWave = Mathf.Max(0.5f, Interval.Evaluate(MaxProgress));
-            int wanted = Mathf.Max(0, Mathf.RoundToInt(Count.Evaluate(MaxProgress)));
-            int spawned = SpawnWave(wanted, squad, mobs, registry);
+            // One-off groups: the first time the squad gets this far. Read from the plan every step, so a
+            // plan edited while playing applies at once.
+            if (Plan != null)
+                for (int i = 0; i < Plan.Bursts.Count; i++)
+                {
+                    var burst = Plan.Bursts[i];
+                    if (burst == null || burst.AtProgress > MaxProgress || !_burstsDone.Add(i)) continue;
+                    spawned += SpawnWave(burst.Mobs, squad, mobs, registry);
+                }
+
+            TimeToNextWave -= dt;
+            if (TimeToNextWave > 0f) { MobsSpawned += spawned; return spawned; }
+
+            if (Plan != null)
+            {
+                float interval = Plan.IntervalAt(MaxProgress);
+                if (interval <= 0f) { TimeToNextWave = 0.5f; MobsSpawned += spawned; return spawned; }   // no row has started yet: look again shortly
+                TimeToNextWave = interval;
+                Plan.CompositionAt(MaxProgress, _wave);
+            }
+            else
+            {
+                if (Mob == null) { MobsSpawned += spawned; return spawned; }
+                TimeToNextWave = Mathf.Max(0.5f, Interval.Evaluate(MaxProgress));
+                _wave.Clear();
+                _wave.Add(new WaveEntry { Mob = Mob, Count = Mathf.Max(0, Mathf.RoundToInt(Count.Evaluate(MaxProgress))) });
+            }
+            spawned += SpawnWave(_wave, squad, mobs, registry);
             WavesSpawned++;
+            MobsSpawned += spawned;
             return spawned;
         }
 
-        int SpawnWave(int count, FormationController squad, MobSystem mobs, EnemyRegistry registry)
+        int SpawnWave(List<WaveEntry> entries, FormationController squad, MobSystem mobs, EnemyRegistry registry)
         {
             var grid = squad.Grid;
             List<Vector2> ahead = new(), behind = new();
@@ -90,13 +141,17 @@ namespace BoneSquadKiting.Stage
 
             int spawned = 0;
             Vector2 center = default;
-            for (int i = 0; i < count; i++)
+            foreach (var entry in entries)
             {
-                if (i % Mathf.Max(1, GroupSize) == 0) center = PickCenter(squad.Anchor, ahead, behind);
-                var p = center + Random.insideUnitCircle * GroupSpread;
-                if (grid != null) p = grid.NearestWalkable(p);
-                if (mobs.Spawn(Mob, p, registry) == null) break;   // alive cap reached: the wave is cut short
-                spawned++;
+                if (entry == null || entry.Mob == null) continue;
+                for (int i = 0; i < entry.Count; i++)
+                {
+                    if (spawned % Group == 0) center = PickCenter(squad.Anchor, ahead, behind);
+                    var p = center + Random.insideUnitCircle * Spread;
+                    if (grid != null) p = grid.NearestWalkable(p);
+                    if (mobs.Spawn(entry.Mob, p, registry) == null) return spawned;   // alive cap reached: the wave is cut short
+                    spawned++;
+                }
             }
             return spawned;
         }
@@ -111,7 +166,7 @@ namespace BoneSquadKiting.Stage
                     if (!grid.Walkable[grid.Index(x, z)]) continue;
                     var c = grid.CellCenter(x, z);
                     float d = (c - anchor).magnitude;
-                    if (d < MinSpawnDistance || d > MaxSpawnDistance) continue;
+                    if (d < MinDistance || d > MaxDistance) continue;
                     int toEnd = _toEnd != null ? _toEnd.Distance[grid.Index(x, z)] : FlowField.Unreachable;
                     bool isAhead = here != FlowField.Unreachable && toEnd != FlowField.Unreachable && toEnd < here;
                     (isAhead ? ahead : behind).Add(c);
@@ -120,11 +175,11 @@ namespace BoneSquadKiting.Stage
 
         Vector2 PickCenter(Vector2 anchor, List<Vector2> ahead, List<Vector2> behind)
         {
-            bool wantAhead = Random.value < AheadShare;
+            bool wantAhead = Random.value < Ahead;
             var pool = wantAhead && ahead.Count > 0 ? ahead : behind.Count > 0 ? behind : ahead;
             if (pool.Count > 0) return pool[Random.Range(0, pool.Count)];
             // No grid, or nothing walkable in the ring: a point on the ring around the squad.
-            return anchor + Random.insideUnitCircle.normalized * MinSpawnDistance;
+            return anchor + Random.insideUnitCircle.normalized * MinDistance;
         }
     }
 }

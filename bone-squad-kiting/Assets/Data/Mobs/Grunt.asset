@@ -19,3 +19,13 @@ MonoBehaviour:
   AttackDamage: 10
   AttackPeriod: 1
   AttackReach: 0.1
+  Prefab: {fileID: 6613591833629731662, guid: e6539bacac0dd4a458d793f028df778f, type: 3}
+  ModelScale: 0.85
+  ModelYawOffset: 0
+  States:
+    Idle: 
+    Run: Run
+    Attack: EnemyMelee_MeshyAI_LeftHook
+    Die: 
+    Revive: 
+    CrossFade: 0.1

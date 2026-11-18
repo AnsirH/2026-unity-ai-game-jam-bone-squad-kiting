@@ -89,8 +89,9 @@ namespace BoneSquadKiting.EditorTools
                 // The models are much bigger than the game's unit spacing (0.5): shrink them to fit.
                 art.UnitScale = 0.36f; art.LeaderScale = 0.17f;
                 // State names as they are in the models' Animators today. Missing ones are skipped at runtime.
-                art.UnitStates = new AnimStates { Idle = "Idle", Run = "Soldier_Fire_SlowRun", Attack = "Fire", Die = "" };
-                art.LeaderStates = new AnimStates { Idle = "", Run = "Spear_Walk", Attack = "", Die = "" };
+                // The soldier shoots on an upper-body layer that is always on, so there is no attack state to play.
+                art.UnitStates = new AnimStates { Idle = "Idle", Run = "Soldier_MeshyAI_Run02", Attack = "", Die = "" };
+                art.LeaderStates = new AnimStates { Idle = "Idle", Run = "Soldier_MeshyAI_Run02", Attack = "Commander_Thrrow", Die = "" };
                 EditorUtility.SetDirty(art);
             }
 

@@ -358,6 +358,7 @@ namespace BoneSquadKiting.EditorTools
             waves.Mob = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
             waves.Interval = AnimationCurve.Linear(0f, spec.Interval0, 1f, spec.Interval1);
             waves.Count = AnimationCurve.Linear(0f, spec.Count0, 1f, spec.Count1);
+            waves.Plan = WavePlanFor(spec.Name, WavePlanGuidIn(spec.Path));
             director.Waves = waves;
 
             // Mini bosses, placed along the corridor between the start and the end point.
@@ -398,6 +399,27 @@ namespace BoneSquadKiting.EditorTools
             var mobView = new GameObject("Mob View").AddComponent<MobView>();
             mobView.Director = director;
             mobView.MobMaterial = Lit("Mob", Hex("#8a3fd1"), Hex("#b455ff") * 0.9f);
+        }
+
+        // The wave plan a rebuilt stage keeps: the one its scene pointed at before the rebuild, else the
+        // stage's first version. Wave plans are hand-tuned assets, so a rebuild never changes which is in use.
+        static WavePlan WavePlanFor(string stageName, string previousGuid)
+        {
+            if (!string.IsNullOrEmpty(previousGuid))
+            {
+                var kept = AssetDatabase.LoadAssetAtPath<WavePlan>(AssetDatabase.GUIDToAssetPath(previousGuid));
+                if (kept != null) return kept;
+            }
+            return AssetDatabase.LoadAssetAtPath<WavePlan>($"Assets/Data/Waves/{stageName}/{stageName}_v01.asset");
+        }
+
+        // The guid of the wave plan a scene file's WaveSpawner points at, or null.
+        static string WavePlanGuidIn(string scenePath)
+        {
+            if (!System.IO.File.Exists(scenePath)) return null;
+            var m = System.Text.RegularExpressions.Regex.Match(System.IO.File.ReadAllText(scenePath),
+                @"\bPlan: \{fileID: 11400000, guid: ([0-9a-f]{32})");
+            return m.Success ? m.Groups[1].Value : null;
         }
 
         internal static T Load<T>(string path) where T : Object
