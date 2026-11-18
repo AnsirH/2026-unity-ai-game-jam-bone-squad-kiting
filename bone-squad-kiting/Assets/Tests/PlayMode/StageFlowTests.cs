@@ -9,44 +9,52 @@ using BoneSquadKiting.Mobs;
 using BoneSquadKiting.Squad;
 using BoneSquadKiting.Stage;
 
-/// <summary>A stage fought against rounds of mobs: round order, clear rules, the stop command.</summary>
+/// <summary>A progress stage: endless waves paced by how far the squad has advanced, clear rules, the stop command.</summary>
 public class StageFlowTests
 {
     FormationController _fc;
     GameDirector _dir;
-    RoundSpawner _rounds;
+    WaveSpawner _waves;
+    StageSetup _stage;
     MobDefinition _mob;
-    GameObject _far;
+    WalkGrid _grid;
+
+    // A corridor 10 wide and 100 long. The squad starts near z = 95 and the end point is near z = 5.
+    static readonly Vector2 Start = new(5f, 95f), End = new(5f, 5f);
 
     [SetUp]
     public void SetUp()
     {
         _fc = SquadTestRig.MakeFc();
+        _grid = WalkGrid.Open(Vector2.zero, new Vector2(10, 100), 1f);
+        _fc.Grid = _grid; _fc.StartAnchor = Start;
+
         _dir = _fc.gameObject.AddComponent<GameDirector>();
         _dir.enabled = false;
         _dir.Squad = _fc;
         _dir.HasBoss = false;
-        _dir.UnitFireRange = 30f; _dir.SquadEngageRange = 30f;
+        _dir.ClearRule = StageClearRule.ReachEnd;
+        _dir.UnitFireRange = 0f; _dir.SquadEngageRange = 0f;    // the squad does not fight unless a test turns it on
+
+        var end = new GameObject("end"); end.transform.SetParent(_fc.transform); end.transform.position = new Vector3(End.x, 0, End.y);
+        _stage = _fc.gameObject.AddComponent<StageSetup>();
+        _stage.Squad = _fc; _stage.EndPoint = end.transform; _stage.EndRadius = 2f;
+        _dir.Stage = _stage;
 
         _mob = ScriptableObject.CreateInstance<MobDefinition>();
-        _mob.Speed = 0f;                                    // they wait where they spawn so tests control the pace
-        _far = new GameObject("spawn"); _far.transform.position = new Vector3(0, 0, -6f);   // 9.4 from the squad
-
-        _rounds = _fc.gameObject.AddComponent<RoundSpawner>();
-        _rounds.FirstRoundDelay = 1f;
-        for (int i = 0; i < 2; i++)
-            _rounds.Rounds.Add(new RoundSpawner.Round { Mob = _mob, Count = 3, SpawnPoints = new[] { _far.transform }, Spread = 1f });
-        _dir.Rounds = _rounds;
+        _mob.Speed = 0f;                                        // mobs wait where they spawn so tests control the pace
+        _waves = _fc.gameObject.AddComponent<WaveSpawner>();
+        _waves.Mob = _mob;
+        _waves.FirstWaveDelay = 1f;
+        _waves.Interval = AnimationCurve.Linear(0f, 4f, 1f, 1f);
+        _waves.Count = AnimationCurve.Linear(0f, 4f, 1f, 20f);
+        _dir.Waves = _waves;
     }
 
     [TearDown]
-    public void TearDown()
-    {
-        Object.DestroyImmediate(_fc.gameObject); Object.DestroyImmediate(_far); Object.DestroyImmediate(_mob);
-    }
+    public void TearDown() { Object.DestroyImmediate(_fc.gameObject); Object.DestroyImmediate(_mob); }
 
     void Run(float seconds) { for (float t = 0; t < seconds; t += 0.02f) _dir.Step(0.02f); }
-    void KillAll() { foreach (var m in new List<Mob>(_dir.Mobs.Mobs)) m.ApplyDamage(float.MaxValue); }
 
     [Test]
     public void StageWithoutABoss_RunsWithNoBossAndNoPatterns()
@@ -59,120 +67,136 @@ public class StageFlowTests
     }
 
     [Test]
-    public void Rounds_StartInOrder_EachAfterThePreviousIsWipedOut()
+    public void Waves_KeepComing_AtASteadyPaceWhileTheSquadStandsStill()
     {
-        _dir.ClearRule = StageClearRule.KillAll;
-        var started = new List<(int, int)>(); int cleared = 0;
-        _dir.RoundStarted += (r, total) => started.Add((r, total));
-        _dir.AllEnemiesCleared += () => cleared++;
-        _dir.UnitFireRange = 0f;                           // the squad does not shoot: the test does the killing
+        var waves = new List<(float time, int mobs)>();
+        _dir.WaveStarted += (n, mobs) => waves.Add((_dir.Elapsed, mobs));
         _dir.Restart();
 
+        Run(0.9f);
+        Assert.AreEqual(0, waves.Count, "nothing before the first-wave delay");
+        Run(13f);                                              // first at 1s, then every 4s: 1, 5, 9, 13
+        Assert.AreEqual(4, waves.Count);
+        foreach (var w in waves) Assert.AreEqual(4, w.mobs, "wave size at the start point");
+        Assert.That(waves[2].time - waves[1].time, Is.EqualTo(4f).Within(0.05f));
+        Assert.That(waves[3].time - waves[2].time, Is.EqualTo(4f).Within(0.05f), "standing still does not shorten the gap");
+        Assert.AreEqual(16, _dir.Mobs.AliveCount, "nobody is killing them, so they add up");
+    }
+
+    [Test]
+    public void Progress_GrowsTowardTheEndPoint_AndNeverGoesBack()
+    {
+        _dir.Restart();
+        Run(0.1f);
+        Assert.That(_waves.MaxProgress, Is.EqualTo(0f).Within(0.02f));
+
+        _dir.IssueOrder(SquadOrder.Move(new Vector2(5f, 50f)));
+        Run(8f);
+        Assert.That(_waves.MaxProgress, Is.EqualTo(0.5f).Within(0.03f), "halfway down the corridor");
+
+        _dir.IssueOrder(SquadOrder.Move(Start));
+        Run(8f);
+        Assert.That(_waves.ProgressAt(_fc.Anchor), Is.LessThan(0.05f), "walked back to the start");
+        Assert.That(_waves.MaxProgress, Is.EqualTo(0.5f).Within(0.03f), "retreating does not make it easier");
+    }
+
+    [Test]
+    public void FurtherAlong_WavesAreBiggerAndCloserTogether()
+    {
+        _dir.Restart();
+        _fc.Anchor = _fc.Destination = new Vector2(5f, 14f);    // 90% of the way
+        var waves = new List<(float time, int mobs)>();
+        _dir.WaveStarted += (n, mobs) => waves.Add((_dir.Elapsed, mobs));
+        Run(6f);
+        Assert.That(waves.Count, Is.GreaterThanOrEqualTo(3));
+        Assert.That(waves[1].mobs, Is.EqualTo(18).Within(1), "4 at the start, 20 at the end, 90% along");
+        Assert.That(waves[2].time - waves[1].time, Is.EqualTo(1.3f).Within(0.1f), "4s at the start, 1s at the end");
+    }
+
+    [Test]
+    public void Mobs_SpawnOnWalkableGround_AwayFromTheSquad()
+    {
+        _dir.Restart();
+        _fc.Anchor = _fc.Destination = new Vector2(5f, 50f);
+        Run(6f);
+        Assert.That(_dir.Mobs.Mobs.Count, Is.GreaterThan(0));
+        int ahead = 0;
+        foreach (var m in _dir.Mobs.Mobs)
+        {
+            Assert.IsTrue(_grid.IsWalkable(m.Pos), $"mob at {m.Pos}");
+            Assert.That(Vector2.Distance(m.Pos, _fc.Anchor), Is.GreaterThan(_waves.MinSpawnDistance - _waves.GroupSpread - 1f));
+            if (m.Z < 50f) ahead++;
+        }
+        Assert.That(ahead, Is.GreaterThan(0), "some come from the end-point side");
+    }
+
+    [Test]
+    public void Waves_StopAtTheAliveCap()
+    {
+        _waves.Count = AnimationCurve.Constant(0f, 1f, 50f);
+        _waves.Interval = AnimationCurve.Constant(0f, 1f, 0.5f);
+        _dir.Restart();
+        _dir.Mobs.MaxAlive = 120;
+        Run(6f);
+        Assert.AreEqual(120, _dir.Mobs.AliveCount);
+    }
+
+    [Test]
+    public void ReachEnd_ClearsTheStage_WhateverIsStillAlive()
+    {
+        _dir.Restart();
+        Run(2f);
+        Assert.That(_dir.Mobs.AliveCount, Is.GreaterThan(0));
+        _fc.Anchor = new Vector2(5f, 12f);
+        _dir.IssueOrder(SquadOrder.Move(End));
+        Run(2f);
+        Assert.IsTrue(_stage.ReachedEnd);
+        Assert.AreEqual(GamePhase.Win, _dir.Phase);
+    }
+
+    [Test]
+    public void DefeatBossRule_IsNotSatisfiedByReachingTheEnd()
+    {
+        _dir.HasBoss = true; _dir.ClearRule = StageClearRule.DefeatBoss;
+        _dir.Restart();
+        _fc.Anchor = _fc.Destination = End;
         Run(0.5f);
-        Assert.AreEqual(0, _dir.Mobs.AliveCount, "nothing before the first-round delay");
-        Run(1f);
-        Assert.AreEqual(3, _dir.Mobs.AliveCount);
-        Assert.AreEqual(new[] { (1, 2) }, started.ToArray());
-
-        Run(2f);
-        Assert.AreEqual(1, started.Count, "round 2 waits while round 1 lives");
-        Assert.IsFalse(_dir.EnemiesCleared);
-
-        KillAll(); Run(0.1f);
-        Assert.AreEqual(new[] { (1, 2), (2, 2) }, started.ToArray());
-        Assert.AreEqual(3, _dir.Mobs.AliveCount);
         Assert.AreEqual(GamePhase.Play, _dir.Phase);
-
-        KillAll(); Run(0.1f);
-        Assert.IsTrue(_dir.EnemiesCleared);
-        Assert.AreEqual(1, cleared);
-        Assert.AreEqual(GamePhase.Win, _dir.Phase, "KillAll: wiping the last round clears the stage");
-    }
-
-    [Test]
-    public void KillAllThenReachEnd_NeedsBoth()
-    {
-        var end = new GameObject("end"); end.transform.SetParent(_fc.transform); end.transform.position = new Vector3(6f, 0, 3.4f);
-        var stage = _fc.gameObject.AddComponent<StageSetup>();
-        stage.Squad = _fc; stage.EndPoint = end.transform; stage.EndRadius = 1.5f;
-        _dir.Stage = stage; _dir.ClearRule = StageClearRule.KillAllThenReachEnd;
-        _dir.UnitFireRange = 0f;
-        _dir.Restart();
-
-        _dir.IssueOrder(SquadOrder.Move(new Vector2(6f, 3.4f)));
-        Run(2f);
-        Assert.IsTrue(stage.ReachedEnd);
-        Assert.AreEqual(GamePhase.Play, _dir.Phase, "at the end point, but enemies remain");
-
-        _dir.IssueOrder(SquadOrder.Move(new Vector2(0f, 3.4f)));
-        Run(2f);
-        KillAll(); Run(0.1f); KillAll(); Run(0.1f);
-        Assert.IsTrue(_dir.EnemiesCleared);
-        Assert.AreEqual(GamePhase.Play, _dir.Phase, "enemies gone, but not at the end point");
-
-        _dir.IssueOrder(SquadOrder.Move(new Vector2(6f, 3.4f)));
-        Run(2f);
+        _dir.Boss.ApplyDamage(GameConstants.BossMax);
+        Run(0.1f);
         Assert.AreEqual(GamePhase.Win, _dir.Phase);
     }
 
     [Test]
-    public void ReachEndRule_IgnoresEnemies()
+    public void TheSquadShootsWavesDown_WhenTheyComeIntoRange()
     {
-        var end = new GameObject("end"); end.transform.SetParent(_fc.transform); end.transform.position = new Vector3(6f, 0, 3.4f);
-        var stage = _fc.gameObject.AddComponent<StageSetup>();
-        stage.Squad = _fc; stage.EndPoint = end.transform; stage.EndRadius = 1.5f;
-        _dir.Stage = stage; _dir.ClearRule = StageClearRule.ReachEnd;
-        _dir.UnitFireRange = 0f;
+        _mob.Speed = 3.2f;                                      // now they walk in
+        _dir.UnitFireRange = 6f;
+        int died = 0;
         _dir.Restart();
-        Run(1.5f);
-        Assert.AreEqual(3, _dir.Mobs.AliveCount);
-        _dir.IssueOrder(SquadOrder.Move(new Vector2(6f, 3.4f)));
-        Run(2f);
-        Assert.AreEqual(GamePhase.Win, _dir.Phase);
-    }
-
-    [Test]
-    public void TheSquadShootsARoundDown_AndClearsTheStage()
-    {
-        _dir.ClearRule = StageClearRule.KillAll;
-        _dir.Restart();
-        Run(1.5f);
-        Assert.AreEqual(3, _dir.Mobs.AliveCount);
-        Run(2f);
-        Assert.AreEqual(3, _dir.Mobs.AliveCount, "a holding squad leaves mobs beyond its threat radius alone");
-
-        _dir.IssueOrder(SquadOrder.AttackMove(new Vector2(0f, -6f)));   // attack-move onto them: now they are targets
-        Run(8f);                                            // two rounds of three 66-HP mobs, 25 guns
-        Assert.AreEqual(GamePhase.Win, _dir.Phase);
-        Assert.AreEqual(GameConstants.SquadSize, _dir.AliveCount);
+        _dir.Mobs.OnMobDied += _ => died++;
+        Run(20f);
+        Assert.That(died, Is.GreaterThan(8), "mobs that walked into range were shot");
+        Assert.AreEqual(GamePhase.Play, _dir.Phase);
     }
 
     [Test]
     public void MobsThatReachTheSquad_KillUnits_AndTheSquadReforms()
     {
-        _mob.Speed = 3.2f; _mob.AttackDamage = 100f;       // one hit kills
-        _rounds.Rounds.Clear();
-        _rounds.Rounds.Add(new RoundSpawner.Round { Mob = _mob, Count = 30, SpawnPoints = new[] { _far.transform }, Spread = 2f });
-        _dir.ClearRule = StageClearRule.KillAll;
-        _dir.UnitFireRange = 0f;
+        _mob.Speed = 3.2f; _mob.AttackDamage = 100f;            // one hit kills; the squad cannot shoot (range 0)
         _dir.Restart();
-        Run(8f);
+        Run(25f);
         Assert.That(_dir.AliveCount, Is.LessThan(GameConstants.SquadSize));
-        if (_dir.AliveCount > 0)
-        {
-            float reach = 0; foreach (var u in _fc.Units) if (!u.Dead) reach = Mathf.Max(reach, u.Slot.magnitude);
-            float full = 2 * 0.53f * 1.415f;               // corner of the full 5x5
-            if (_dir.AliveCount <= 9) Assert.That(reach, Is.LessThan(full - 0.5f), "survivors closed up toward the anchor");
-        }
-        else Assert.AreEqual(GamePhase.Lose, _dir.Phase);
+        if (_dir.AliveCount == 0) { Assert.AreEqual(GamePhase.Lose, _dir.Phase); return; }
+        float reach = 0; foreach (var u in _fc.Units) if (!u.Dead) reach = Mathf.Max(reach, u.Slot.magnitude);
+        if (_dir.AliveCount <= 9) Assert.That(reach, Is.LessThan(1.2f), "survivors closed up toward the anchor");
     }
 
     [Test]
     public void StopSquad_HaltsTheAnchor_AndTurnsTheOrderIntoAHold()
     {
         _dir.Restart();
-        _dir.IssueOrder(SquadOrder.AttackMove(new Vector2(7f, 0f)));
-        _dir.UnitFireRange = 0f; _dir.SquadEngageRange = 0f;   // nothing stops it on its own
+        _dir.IssueOrder(SquadOrder.AttackMove(new Vector2(5f, 60f)));
         Run(0.3f);
         Assert.IsTrue(_fc.IsMoving);
         var where = _fc.Anchor;
@@ -187,7 +211,7 @@ public class StageFlowTests
     [Test]
     public void StopSquad_DoesNothingOutsideAMatch()
     {
-        _dir.StopSquad();                                   // still in the menu: must not throw or change anything
+        _dir.StopSquad();                                       // still in the menu: must not throw or change anything
         Assert.AreEqual(GamePhase.Menu, _dir.Phase);
     }
 }

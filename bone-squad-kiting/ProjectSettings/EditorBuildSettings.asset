@@ -8,6 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Arena.unity
     guid: a508c1a2fe8bd9e448161ad5ebac5bbc
+  - enabled: 1
+    path: Assets/Scenes/StageProto.unity
+    guid: 701661b0b819a274d9ea0b4dcba602f7
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

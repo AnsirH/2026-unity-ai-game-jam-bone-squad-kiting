@@ -44,8 +44,9 @@ namespace BoneSquadKiting.UI
                 GUI.Label(new Rect(22, 184, 230, 24), $"시간  {Director.Elapsed:0.0}s   페이즈 {Director.BossPhase}", _label);
                 if (Director.Mobs != null)
                 {
-                    string rounds = Director.Rounds != null ? $"   라운드 {Director.Rounds.Started}/{Director.Rounds.Total}" : "";
-                    GUI.Label(new Rect(22, 208, 230, 24), $"적  {Director.Mobs.AliveCount}{rounds}", _label);
+                    string waves = Director.Waves != null
+                        ? $"   웨이브 {Director.Waves.WavesSpawned}   진행 {Mathf.RoundToInt(Director.Waves.MaxProgress * 100)}%" : "";
+                    GUI.Label(new Rect(22, 208, 240, 24), $"적  {Director.Mobs.AliveCount}{waves}", _label);
                 }
             }
 

@@ -125,4 +125,41 @@ public class ArenaSceneSmokeTests
         File.WriteAllBytes(Path.Combine(dir, fileName), tex.EncodeToPNG());
         Object.Destroy(rt); Object.Destroy(tex);
     }
+
+    [UnityTest]
+    public IEnumerator StageProto_StartsWithTheSquadInView_AndWavesArrive()
+    {
+        yield return SceneManager.LoadSceneAsync("StageProto", LoadSceneMode.Single);
+        yield return null;
+
+        var director = Object.FindFirstObjectByType<GameDirector>();
+        Assert.IsNotNull(director);
+        Assert.IsFalse(director.HasBoss);
+        Assert.IsNotNull(director.Waves, "wave spawner wired");
+        Assert.IsNotNull(director.Stage.EndPoint, "end point set");
+        Assert.AreEqual(BoneSquadKiting.Stage.StageClearRule.ReachEnd, director.ClearRule);
+
+        // The squad must be on screen at the start.
+        var anchor = director.Squad.Anchor;
+        var view = Camera.main.WorldToViewportPoint(new Vector3(anchor.x, 0f, anchor.y));
+        Assert.That(view.x, Is.InRange(0.1f, 0.9f), "squad horizontally in view");
+        Assert.That(view.y, Is.InRange(0.05f, 0.95f), "squad vertically in view");
+        Assert.IsTrue(director.Squad.Grid.IsWalkable(anchor));
+
+        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
+        hud.OverlayButton.onClick.Invoke();
+        yield return null;
+        Assert.IsFalse(hud.BossBar.activeSelf, "no boss bar on a stage without a boss");
+
+        float until = Time.time + director.Waves.FirstWaveDelay + 2f;
+        while (director.Mobs.AliveCount == 0 && Time.time < until) yield return null;
+        Assert.That(director.Mobs.AliveCount, Is.GreaterThan(0), "first wave arrived");
+        foreach (var m in director.Mobs.Mobs) Assert.IsTrue(director.Squad.Grid.IsWalkable(m.Pos), "mobs spawn on walkable ground");
+        Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Mobs.MobView>(), "mobs are drawn");
+
+        // Let them walk in and get shot at for a while, then look at it.
+        yield return new WaitForSeconds(7f);
+        Capture("stage-proto.png");
+        Assert.AreEqual(GamePhase.Play, director.Phase);
+    }
 }

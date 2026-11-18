@@ -25,7 +25,7 @@ namespace BoneSquadKiting.Game
         public bool HasBoss = true;                                   // false for stages fought against rounds of mobs only
         public StageClearRule ClearRule = StageClearRule.DefeatBoss;
         public StageSetup Stage;            // optional: start / end points and the walkable grid
-        public RoundSpawner Rounds;         // optional: this stage's rounds of mobs
+        public WaveSpawner Waves;           // optional: this stage's endless mob waves
 
         [Header("Tuning (editable while playing)")]
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
@@ -44,19 +44,13 @@ namespace BoneSquadKiting.Game
         public MobSystem Mobs { get; private set; }
         public FlowField Flow { get; private set; }
 
-        /// <summary>True once every round has been started and no mob is left alive (always true with no rounds).</summary>
-        public bool EnemiesCleared => (Rounds == null || Rounds.AllStarted) && (Mobs == null || Mobs.AliveCount == 0);
-
         // Stable hooks for HUD / FX: the systems above are recreated on every Restart.
         public event System.Action<PatternDefinition> PatternStarted;
         public event System.Action<int, int> PatternResolved; // units hit, units lost
         public event System.Action<string> FormationChanged;
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
-        public event System.Action<int, int> RoundStarted;   // round number (1-based), total rounds
-        public event System.Action AllEnemiesCleared;         // last round wiped out
-
-        bool _clearedAnnounced;
+        public event System.Action<int, int> WaveStarted;    // wave number (1-based), mobs spawned
 
         readonly List<(float t, float d)> _hits = new();
 
@@ -69,8 +63,7 @@ namespace BoneSquadKiting.Game
             if (Boss != null) Enemies.Register(Boss);
             Mobs = new MobSystem();
             Flow = Squad.Grid != null ? new FlowField(Squad.Grid) : null;
-            if (Rounds != null) Rounds.ResetRounds();
-            _clearedAnnounced = false;
+
             Attacks = new BossAttackSystem { Sequence = Sequence };
             Attacks.OnStart += p => PatternStarted?.Invoke(p);
             Attacks.OnResolved += (hit, lost) =>
@@ -84,6 +77,12 @@ namespace BoneSquadKiting.Game
             _hits.Clear();
             TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1; Paused = false;
             Squad.Init();
+            if (Waves != null)
+            {
+                Vector2? end = Stage != null && Stage.EndPoint != null
+                    ? new Vector2(Stage.EndPoint.position.x, Stage.EndPoint.position.z) : null;
+                Waves.Begin(Squad.Grid, Squad.Anchor, end);
+            }
             if (BossView != null && Boss != null) BossView.Bind(Boss);
             Phase = GamePhase.Play;
             FormationChanged?.Invoke(Squad.Formation);
@@ -159,8 +158,6 @@ namespace BoneSquadKiting.Game
             switch (ClearRule)
             {
                 case StageClearRule.DefeatBoss: return Boss != null && !Boss.Alive;
-                case StageClearRule.KillAllThenReachEnd: return EnemiesCleared && reachedEnd;
-                case StageClearRule.KillAll: return EnemiesCleared;
                 case StageClearRule.ReachEnd: return reachedEnd;
                 default: return false;
             }
@@ -178,15 +175,13 @@ namespace BoneSquadKiting.Game
 
             Squad.Tick(dt);
 
-            if (Rounds != null && Rounds.Tick(Mobs, Enemies, Squad.Grid, Elapsed))
-                RoundStarted?.Invoke(Rounds.Started, Rounds.Total);
+            if (Waves != null)
+            {
+                int spawned = Waves.Tick(Squad, Mobs, Enemies, dt);
+                if (spawned > 0) WaveStarted?.Invoke(Waves.WavesSpawned, spawned);
+            }
             Mobs.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
             if (Mobs.UnitsKilledLastTick > 0) Squad.Reform();   // close up around the survivors
-            if (!_clearedAnnounced && Rounds != null && Rounds.Total > 0 && EnemiesCleared)
-            {
-                _clearedAnnounced = true;
-                AllEnemiesCleared?.Invoke();
-            }
 
             Shots.FireRange = UnitFireRange;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);

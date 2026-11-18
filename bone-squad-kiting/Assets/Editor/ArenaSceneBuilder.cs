@@ -51,7 +51,7 @@ namespace BoneSquadKiting.EditorTools
 
         /// <summary>
         /// A placeholder progress stage for trying out mobs: a long corridor with a few obstacles, a start
-        /// and an end point, and three rounds of mobs. Same squad, camera and HUD as the arena, no boss.
+        /// and an end point, and endless waves of mobs that grow toward the end. Same squad, camera and HUD as the arena, no boss.
         /// </summary>
         [MenuItem("BoneSquadKiting/Rebuild Stage Proto Scene")]
         public static void BuildStageProto() => BuildScene(StageProtoPath, mobStage: true);
@@ -254,7 +254,7 @@ namespace BoneSquadKiting.EditorTools
 
             Object.DestroyImmediate(bossGo); Object.DestroyImmediate(bossArea); Object.DestroyImmediate(teleGo);
             director.BossView = null; director.HasBoss = false;
-            director.ClearRule = StageClearRule.KillAllThenReachEnd;
+            director.ClearRule = StageClearRule.ReachEnd;
             director.Stage = stage;
 
             // Move the squad and its pre-placed units to the start point.
@@ -262,6 +262,9 @@ namespace BoneSquadKiting.EditorTools
             squad.StartAnchor = squad.Anchor = squad.Destination = start;
             foreach (Transform unit in squadView.transform) unit.position += new Vector3(delta.x, 0f, delta.y);
             startPoint.transform.position = new Vector3(start.x, 0f, start.y);
+            // The camera's limits must cover this stage before its start position is applied, or the
+            // position gets clamped to the arena's size.
+            scroll.BoundsMin = new Vector2(-width / 2f, -length / 2f); scroll.BoundsMax = new Vector2(width / 2f, length / 2f);
             scroll.LookAt = start + new Vector2(0f, -4f); scroll.Apply();
 
             var endPoint = new GameObject("End Point");
@@ -284,23 +287,10 @@ namespace BoneSquadKiting.EditorTools
                 block.GetComponent<Renderer>().sharedMaterial = obstacleMat;
             }
 
-            // Three rounds, each coming from further down the corridor.
-            var grunt = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
-            var spawner = stage.gameObject.AddComponent<RoundSpawner>();
-            var roundSpecs = new[] { (count: 20, z: 12f), (count: 30, z: -2f), (count: 40, z: -18f) };
-            for (int r = 0; r < roundSpecs.Length; r++)
-            {
-                var points = new Transform[2];
-                for (int i = 0; i < 2; i++)
-                {
-                    var p = new GameObject($"Round {r + 1} Spawn {i + 1}");
-                    p.transform.SetParent(stage.transform, false);
-                    p.transform.position = new Vector3(i == 0 ? -5f : 5f, 0f, roundSpecs[r].z);
-                    points[i] = p.transform;
-                }
-                spawner.Rounds.Add(new RoundSpawner.Round { Mob = grunt, Count = roundSpecs[r].count, SpawnPoints = points, Spread = 2.5f });
-            }
-            director.Rounds = spawner;
+            // Endless waves that grow as the squad advances toward the end point.
+            var waves = stage.gameObject.AddComponent<WaveSpawner>();
+            waves.Mob = Load<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
+            director.Waves = waves;
 
             var mobView = new GameObject("Mob View").AddComponent<MobView>();
             mobView.Director = director;

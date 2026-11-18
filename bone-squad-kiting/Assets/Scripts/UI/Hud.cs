@@ -60,8 +60,7 @@ namespace BoneSquadKiting.UI
             if (OverlayButton != null) OverlayButton.onClick.AddListener(Director.Restart);
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
-            Director.RoundStarted += OnRoundStarted;
-            Director.AllEnemiesCleared += OnAllCleared;
+            Director.WaveStarted += OnWaveStarted;
             if (Toast != null) Toast.text = "";
         }
 
@@ -70,12 +69,10 @@ namespace BoneSquadKiting.UI
             if (Director == null) return;
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
-            Director.RoundStarted -= OnRoundStarted;
-            Director.AllEnemiesCleared -= OnAllCleared;
+            Director.WaveStarted -= OnWaveStarted;
         }
 
-        void OnRoundStarted(int round, int total) => ShowToast($"라운드 {round} / {total}");
-        void OnAllCleared() => ShowToast(Director.ClearRule == Stage.StageClearRule.KillAllThenReachEnd ? "모든 적 처치 — 끝 지점으로!" : "모든 적 처치");
+        void OnWaveStarted(int wave, int mobs) => ShowToast($"웨이브 {wave}  (+{mobs})");
 
         void OnResolved(int hit, int lost) => ShowToast(hit == 0 ? "PERFECT DODGE!" : $"피격 {hit}명 · 전사 {lost}명");
         void OnPhaseTwo() => ShowToast("PHASE 2");
