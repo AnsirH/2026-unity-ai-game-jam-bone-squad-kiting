@@ -123,4 +123,39 @@ public class GameDirectorTests
         Assert.AreEqual(GameConstants.SquadSize, lost);
         Assert.AreEqual(GamePhase.Lose, _dir.Phase);
     }
+
+    [Test]
+    public void AttackMove_StopsWhenAnEnemyIsWithinSquadRange()
+    {
+        _dir.Restart();
+        var start = _fc.Anchor;
+        _dir.IssueOrder(SquadOrder.AttackMove(new Vector2(6f, 0f)));
+        Assert.IsTrue(_fc.IsMoving);
+        Run(0.5f);
+        Assert.IsFalse(_fc.IsMoving);
+        Assert.AreEqual(start, _fc.Anchor, "boss is already in squad range, so the squad never leaves");
+    }
+
+    [Test]
+    public void AttackMove_WalksToThePointWhenNoEnemyIsInRange()
+    {
+        _dir.Restart();
+        _dir.Enemies.Unregister(_dir.Boss);
+        _dir.IssueOrder(SquadOrder.AttackMove(new Vector2(6f, 0f)));
+        Run(2f);
+        Assert.That(Vector2.Distance(_fc.Anchor, new Vector2(6f, 0f)), Is.LessThan(0.05f));
+    }
+
+    [Test]
+    public void RotateFormation_OnlyWhilePlaying_AndRaisesEvent()
+    {
+        _dir.RotateFormation(1);
+        Assert.AreEqual(0f, _fc.RotationDegrees, "ignored in the menu");
+
+        _dir.Restart();
+        float reported = -1; _dir.FormationRotated += d => reported = d;
+        _dir.RotateFormation(2);
+        Assert.AreEqual(30f, _fc.RotationDegrees);
+        Assert.AreEqual(30f, reported);
+    }
 }

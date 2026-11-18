@@ -7,7 +7,7 @@ namespace BoneSquadKiting.Input
 {
     /// <summary>
     /// Mouse / keyboard to squad commands. Right click: enemy = attack it, ground = move.
-    /// A then left click: attack-move. Formation hotkeys come from the formation assets (plus Q/W/E/R).
+    /// A then left click: attack-move. Mouse wheel: rotate the formation. Formation hotkeys come from the formation assets (plus Q/W/E/R).
     /// Reads the new Input System directly; the project has the legacy Input class disabled.
     /// </summary>
     public class SquadInputController : MonoBehaviour
@@ -45,6 +45,10 @@ namespace BoneSquadKiting.Input
                 }
 
                 HandleFormationKeys();
+
+                // Wheel down = clockwise, wheel up = counter-clockwise (seen from above). One notch per frame.
+                float wheel = Mouse.current.scroll.ReadValue().y;
+                if (wheel != 0) Director.RotateFormation(wheel < 0 ? 1 : -1);
             }
             else AttackMovePending = false;
 

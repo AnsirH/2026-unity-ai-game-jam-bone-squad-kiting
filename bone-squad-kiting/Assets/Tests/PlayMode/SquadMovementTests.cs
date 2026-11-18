@@ -71,4 +71,38 @@ public class SquadMovementTests
         for (int i = 0; i < 60; i++) _fc.Tick(0.016f);
         Assert.AreEqual(x, u.X); Assert.AreEqual(z, u.Z);
     }
+
+    [Test]
+    public void Rotate_TurnsSlotsAroundAnchor_AndSurvivesFormationChange()
+    {
+        _fc.SetFormation("line");
+        var before = _fc.Units[24].Slot;                       // far end of the line, on +z
+        _fc.RotationStepDegrees = 90f;
+        _fc.Rotate(1);
+        Assert.AreEqual(90f, _fc.RotationDegrees);
+        Assert.That(_fc.Units[24].Slot.x, Is.EqualTo(before.y).Within(1e-3f), "+z end swings to +x");
+        Assert.AreEqual(new Vector2(0, 3.4f), _fc.Anchor, "the anchor does not move");
+
+        _fc.SetFormation("cross");
+        Assert.That(Vector2.Distance(_fc.Units[4].Slot, new Vector2(0.61f, 0)), Is.LessThan(1e-3f), "new formation keeps the rotation");
+
+        _fc.Rotate(-1);
+        Assert.AreEqual(0f, _fc.RotationDegrees);
+        _fc.Rotate(-1);
+        Assert.AreEqual(270f, _fc.RotationDegrees, "wraps into 0..360");
+
+        _fc.Init();
+        Assert.AreEqual(0f, _fc.RotationDegrees, "restart resets rotation");
+    }
+
+    [Test]
+    public void Rotate_MakesUnitsMove_SoTheyHoldFire()
+    {
+        for (int i = 0; i < 10; i++) _fc.Tick(0.016f);
+        Assert.IsFalse(_fc.Units[0].Moving);
+        _fc.Rotate(1);
+        _fc.Tick(0.016f);
+        Assert.IsTrue(_fc.Units[0].Moving);
+        Assert.IsFalse(_fc.Units[12].Moving, "the center slot stays put");
+    }
 }

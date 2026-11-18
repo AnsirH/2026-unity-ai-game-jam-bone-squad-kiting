@@ -19,6 +19,8 @@ namespace BoneSquadKiting.Squad
         public Vector2 Anchor = StartAnchor;                  // Vector2(x, z)
         public Vector2 Destination = StartAnchor;
         public string Formation = DefaultFormation;
+        public float RotationStepDegrees = 15f;              // one mouse-wheel notch (initial value, not final)
+        public float RotationDegrees;                         // clockwise seen from above; 0 = as authored
         public SquadOrder Order;
         public readonly List<SquadUnit> Units = new();
 
@@ -39,6 +41,7 @@ namespace BoneSquadKiting.Squad
             Units.Clear();
             Anchor = Destination = StartAnchor;
             Formation = DefaultFormation;
+            RotationDegrees = 0;
             Order = SquadOrder.Move(StartAnchor);
             var slots = FormationSlots.Generate(def);
             for (int i = 0; i < GameConstants.SquadSize; i++)
@@ -56,9 +59,29 @@ namespace BoneSquadKiting.Squad
             var def = Find(id);
             if (def == null) return false;
             Formation = id;
-            var slots = FormationSlots.Generate(def);
-            for (int i = 0; i < Units.Count; i++) Units[i].Slot = slots[i];
+            ApplySlots(def);
             return true;
+        }
+
+        /// <summary>
+        /// Turn the formation around the anchor by whole notches. Positive = clockwise seen from above.
+        /// Units then walk to their new slots (and hold fire while they do).
+        /// </summary>
+        public void Rotate(int clockwiseNotches)
+        {
+            var def = Find(Formation);
+            if (def == null || clockwiseNotches == 0) return;
+            RotationDegrees = Mathf.Repeat(RotationDegrees + clockwiseNotches * RotationStepDegrees, 360f);
+            ApplySlots(def);
+        }
+
+        /// <summary>Stop where the anchor is now.</summary>
+        public void Halt() { Destination = Anchor; }
+
+        void ApplySlots(FormationDefinition def)
+        {
+            var slots = FormationSlots.Rotate(FormationSlots.Generate(def), RotationDegrees);
+            for (int i = 0; i < Units.Count; i++) Units[i].Slot = slots[i];
         }
 
         /// <summary>Set where the anchor walks to, clamped to the commander's allowed area.</summary>

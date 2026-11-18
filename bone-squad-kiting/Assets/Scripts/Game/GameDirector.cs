@@ -33,6 +33,7 @@ namespace BoneSquadKiting.Game
         public event System.Action<PatternDefinition> PatternStarted;
         public event System.Action<int, int> PatternResolved; // units hit, units lost
         public event System.Action<string> FormationChanged;
+        public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
 
         readonly List<(float t, float d)> _hits = new();
@@ -69,6 +70,14 @@ namespace BoneSquadKiting.Game
             if (Squad.SetFormation(id)) FormationChanged?.Invoke(id);
         }
 
+        /// <summary>Turn the formation by mouse-wheel notches. Positive = clockwise seen from above.</summary>
+        public void RotateFormation(int clockwiseNotches)
+        {
+            if (Phase != GamePhase.Play || Paused || clockwiseNotches == 0) return;
+            Squad.Rotate(clockwiseNotches);
+            FormationRotated?.Invoke(Squad.RotationDegrees);
+        }
+
         /// <summary>
         /// Move / AttackMove walk the anchor to the point (units do not fire while moving, see FireRules).
         /// AttackTarget advances only when the target is out of range; in range the squad holds and fires.
@@ -92,6 +101,12 @@ namespace BoneSquadKiting.Game
         {
             if (Phase != GamePhase.Play || Paused) return;
             Elapsed += dt;
+
+            // An attack-move squad stops as soon as an enemy is within squad range of the anchor.
+            if (Squad.Order.Kind == OrderKind.AttackMove && Squad.IsMoving
+                && Enemies.NearestInRange(Squad.Anchor, GameConstants.SquadEngageRange) != null)
+                Squad.Halt();
+
             Squad.Tick(dt);
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             Attacks.Tick(Squad, Boss, dt);

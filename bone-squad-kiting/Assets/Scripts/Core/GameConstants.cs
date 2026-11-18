@@ -31,7 +31,10 @@ namespace BoneSquadKiting.Core
         public const float AnchorArrive = 0.024f, UnitArrive = 0.015f;
 
         // Combat
-        public const float FireRange = 15.9f;
+        public const float FireRange = 15.9f;          // per unit: how far one unit can shoot
+        // Per squad, measured from the formation anchor: an attack-move squad stops once an enemy is this close.
+        // Same number as FireRange for now; both are due for retuning (15.9 covers almost the whole arena).
+        public const float SquadEngageRange = 15.9f;
         public const float ShotSpeed = 22f;
         public const float ShotLife = 1.35f;
         public const float ShotHitRadius = 1.15f;

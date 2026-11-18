@@ -48,4 +48,24 @@ public class FormationSlotsTests
         Assert.That(s[1], Is.EqualTo(new Vector2(-0.61f, 0)).Using(TestUtil.V2(1e-4f)));
         Assert.That(s[24], Is.EqualTo(new Vector2(0, 6 * 0.61f)).Using(TestUtil.V2(1e-4f)));
     }
+
+    [Test]
+    public void Rotate_PositiveDegreesTurnClockwiseSeenFromAbove()
+    {
+        var r = FormationSlots.Rotate(new[] { new Vector2(0, 1), new Vector2(1, 0) }, 90f);
+        Assert.That(r[0], Is.EqualTo(new Vector2(1, 0)).Using(TestUtil.V2(1e-4f)));   // +z -> +x
+        Assert.That(r[1], Is.EqualTo(new Vector2(0, -1)).Using(TestUtil.V2(1e-4f)));  // +x -> -z
+    }
+
+    [Test]
+    public void Rotate_KeepsDistancesAndDoesNotTouchTheInput()
+    {
+        var src = FormationSlots.Generate(Def(FormationMode.Line, spacing: 0.49f, stagger: 0.12f));
+        var first = src[0];
+        var r = FormationSlots.Rotate(src, 37f);
+        Assert.AreEqual(first, src[0]);
+        for (int i = 0; i < src.Length; i++) Assert.That(r[i].magnitude, Is.EqualTo(src[i].magnitude).Within(1e-4f));
+        var back = FormationSlots.Rotate(r, -37f);
+        Assert.That(back[0], Is.EqualTo(src[0]).Using(TestUtil.V2(1e-4f)));
+    }
 }

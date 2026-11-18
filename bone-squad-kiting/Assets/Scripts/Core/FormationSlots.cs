@@ -44,5 +44,19 @@ namespace BoneSquadKiting.Core
             }
             return o;
         }
+
+        /// <summary>
+        /// Rotate slot offsets around the anchor. Positive degrees turn clockwise as seen from above
+        /// (a slot at +z moves toward +x). Returns a new array.
+        /// </summary>
+        public static Vector2[] Rotate(Vector2[] slots, float clockwiseDegrees)
+        {
+            float rad = clockwiseDegrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(rad), sin = Mathf.Sin(rad);
+            var o = new Vector2[slots.Length];
+            for (int i = 0; i < slots.Length; i++)
+                o[i] = new Vector2(slots[i].x * cos + slots[i].y * sin, -slots[i].x * sin + slots[i].y * cos);
+            return o;
+        }
     }
 }
