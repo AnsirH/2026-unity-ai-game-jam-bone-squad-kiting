@@ -1,0 +1,78 @@
+using System.Collections.Generic;
+using UnityEngine;
+using BoneSquadKiting.Combat;
+using BoneSquadKiting.Core;
+using BoneSquadKiting.Data;
+
+namespace BoneSquadKiting.Squad
+{
+    /// <summary>
+    /// The squad as one commanded body: an anchor that walks to a destination, and units that
+    /// follow anchor + formation slot. Driven by Tick(dt) so tests and the game director control time.
+    /// </summary>
+    public class FormationController : MonoBehaviour
+    {
+        public const string DefaultFormation = "dense";
+        static readonly Vector2 StartAnchor = new(0, 3.4f);
+
+        public List<FormationDefinition> Formations = new(); // assigned in the scene (or by tests)
+        public Vector2 Anchor = StartAnchor;                  // Vector2(x, z)
+        public Vector2 Destination = StartAnchor;
+        public string Formation = DefaultFormation;
+        public SquadOrder Order;
+        public readonly List<SquadUnit> Units = new();
+
+        public FormationDefinition Find(string id) => Formations.Find(f => f != null && f.Id == id);
+
+        /// <summary>Reset to the prototype's starting layout: dense formation at z = 3.4.</summary>
+        public void Init()
+        {
+            var def = Find(DefaultFormation);
+            if (def == null)
+            {
+                Debug.LogError($"FormationController: no '{DefaultFormation}' formation assigned.", this);
+                return;
+            }
+            Units.Clear();
+            Anchor = Destination = StartAnchor;
+            Formation = DefaultFormation;
+            Order = SquadOrder.Move(StartAnchor);
+            var slots = FormationSlots.Generate(def);
+            for (int i = 0; i < GameConstants.SquadSize; i++)
+                Units.Add(new SquadUnit
+                {
+                    Id = i, Slot = slots[i],
+                    X = StartAnchor.x + slots[i].x, Z = StartAnchor.y + slots[i].y,
+                    Cd = Random.value * 0.65f, Anim = Random.value * 6.28f,
+                });
+        }
+
+        /// <summary>Switch formation. Returns false when the id is unknown.</summary>
+        public bool SetFormation(string id)
+        {
+            var def = Find(id);
+            if (def == null) return false;
+            Formation = id;
+            var slots = FormationSlots.Generate(def);
+            for (int i = 0; i < Units.Count; i++) Units[i].Slot = slots[i];
+            return true;
+        }
+
+        /// <summary>Set where the anchor walks to, clamped to the commander's allowed area.</summary>
+        public void SetDestination(Vector2 d)
+        {
+            Destination = new Vector2(
+                Mathf.Clamp(d.x, -GameConstants.MoveClampX, GameConstants.MoveClampX),
+                Mathf.Clamp(d.y, GameConstants.MoveClampZMin, GameConstants.MoveClampZMax));
+        }
+
+        public void Tick(float dt)
+        {
+            Vector2 diff = Destination - Anchor;
+            float dist = diff.magnitude;
+            if (dist > GameConstants.AnchorArrive)
+                Anchor += diff / dist * Mathf.Min(dist, GameConstants.AnchorSpeed * dt);
+            foreach (var u in Units) u.MoveToward(Anchor, dt);
+        }
+    }
+}

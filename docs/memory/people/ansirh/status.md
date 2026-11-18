@@ -13,19 +13,20 @@
 
 ## 완료
 
-- Unity 프로젝트 스캐폴딩(`bone-squad-kiting/`, 6000.3.28f1 URP), EditMode 테스트 어셈블리
+- Unity 프로젝트 스캐폴딩(`bone-squad-kiting/`, 6000.3.28f1 URP), EditMode·PlayMode 테스트 어셈블리
 - 패턴·진형 데이터화(결정 #8): `PatternDefinition`/`AttackSequence`/`FormationDefinition` + 에셋 13개, 장판 판정·진형 슬롯 생성기
-- 적 추상화와 분대 오더(결정 #9의 토대): `IEnemy`/`IDamageable`/`EnemyRegistry`/`SquadOrder`
-- EditMode 테스트 14개 통과
+- 적 추상화와 분대 오더(결정 #9): `IEnemy`/`IDamageable`/`EnemyRegistry`/`SquadOrder`
+- 게임 로직 전부(M1 계획 Task 5~9): 분대 이동, 평타·투사체, 보스 패턴 스케줄·판정, `GameDirector`(승패·페이즈·DPS·오더), 입력(우클릭 스마트 커맨드·어택땅·진형키)
+- 테스트: EditMode 17개, PlayMode 22개 통과(헤드리스)
 
 ## 막힘
 
 - 결정 #8·#9가 아직 "제안됨"(팀장 승인 전)인데 구현은 그 구조를 따르고 있다
 - 2페이즈 임계값이 0.54(페이즈 전환)와 0.55(공격 간격) 두 가지다. 프로토타입 원본 대조 필요
-- `origin/main`에 `Art 폴더 추가` 커밋이 있어 push 전에 병합해야 한다
+- 로직은 테스트로만 확인했다. 씬이 없어서 실제 플레이로는 아직 한 번도 돌려 보지 못했다
 
 ## 다음 할 일
 
-- Task 1: 아레나 씬 + 쿼터뷰 직교 카메라 + URP 포스트
-- Task 5: 분대 이동(중심점 + 유닛 추종), 첫 PlayMode 테스트
-- 이후 Task 6(입력) → 7(평타·보스) → 8(패턴) → 9(GameDirector) → 10(HUD) → 11(연출) → 12(통합)
+- Task 1: 아레나 씬 + 쿼터뷰 직교 카메라 + URP 포스트 (Editor를 열고 진행)
+- 씬 결선: 분대·보스·투사체 비주얼 배치, `TelegraphView` 작성, 입력 수동 확인
+- Task 10(HUD) → 11(연출) → 12(통합 플레이스루)
