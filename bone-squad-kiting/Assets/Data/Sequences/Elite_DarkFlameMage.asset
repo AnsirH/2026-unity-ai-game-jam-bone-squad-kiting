@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a10c440e64b89104686ad458e529bdab, type: 3}
+  m_Name: Elite_DarkFlameMage
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.AttackSequence
+  Patterns:
+  - {fileID: 11400000, guid: ec0d90245c4c84d459651fc1f147e448, type: 2}

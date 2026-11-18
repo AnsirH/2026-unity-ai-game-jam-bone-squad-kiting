@@ -11,7 +11,7 @@ namespace BoneSquadKiting.Data
     {
         public string DisplayName = "미니 보스";
         public float MaxHp = 4000f;
-        public float Speed = 2f;              // slower than mobs (3.2): the swarm arrives first
+        public float Speed = 2f;              // slower than mobs (3.2): the swarm arrives first. 0 = fixed in place (a cannon)
         public float Radius = 0.8f;
         public float StopDistance = 3f;       // stops walking this close to the nearest unit
 
@@ -19,6 +19,8 @@ namespace BoneSquadKiting.Data
         public AttackSequence Patterns;
         public float FirstAttackDelay = 3f;   // seconds after appearing before the first cast
         public float AttackGap = 4.5f;        // seconds between casts
+        public float AttackGapRandom = 0f;    // up to this many extra seconds, picked anew for each gap (irregular fire)
+        public float AttackRange = 16f;       // only casts while the squad's anchor is this close; 0 = any distance
 
         [Header("Intro / death moments (game is frozen, camera goes to the mini boss)")]
         public float IntroDuration = 2f;

@@ -26,9 +26,10 @@ namespace BoneSquadKiting.Bosses
             e.Attacks = new BossAttackSystem
             {
                 Sequence = def.Patterns,
-                NextAttack = def.FirstAttackDelay,
+                NextAttack = def.FirstAttackDelay + Random.value * def.AttackGapRandom,
                 TrackSquad = false,          // the zone stays where it was announced, so it can be walked out of
                 FixedGap = def.AttackGap,
+                FixedGapRandom = def.AttackGapRandom,
             };
             e.Attacks.OnStart += p => OnPatternStarted?.Invoke(e, p);
             e.Attacks.OnResolved += (hit, lost) => OnPatternResolved?.Invoke(e, hit, lost);
@@ -56,8 +57,10 @@ namespace BoneSquadKiting.Bosses
                     continue;
                 }
                 e.Flash = Mathf.Max(0f, e.Flash - dt * 3f);
-                e.Attacks.Tick(squad, null, dt);
-                if (e.Casting) continue;   // it stands still while casting: the squad's chance to shoot — or to move
+                // A cast in progress always finishes; a new one only starts while the squad is within reach.
+                bool inReach = e.Def.AttackRange <= 0f || (squad.Anchor - e.Pos).magnitude <= e.Def.AttackRange;
+                if (e.Casting || inReach) e.Attacks.Tick(squad, null, dt);
+                if (e.Casting || e.Def.Speed <= 0f) continue;   // it stands still while casting: the squad's chance to shoot — or to move
 
                 var dir = Steer(e, squad, flow);
                 if (dir == Vector2.zero) continue;

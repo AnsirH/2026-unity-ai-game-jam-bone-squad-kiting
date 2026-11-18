@@ -28,6 +28,7 @@ namespace BoneSquadKiting.Bosses
         public float NextAttack = GameConstants.FirstAttackDelay;
         public bool TrackSquad = true;   // the boss's zones follow the squad until the lock time; a mini boss's do not
         public float FixedGap = -1f;     // > 0: seconds between casts, instead of the boss's HP-based gap
+        public float FixedGapRandom = 0f; // with FixedGap: up to this many extra seconds, rolled for every gap
 
         public System.Action<PatternDefinition> OnStart;
         public System.Action<int, int> OnResolved; // units hit, units lost
@@ -81,7 +82,7 @@ namespace BoneSquadKiting.Bosses
             int aliveAfter = 0; foreach (var u in units) if (!u.Dead) aliveAfter++;
             hit = caught.Count; lost = aliveBefore - aliveAfter;
             Current = null;
-            NextAttack = FixedGap > 0f ? FixedGap
+            NextAttack = FixedGap > 0f ? FixedGap + Random.value * FixedGapRandom
                 : (boss != null && boss.HpFrac < GameConstants.FastAttackHpFrac)
                     ? GameConstants.NextAttackPhase2 : GameConstants.NextAttackPhase1;
             OnResolved?.Invoke(hit, lost);

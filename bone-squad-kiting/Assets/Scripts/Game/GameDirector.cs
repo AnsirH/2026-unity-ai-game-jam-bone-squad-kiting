@@ -253,24 +253,27 @@ namespace BoneSquadKiting.Game
         {
             foreach (var m in _miniBosses)
             {
-                if (m.Triggered || m.Definition == null) continue;
-                if ((m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
+                if (m.Triggered || m.Definition == null || !m.Unlocked) continue;
+                if (!m.PresentFromStart && (m.Position - Squad.Anchor).magnitude > m.TriggerRadius) continue;
                 var pos = Squad.Grid != null ? Squad.Grid.NearestWalkable(m.Position) : m.Position;
                 var elite = Elites.Spawn(m.Definition, pos, Enemies);
                 m.MarkTriggered(elite);
                 MiniBossAppeared?.Invoke(elite);
-                StartCutscene(pos, m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
+                if (m.PlayIntro && !m.PresentFromStart)
+                    StartCutscene(pos, m.Definition.IntroDuration, m.Definition.DisplayName, m.Definition.IntroFx);
             }
         }
 
-        // When a mini boss falls: its death moment plays, the swarm is swept away and the waves stop,
-        // so the walk to the end point is clear. Shots in flight go with them.
+        // A mini boss fell. Only the stage's last one gets the big finish: its death moment plays, the swarm
+        // is swept away and the waves stop, so the walk to the end point is clear. Earlier ones just die and
+        // the waves keep coming.
         void OnMiniBossDied(Elite elite)
         {
+            MiniBossDefeated?.Invoke(elite);
+            foreach (var m in _miniBosses) if (!m.Defeated) return;   // others remain (including ones yet to appear)
             Mobs.Clear(Enemies);
             Shots.Shots.Clear();
             if (Waves != null) Waves.Stopped = true;
-            MiniBossDefeated?.Invoke(elite);
             StartCutscene(elite.Pos, elite.Def.DeathDuration, null, elite.Def.DeathFx);
         }
 
@@ -326,9 +329,12 @@ namespace BoneSquadKiting.Game
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
             if (Boss != null) Attacks.Tick(Squad, Boss, dt);
 
-            TriggerMiniBosses();
-            if (InCutscene) return;   // a mini boss just appeared: freeze from this frame on
+            // Deaths are processed before new arrivals, so a mini boss that waits for another one to die
+            // appears on the same frame, and a newcomer does not act on the frame it appears.
             Elites.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
+            if (InCutscene) return;   // the last mini boss just died: its moment starts now
+            TriggerMiniBosses();
+            if (InCutscene) return;   // one just appeared with an intro: freeze from this frame on
 
             Telegraphs.Clear();
             if (Attacks.Current.HasValue) Telegraphs.Add(Attacks.Current.Value);

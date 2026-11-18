@@ -50,8 +50,34 @@ namespace BoneSquadKiting.EditorTools
             brute.DisplayName = "미니 보스"; brute.Patterns = eliteSeq;
             EditorUtility.SetDirty(brute);
 
+            // The five mini bosses of the stage lineup. Each casts one pattern; everything but the pattern,
+            // the name and the cannon's settings is the EliteDefinition default (starting values, not tuned).
+            // The telekinetic mage is meant to cast rotating zones, which do not exist yet: it uses the plain
+            // gate pattern for now.
+            Elite("Catapult", "투석병", seq.Patterns[0], cannon: true);
+            Elite("DarkFlameMage", "검정불꽃마법사", seq.Patterns[3]);
+            Elite("SpearThrower", "창투척병", seq.Patterns[1]);
+            Elite("ShadowSwordsman", "그림자검사", seq.Patterns[2]);
+            Elite("TelekineticMage", "염동력 마법사", seq.Patterns[1]);
+
             AssetDatabase.SaveAssets();
             Debug.Log("DefaultDataBuilder: wrote 4 formations, 8 patterns, 1 sequence.");
+        }
+
+        static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false)
+        {
+            var seq = Upsert<AttackSequence>($"{Root}/Sequences/Elite_{file}.asset");
+            seq.Patterns = new[] { pattern };
+            EditorUtility.SetDirty(seq);
+            var e = Upsert<EliteDefinition>($"{Root}/Elites/{file}.asset");
+            e.DisplayName = name; e.Patterns = seq;
+            if (cannon)
+            {
+                // A fixed emplacement: does not walk, fires irregularly, weaker than a walking mini boss.
+                e.Speed = 0f; e.MaxHp = 1500f; e.Radius = 0.9f;
+                e.AttackGap = 3.5f; e.AttackGapRandom = 3f; e.AttackRange = 14f;
+            }
+            EditorUtility.SetDirty(e);
         }
 
         static void Formation(string id, string name, Key key, FormationMode mode,
