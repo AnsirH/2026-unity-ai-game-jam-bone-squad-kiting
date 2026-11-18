@@ -16,8 +16,8 @@ MonoBehaviour:
   SquadEngageRange: 5
   ThreatRadius: 4
   AttackMoveRadius: 4
-  AnchorSpeed: 7.4
-  UnitBaseSpeed: 9.7
+  AnchorSpeed: 3.66
+  UnitBaseSpeed: 1.58
   UnitSpeedDistGain: 2.4
   UnitSpeedDistCap: 9
   AnchorArrive: 0.024
