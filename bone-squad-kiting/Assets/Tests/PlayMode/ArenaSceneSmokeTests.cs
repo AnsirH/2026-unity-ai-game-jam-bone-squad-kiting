@@ -36,6 +36,9 @@ public class ArenaSceneSmokeTests
         Assert.IsNotNull(Camera.main.GetComponent<BoneSquadKiting.Cameras.EdgeScrollCamera>(), "edge-scroll camera in scene");
         var camStart = Camera.main.transform.position;
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
+        var gizmos = Object.FindFirstObjectByType<RangeGizmos>();
+        Assert.IsNotNull(gizmos, "range gizmos in scene");
+        Assert.AreSame(director, gizmos.Director);
         var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
         Assert.IsNotNull(hud, "player HUD in scene");
         Assert.IsTrue(hud.Overlay.activeSelf, "start overlay is up before the match");
