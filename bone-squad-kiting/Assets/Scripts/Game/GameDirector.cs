@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using BoneSquadKiting.Bosses;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
@@ -26,6 +27,13 @@ namespace BoneSquadKiting.Game
         public StageClearRule ClearRule = StageClearRule.DefeatBoss;
         public StageSetup Stage;            // optional: start / end points and the walkable grid
         public WaveSpawner Waves;           // optional: this stage's endless mob waves
+        public string StageTitle = "";      // shown when the stage starts and on its clear screen, e.g. "스테이지 1"
+        public string NextScene = "";       // scene to load after this stage is cleared; empty = this is the last stage
+
+        public bool IsFinalStage => string.IsNullOrEmpty(NextScene);
+
+        // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
+        static bool _continueRun;
 
         [Header("Tuning (editable while playing)")]
         [Min(0f)] public float UnitFireRange = GameConstants.FireRange;            // how far one unit can shoot
@@ -153,6 +161,17 @@ namespace BoneSquadKiting.Game
             FormationChanged?.Invoke(Squad.Formation);
         }
 
+        /// <summary>
+        /// After a win: go on. Loads the next stage (which starts right away with a fresh squad), or after
+        /// the last stage goes back to the first scene's title screen. Does nothing unless the stage is won.
+        /// </summary>
+        public void Proceed()
+        {
+            if (Phase != GamePhase.Win) return;
+            if (IsFinalStage) { _continueRun = false; SceneManager.LoadScene(0); }
+            else { _continueRun = true; SceneManager.LoadScene(NextScene); }
+        }
+
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
 
         public void ChangeFormation(string id)
@@ -226,6 +245,7 @@ namespace BoneSquadKiting.Game
         {
             // Stand the squad on the field before the match starts, so the menu is not an empty arena.
             if (Squad != null && Squad.Units.Count == 0) Squad.Init();
+            if (_continueRun) { _continueRun = false; Restart(); }
         }
 
         // A mini boss appears, with its intro, when the squad's anchor comes within its trigger radius.
