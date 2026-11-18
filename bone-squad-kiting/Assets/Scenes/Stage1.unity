@@ -863,6 +863,7 @@ MonoBehaviour:
   Destination: {x: 0, y: 36}
   HasLeader: 1
   LeaderFacing: {x: 0, y: -1}
+  RingTurnFactor: 1
   SeatSize: 0.5
   AnchorSpeed: 3.66
   AnchorArrive: 0.024
@@ -22985,6 +22986,7 @@ MonoBehaviour:
   Director: {fileID: 32514558}
   MobMaterial: {fileID: 2100000, guid: d877a3329067f7d448eb3c46759cd6d9, type: 2}
   HitFlashColor: {r: 3, g: 3, b: 3, a: 1}
+  TurnSpeed: 540
 --- !u!4 &756614985
 Transform:
   m_ObjectHideFlags: 0
@@ -50782,7 +50784,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd57e1b206411254290cff6126713453, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Stage.WaveSpawner
-  Plan: {fileID: 11400000, guid: f553297b2aa946c8ad45d0b561af2a15, type: 2}
+  Plan: {fileID: 11400000, guid: 46592228117b4924aa2233f599b20ddd, type: 2}
   Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
   Interval:
     serializedVersion: 2

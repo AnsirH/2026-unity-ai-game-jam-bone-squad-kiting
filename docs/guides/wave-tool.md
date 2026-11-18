@@ -2,7 +2,7 @@
 
 > 대상: 웨이브를 세팅하고 테스트하는 사람.
 > 기준 코드: sub-1 `cdd0098` 시점의 `Assets/Scripts/Data/WavePlan.cs`, `Stage/WaveSpawner.cs`, `Assets/Editor/WaveToolWindow.cs`.
-> 최종 갱신: 2026-11-18 밤. 자동 테스트(EditMode 149, PlayMode 160)는 통과했고 도구 창이 뜨는 것까지 확인했다. 실제로 플레이하며 써 본 것은 아니다.
+> 최종 갱신: 2026-11-18 밤. 자동 테스트(EditMode 149, PlayMode 160)는 통과했고 도구 창이 뜨는 것까지 확인했다. Stage1에서 플레이 모드로 웨이브와 적 모델이 나오는 것은 확인했다. 사람이 플레이하며 재미를 본 것은 아니다.
 > 설계 배경: `docs/plans/2026-11-18-wave-tool-design.md`.
 
 ## 한눈에 보기
@@ -96,7 +96,9 @@
 
 ## 알아둘 점
 
-- 잡몹 종류는 지금 `Assets/Data/Mobs/Grunt.asset` 하나다. 원거리 몹은 아직 없다. 종류가 생기면 구성에 줄을 추가하면 된다.
+- 잡몹 종류는 `Assets/Data/Mobs/`의 `Grunt`(근접, EnemyMelee 모델)와 `Caster`(원거리, EnemyMage 모델) 둘이다. **`Caster`는 아직 모델만 다르고 행동은 근접과 같다**(다가와서 때린다). 원거리 공격(적 투사체)은 만들지 않았다.
+- 잡몹 모델은 잡몹 파일의 **Looks** 칸에서 바꾼다: Prefab(비우면 임시 구), Model Scale, Model Yaw Offset, States(Run·Attack 등 애니메이터 상태 이름. 없는 이름은 무시된다).
+- `Stage1_v02`는 근접+원거리를 섞은 초안이고 Stage1 씬이 이것을 쓴다. 숫자는 플레이로 확인한 값이 아니다.
 - 동시에 살아 있는 잡몹은 `GameTuning.asset`의 **Mob Max Alive**(지금 200)를 넘지 못한다. 넘으면 그 웨이브는 잘린다.
 - 미니 보스는 웨이브 플랜에 넣지 않는다. 맵 위의 표식으로 놓는다. 스테이지의 마지막 미니 보스가 죽으면 웨이브가 멈춘다(결정 #42·#46).
 - `Stage1~4_v01`은 예전 곡선 값을 네 구간으로 옮긴 것이다. 재미를 확인한 값이 아니다.
