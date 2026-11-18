@@ -78,9 +78,41 @@ namespace BoneSquadKiting.EditorTools
         static WaveSpawner SceneSpawner() => FindAnyObjectByType<WaveSpawner>();
         static StageStart SceneStart() => FindAnyObjectByType<StageStart>();
 
+        // A game scene holds several stages: its StageRun list says which version each one plays.
+        static StageRun SceneRun() => FindAnyObjectByType<StageRun>();
+
+        /// <summary>Which entry of a StageRun list a wave folder belongs to: "Stage2" is entry 1. −1 if the
+        /// name has no number or the list is shorter.</summary>
+        public static int RunIndexOf(StageRun run, string stage)
+        {
+            var m = Regex.Match(stage ?? "", @"(\d+)$");
+            if (run == null || !m.Success) return -1;
+            int i = int.Parse(m.Groups[1].Value) - 1;
+            return i >= 0 && i < run.Stages.Count ? i : -1;
+        }
+
+        static string StageOf(WavePlan plan) =>
+            plan == null ? null : Path.GetFileName(Path.GetDirectoryName(AssetDatabase.GetAssetPath(plan)));
+
+        /// <summary>The version this stage uses in the open scene. In a game scene with a stage list that is
+        /// the list's entry for the stage; in a single-stage scene it is whatever the scene plays.</summary>
+        public static WavePlan InUse(string stage)
+        {
+            var run = SceneRun();
+            if (run == null) return InUse();
+            int i = RunIndexOf(run, stage);
+            return i >= 0 ? run.Stages[i].WavePlan : null;
+        }
+
         /// <summary>The version the open scene (or the running game) uses now.</summary>
         public static WavePlan InUse()
         {
+            var run = SceneRun();
+            if (run != null && run.Stages.Count > 0)
+            {
+                int i = EditorApplication.isPlaying ? run.Current : Mathf.Clamp(run.StartStage, 0, run.Stages.Count - 1);
+                return run.Stages[i].WavePlan;
+            }
             var spawner = SceneSpawner();
             if (spawner != null && (spawner.Plan != null || EditorApplication.isPlaying)) return spawner.Plan;
             var start = SceneStart();
@@ -91,6 +123,17 @@ namespace BoneSquadKiting.EditorTools
         /// (from the next wave); that switch lasts only for this play session.</summary>
         public static bool Use(WavePlan plan)
         {
+            var run = SceneRun();
+            if (run != null)
+            {
+                // The stage is told by the version's folder (Stage2 → the list's second entry).
+                int i = RunIndexOf(run, StageOf(plan));
+                if (i < 0) return false;
+                if (!EditorApplication.isPlaying) Undo.RecordObject(run, "Use wave plan");
+                run.SetWavePlan(i, plan);      // while playing that stage, its waves follow from the next one
+                if (!EditorApplication.isPlaying) { EditorUtility.SetDirty(run); EditorSceneManager.MarkSceneDirty(run.gameObject.scene); }
+                return true;
+            }
             bool done = false;
             var spawner = SceneSpawner();
             if (spawner != null)
@@ -133,12 +176,15 @@ namespace BoneSquadKiting.EditorTools
                 int index = EditorGUILayout.Popup(stages.IndexOf(_stage), stages.ToArray(), EditorStyles.toolbarPopup, GUILayout.Width(140));
                 if (stages[index] != _stage) { _stage = stages[index]; _selected = null; _compare = null; }
                 GUILayout.FlexibleSpace();
-                var inUse = InUse();
-                GUILayout.Label(inUse != null ? $"열린 씬이 쓰는 버전: {inUse.name}" : "열린 씬에 웨이브 설정이 연결되어 있지 않음");
+                var inUse = InUse(_stage);
+                var run = SceneRun();
+                if (run != null && RunIndexOf(run, _stage) < 0) GUILayout.Label($"이 씬의 스테이지 목록에 {_stage}이(가) 없음");
+                else if (run != null) GUILayout.Label(inUse != null ? $"스테이지 목록 {RunIndexOf(run, _stage) + 1}번이 쓰는 버전: {inUse.name}" : $"스테이지 목록 {RunIndexOf(run, _stage) + 1}번에 웨이브 설정 없음");
+                else GUILayout.Label(inUse != null ? $"열린 씬이 쓰는 버전: {inUse.name}" : "열린 씬에 웨이브 설정이 연결되어 있지 않음");
             }
 
             var versions = Versions(_stage);
-            if (_selected == null || !versions.Contains(_selected)) _selected = versions.Contains(InUse()) ? InUse() : versions.FirstOrDefault();
+            if (_selected == null || !versions.Contains(_selected)) _selected = versions.Contains(InUse(_stage)) ? InUse(_stage) : versions.FirstOrDefault();
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -167,7 +213,7 @@ namespace BoneSquadKiting.EditorTools
                 using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollList, GUILayout.ExpandHeight(true)))
                 {
                     _scrollList = scroll.scrollPosition;
-                    var inUse = InUse();
+                    var inUse = InUse(_stage);
                     foreach (var v in versions)
                     {
                         using (new EditorGUILayout.VerticalScope(v == _selected ? EditorStyles.helpBox : GUIStyle.none))
@@ -182,7 +228,7 @@ namespace BoneSquadKiting.EditorTools
                 {
                     if (GUILayout.Button("이 버전으로 플레이", GUILayout.Height(26)))
                     {
-                        if (!Use(_selected)) ShowNotification(new GUIContent("열린 씬에 Wave Spawner나 Stage Start가 없습니다"));
+                        if (!Use(_selected)) ShowNotification(new GUIContent(SceneRun() != null ? "이 씬의 스테이지 목록에 이 스테이지가 없습니다" : "열린 씬에 Wave Spawner나 Stage Start가 없습니다"));
                         else if (EditorApplication.isPlaying) ShowNotification(new GUIContent("다음 웨이브부터 적용 (이번 플레이에만)"));
                     }
                     if (GUILayout.Button("복제해서 새 버전"))
