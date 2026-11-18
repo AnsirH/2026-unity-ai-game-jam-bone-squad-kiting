@@ -110,6 +110,7 @@ namespace BoneSquadKiting.Game
         // Stable hooks for HUD / FX: the systems above are recreated on every Restart.
         public event System.Action<PatternDefinition> PatternStarted;
         public event System.Action<int, int> PatternResolved; // units hit, units lost
+        public event System.Action DefaultRingRequested;
         public event System.Action<string> FormationChanged;
         public event System.Action<float> FormationRotated; // new rotation in degrees, clockwise
         public event System.Action PhaseTwoStarted;
@@ -139,6 +140,7 @@ namespace BoneSquadKiting.Game
             Elites.OnPatternResolved += (e, hit, lost) =>
             {
                 if (lost > 0) Squad.Reform();
+                if (e.Attacks.OnImpact == null) DefaultRingRequested?.Invoke();
                 PatternResolved?.Invoke(hit, lost);
             };
             Elites.OnNearMiss += (e, near) => OnNearMiss(near);
@@ -168,6 +170,7 @@ namespace BoneSquadKiting.Game
             Attacks.OnNearMiss += OnNearMiss;
             Attacks.OnResolved += (hit, lost) =>
             {
+                DefaultRingRequested?.Invoke();
                 if (lost > 0) Squad.Reform(); // close the formation up around the survivors
                 PatternResolved?.Invoke(hit, lost);
             };

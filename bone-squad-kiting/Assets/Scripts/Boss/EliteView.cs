@@ -29,6 +29,7 @@ namespace BoneSquadKiting.Bosses
             public GameObject Root;
             public EnemyRef Ref;
             public Renderer Cylinder;          // placeholder only
+            public CatapultThrow Throw;
             public UnitVisual Visual;          // model only
             public Transform Model;            // model only
             public CapsuleCollider Pick;       // model only
@@ -104,6 +105,8 @@ namespace BoneSquadKiting.Bosses
 
             var squad = Director != null ? Director.Squad : null;
             var to = e.Entering ? e.Heading : (squad != null ? squad.Anchor - e.Pos : Vector2.zero);   // walking in: face the way it walks
+            if (v.Throw != null && e.Attacks.Current is BossAttackSystem.Active cast)
+                to = new Vector2(cast.Cx, cast.Cz) - e.Pos;
             if (to.sqrMagnitude > 1e-6f)
             {
                 var want = Quaternion.Euler(0f, Mathf.Atan2(to.x, to.y) * Mathf.Rad2Deg + e.Def.ModelYawOffset, 0f);
@@ -111,7 +114,8 @@ namespace BoneSquadKiting.Bosses
             }
 
             bool moving = (e.Pos - v.LastPos).sqrMagnitude > 1e-8f;
-            if (e.Casting && !v.WasCasting) v.Visual.PlayAttack(e.Def.CastAnimSeconds);
+            if (v.Throw != null) v.Throw.Draw(e.Attacks);
+            else if (e.Casting && !v.WasCasting) v.Visual.PlayAttack(e.Def.CastAnimSeconds);
             else v.Visual.SetState(moving ? VisualState.Run : VisualState.Idle);
             v.WasCasting = e.Casting;
             v.LastPos = e.Pos;
@@ -160,6 +164,7 @@ namespace BoneSquadKiting.Bosses
                 var model = Instantiate(def.Prefab, v.Root.transform);
                 model.name = def.Prefab.name;
                 foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
+                v.Throw = model.GetComponent<CatapultThrow>();
                 v.Model = model.transform;
                 v.Model.localPosition = Vector3.zero;
                 v.Visual = model.GetComponent<UnitVisual>();
