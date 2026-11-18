@@ -49,6 +49,11 @@ namespace BoneSquadKiting.Data
         public float ModelYawOffset = 0f;
         public float TurnSpeed = 720f;        // degrees per second a unit turns to face where it walks or shoots
 
+        [Header("Revive fragments")]
+        public GameObject BrokenBone;
+        public GameObject Vertebra;
+        public GameObject Scapula;
+
         [Header("Projectile")]
         public GameObject ShotPrefab;
         public GameObject LaunchFxPrefab;

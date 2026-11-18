@@ -15,6 +15,7 @@ namespace BoneSquadKiting.Squad
         public class Revive
         {
             public SquadUnit Reviver, Target;
+            public Vector2 AppearOffset;
             public float Elapsed;
         }
 
@@ -50,7 +51,12 @@ namespace BoneSquadKiting.Squad
             if (reviver == null) return false;
 
             reviver.Reviving = true;
-            Active.Add(new Revive { Reviver = reviver, Target = target });
+            Active.Add(new Revive
+            {
+                Reviver = reviver,
+                Target = target,
+                AppearOffset = Random.insideUnitCircle.normalized * AppearRadius
+            });
             OnStarted?.Invoke(reviver, target);
             return true;
         }
@@ -96,7 +102,7 @@ namespace BoneSquadKiting.Squad
                 if (r.Elapsed < Duration) continue;
 
                 r.Reviver.Reviving = false;
-                var spot = AppearPosition(anchor);
+                var spot = anchor + r.AppearOffset;
                 r.Target.Dead = false;
                 r.Target.Hp = GameConstants.UnitMax;
                 r.Target.X = spot.x; r.Target.Z = spot.y;
@@ -106,9 +112,6 @@ namespace BoneSquadKiting.Squad
                 OnCompleted?.Invoke(r.Reviver, r.Target);
             }
         }
-
-        // The one place that decides where a revived unit appears: on a small circle around the anchor.
-        Vector2 AppearPosition(Vector2 anchor) => anchor + Random.insideUnitCircle.normalized * AppearRadius;
 
         /// <summary>0..1 for a reviver's current revive, or -1 if it is not reviving.</summary>
         public float ProgressOf(SquadUnit reviver)
