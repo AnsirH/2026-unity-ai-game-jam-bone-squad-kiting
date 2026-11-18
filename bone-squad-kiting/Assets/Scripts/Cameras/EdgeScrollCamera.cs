@@ -18,6 +18,11 @@ namespace BoneSquadKiting.Cameras
         public Vector2 BoundsMin = new(GameConstants.LimitXMin, GameConstants.LimitZMin); // look-at limits (x, z)
         public Vector2 BoundsMax = new(GameConstants.LimitXMax, GameConstants.LimitZMax);
 
+        /// <summary>Extra world-space offset added on top of the scrolled position (screen shake).</summary>
+        [System.NonSerialized] public Vector3 ShakeOffset;
+
+        bool _mouseSeen;
+
         /// <summary>
         /// Which way to scroll for a mouse position, as (right, up) in -1..1. Zero when the cursor is not
         /// at an edge or is outside the view (so dragging the mouse out of the Game window does nothing).
@@ -34,9 +39,12 @@ namespace BoneSquadKiting.Cameras
 
         void LateUpdate()
         {
-            if (Mouse.current == null || !Application.isFocused) return;
-            var dir = ScrollDirection(Mouse.current.position.ReadValue(), new Vector2(Screen.width, Screen.height), EdgeWidth);
-            Scroll(dir, Time.unscaledDeltaTime);
+            // Until the mouse has reported a position it reads (0, 0), which would look like the corner.
+            if (Mouse.current != null && Mouse.current.position.ReadValue() != Vector2.zero) _mouseSeen = true;
+            var dir = _mouseSeen && Application.isFocused
+                ? ScrollDirection(Mouse.current.position.ReadValue(), new Vector2(Screen.width, Screen.height), EdgeWidth)
+                : Vector2.zero;
+            Scroll(dir, Time.unscaledDeltaTime); // also runs when idle so the shake offset is applied
         }
 
         /// <summary>Slide the view by a screen-space direction. Public so tests can drive it.</summary>
@@ -56,7 +64,7 @@ namespace BoneSquadKiting.Cameras
         public void Apply()
         {
             LookAt = new Vector2(Mathf.Clamp(LookAt.x, BoundsMin.x, BoundsMax.x), Mathf.Clamp(LookAt.y, BoundsMin.y, BoundsMax.y));
-            transform.position = new Vector3(LookAt.x, 0f, LookAt.y) - transform.forward * Distance;
+            transform.position = new Vector3(LookAt.x, 0f, LookAt.y) - transform.forward * Distance + ShakeOffset;
         }
 
         static Vector3 Flat(Vector3 v)

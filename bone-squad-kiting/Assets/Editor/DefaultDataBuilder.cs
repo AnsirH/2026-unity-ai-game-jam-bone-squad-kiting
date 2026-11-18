@@ -55,16 +55,16 @@ namespace BoneSquadKiting.EditorTools
             switch (id)
             {
                 case PatternId.Core:
-                    p.DisplayName = "중앙 핵폭발"; p.Advice = "3 · 원형"; p.Recommend = "ring";
+                    p.DisplayName = "중앙 핵폭발"; p.Advice = "E · 원형"; p.Recommend = "ring";
                     p.Detail = "중앙이 폭발합니다. 원형으로 흩어지세요!"; p.Shape = DangerShape.Disc(3.10f); break;
                 case PatternId.Gate:
-                    p.DisplayName = "쌍벽 압착"; p.Advice = "2 · 일자"; p.Recommend = "line";
+                    p.DisplayName = "쌍벽 압착"; p.Advice = "W · 일자"; p.Recommend = "line";
                     p.Detail = "좌우가 휩쓸립니다. 일자로 줄이세요!"; p.Shape = DangerShape.BandsX(0.83f, 6.4f, 7.1f); break;
                 case PatternId.Quadrant:
-                    p.DisplayName = "사분면 폭격"; p.Advice = "4 · 십자가"; p.Recommend = "cross";
+                    p.DisplayName = "사분면 폭격"; p.Advice = "R · 십자가"; p.Recommend = "cross";
                     p.Detail = "십자 통로만 안전합니다!"; p.Shape = DangerShape.Quadrants(0.56f, 5.7f); break;
                 case PatternId.Shell:
-                    p.DisplayName = "외곽 소거"; p.Advice = "1 · 밀집"; p.Recommend = "dense";
+                    p.DisplayName = "외곽 소거"; p.Advice = "Q · 밀집"; p.Recommend = "dense";
                     p.Detail = "바깥부터 폭발합니다. 중심으로 모이세요!"; p.Shape = DangerShape.Annulus(1.73f, 6.05f); break;
             }
             EditorUtility.SetDirty(p);

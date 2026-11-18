@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Game;
@@ -30,7 +31,11 @@ namespace BoneSquadKiting.Input
                 if (Pressed(Key.A)) AttackMovePending = true;
                 if (Pressed(Key.Escape)) AttackMovePending = false;
 
-                if (Mouse.current.leftButton.wasPressedThisFrame && AttackMovePending)
+                // A click that lands on a HUD button must not also be read as a squad command.
+                bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+
+                if (overUi) { }
+                else if (Mouse.current.leftButton.wasPressedThisFrame && AttackMovePending)
                 {
                     AttackMovePending = false;
                     if (PickEnemy(out var enemy)) Director.IssueOrder(SquadOrder.Attack(enemy));

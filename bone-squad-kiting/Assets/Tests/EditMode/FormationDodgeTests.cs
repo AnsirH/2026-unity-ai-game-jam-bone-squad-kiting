@@ -27,6 +27,18 @@ public class FormationDodgeTests
     }
 
     [Test]
+    public void PatternAdvice_NamesTheHotkeyOfItsRecommendedFormation()
+    {
+        var seq = AssetDatabase.LoadAssetAtPath<AttackSequence>("Assets/Data/Sequences/BossMain.asset");
+        foreach (var p in seq.Patterns)
+        {
+            var formation = AssetDatabase.LoadAssetAtPath<FormationDefinition>($"Assets/Data/Formations/{p.Recommend}.asset");
+            StringAssert.StartsWith(formation.HotKey.ToString(), p.Advice, p.name);
+            StringAssert.Contains(formation.DisplayName, p.Advice, p.name);
+        }
+    }
+
+    [Test]
     public void CorePattern_ScalesWithTheSquad_OthersDoNot()
     {
         var seq = AssetDatabase.LoadAssetAtPath<AttackSequence>("Assets/Data/Sequences/BossMain.asset");

@@ -9,6 +9,7 @@ using BoneSquadKiting.Cameras;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
+using BoneSquadKiting.Fx;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Input;
 using BoneSquadKiting.Squad;
@@ -148,8 +149,40 @@ namespace BoneSquadKiting.EditorTools
             teleGo.GetComponent<MeshRenderer>().sharedMaterial = telegraph;
             teleGo.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
 
-            var hud = game.AddComponent<TestHud>();
-            hud.Director = director; hud.Input = input;
+            // Debug overlay (F1) for playtesting, plus the player HUD.
+            var testHud = game.AddComponent<TestHud>();
+            testHud.Director = director; testHud.Input = input;
+            HudBuilder.Build(director, out var flashImage);
+
+            // Game feel: shake, flash, hit particles, blast ring.
+            var particleMat = Upsert($"{MatDir}/Particle.mat", Shader.Find("Sprites/Default"));
+            particleMat.color = Color.white; EditorUtility.SetDirty(particleMat);
+
+            var particlesGo = new GameObject("Hit Particles");
+            var particles = particlesGo.AddComponent<ParticleSystem>();
+            var main = particles.main;
+            main.playOnAwake = false; main.loop = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.5f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 6f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.16f);
+            main.startColor = new Color(1f, 0.55f, 0.25f);
+            main.gravityModifier = 1.2f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.useUnscaledTime = true;
+            var emission = particles.emission; emission.enabled = false;   // bursts come from JuiceFx.Emit
+            var shape = particles.shape; shape.shapeType = ParticleSystemShapeType.Hemisphere; shape.radius = 0.15f;
+            shape.rotation = new Vector3(-90f, 0f, 0f);                    // spray upward
+            particlesGo.GetComponent<ParticleSystemRenderer>().sharedMaterial = particleMat;
+
+            var ringGo = new GameObject("Blast Ring");
+            var ring = ringGo.AddComponent<LineRenderer>();
+            ring.loop = true; ring.useWorldSpace = true; ring.widthMultiplier = 0.14f;
+            ring.sharedMaterial = particleMat; ring.shadowCastingMode = ShadowCastingMode.Off;
+            ring.positionCount = 0; ring.enabled = false;
+
+            var fx = game.AddComponent<JuiceFx>();
+            fx.Director = director; fx.Cam = scroll; fx.FlashImage = flashImage;
+            fx.HitParticles = particles; fx.Ring = ring;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };

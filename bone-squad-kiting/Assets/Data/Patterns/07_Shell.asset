@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.PatternDefinition
   Id: 3
   DisplayName: "\uC678\uACFD \uC18C\uAC70"
-  Advice: "1 \xB7 \uBC00\uC9D1"
+  Advice: "Q \xB7 \uBC00\uC9D1"
   Detail: "\uBC14\uAE65\uBD80\uD130 \uD3ED\uBC1C\uD569\uB2C8\uB2E4. \uC911\uC2EC\uC73C\uB85C
     \uBAA8\uC774\uC138\uC694!"
   Recommend: dense

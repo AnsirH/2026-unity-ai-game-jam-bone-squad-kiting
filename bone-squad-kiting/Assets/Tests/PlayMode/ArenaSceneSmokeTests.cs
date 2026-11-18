@@ -36,10 +36,23 @@ public class ArenaSceneSmokeTests
         Assert.IsNotNull(Camera.main.GetComponent<BoneSquadKiting.Cameras.EdgeScrollCamera>(), "edge-scroll camera in scene");
         var camStart = Camera.main.transform.position;
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.UI.TestHud>(), "test HUD in scene");
-        Capture("arena-0-menu.png");
+        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
+        Assert.IsNotNull(hud, "player HUD in scene");
+        Assert.IsTrue(hud.Overlay.activeSelf, "start overlay is up before the match");
+        Assert.AreEqual(4, hud.FormationButtons.Length);
+        Assert.AreEqual("Q  밀집", hud.FormationLabels[0].text);
+        Assert.IsNotNull(Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>(), "event system for HUD clicks");
+        var fx = Object.FindFirstObjectByType<BoneSquadKiting.Fx.JuiceFx>();
+        Assert.IsNotNull(fx, "effects in scene");
+        Assert.IsNotNull(fx.Cam); Assert.IsNotNull(fx.FlashImage); Assert.IsNotNull(fx.HitParticles); Assert.IsNotNull(fx.Ring);
 
-        director.Restart();
+        hud.OverlayButton.onClick.Invoke();   // the start button starts the match
         Assert.AreEqual(GamePhase.Play, director.Phase);
+        yield return null;
+        Assert.IsFalse(hud.Overlay.activeSelf, "overlay closes once playing");
+        StringAssert.Contains("BOSS  100%", hud.BossText.text);
+        StringAssert.Contains("25 / 25", hud.AliveText.text);
+        Capture("arena-0-menu.png");
 
         // The boss collider must be pickable on the Enemy layer and resolve to the live boss.
         var bossRef = director.BossView.GetComponent<EnemyRef>();
@@ -52,6 +65,9 @@ public class ArenaSceneSmokeTests
         while (director.Attacks.Current == null && Time.time < timeout) yield return null;
         Assert.IsNotNull(director.Attacks.Current, "first pattern telegraphed");
         Assert.That(director.Boss.Hp, Is.LessThan(GameConstants.BossMax), "squad auto-fire hit the boss");
+        yield return null; // the HUD may have refreshed before the director started the pattern this frame
+        Assert.IsTrue(hud.WarningPanel.activeSelf, "pattern warning shows during a telegraph");
+        StringAssert.Contains("중앙 핵폭발", hud.WarningTitle.text);
         yield return new WaitForSeconds(0.6f);
         Capture("arena-1-telegraph-core.png");
 
@@ -60,6 +76,9 @@ public class ArenaSceneSmokeTests
         float resolveBy = Time.time + 4f;
         while (director.Attacks.Current != null && Time.time < resolveBy) yield return null;
         Assert.AreEqual(GameConstants.SquadSize, director.AliveCount, "ring formation dodges the core blast");
+        yield return null;
+        Assert.AreEqual("PERFECT DODGE!", hud.Toast.text);
+        Assert.AreEqual(0f, fx.Shake, "no shake on a clean dodge");
         Capture("arena-2-ring.png");
 
         director.ChangeFormation("line");
