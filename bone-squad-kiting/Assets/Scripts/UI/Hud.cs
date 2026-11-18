@@ -61,6 +61,7 @@ namespace BoneSquadKiting.UI
             if (OverlayButton != null) OverlayButton.onClick.AddListener(OnOverlayButton);
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
+            Director.NearMissed += OnNearMiss;
             Director.WaveStarted += OnWaveStarted;
             Director.CutsceneStarted += OnCutscene;
             Director.MiniBossDefeated += OnMiniBossDefeated;
@@ -72,6 +73,7 @@ namespace BoneSquadKiting.UI
             if (Director == null) return;
             Director.PatternResolved -= OnResolved;
             Director.PhaseTwoStarted -= OnPhaseTwo;
+            Director.NearMissed -= OnNearMiss;
             Director.WaveStarted -= OnWaveStarted;
             Director.CutsceneStarted -= OnCutscene;
             Director.MiniBossDefeated -= OnMiniBossDefeated;
@@ -91,7 +93,19 @@ namespace BoneSquadKiting.UI
 
         void OnWaveStarted(int wave, int mobs) => ShowToast($"웨이브 {wave}  (+{mobs})");
 
-        void OnResolved(int hit, int lost) => ShowToast(hit == 0 ? "PERFECT DODGE!" : $"피격 {hit}명 · 전사 {lost}명");
+        int _nearMissFrame = -1;
+        int BuffPercent => Mathf.RoundToInt((Director.NearMissDamageMultiplier - 1f) * 100f);
+        void OnNearMiss(int unitsNear)
+        {
+            _nearMissFrame = Time.frameCount;
+            ShowToast($"NEAR MISS!  공격력 +{BuffPercent}%", 2.2f);
+        }
+
+        void OnResolved(int hit, int lost)
+        {
+            if (hit == 0 && _nearMissFrame == Time.frameCount) return;   // the near-miss message says it better
+            ShowToast(hit == 0 ? "PERFECT DODGE!" : $"피격 {hit}명 · 전사 {lost}명");
+        }
         void OnPhaseTwo() => ShowToast("PHASE 2");
 
         public void ShowToast(string text, float seconds = -1f)
@@ -137,7 +151,10 @@ namespace BoneSquadKiting.UI
                 ? $"생존  {alive} / {GameConstants.SquadSize}   전사 {dead}" + (reviving > 0 ? $" (부활 중 {reviving})" : "")
                 : $"생존  {alive} / {GameConstants.SquadSize}";
             AliveText.color = alive < 10 ? new Color(1f, 0.45f, 0.4f) : Color.white;
-            DpsText.text = $"DPS  {Mathf.RoundToInt(Director.LastDps)}";
+            DpsText.text = Director.NearMissBuffLeft > 0f
+                ? $"DPS  {Mathf.RoundToInt(Director.LastDps)}   공격력 +{BuffPercent}%  {Director.NearMissBuffLeft:0.0}s"
+                : $"DPS  {Mathf.RoundToInt(Director.LastDps)}";
+            DpsText.color = Director.NearMissBuffLeft > 0f ? new Color(1f, 0.85f, 0.3f) : Color.white;
 
             BossAttackSystem.Active? current = playing ? Director.NextTelegraph : null;
             WarningPanel.SetActive(current.HasValue);

@@ -22,10 +22,12 @@ namespace BoneSquadKiting.Bosses
             public DangerShape Shape;   // the pattern's shape as cast (already scaled to the squad if it scales)
             public float Cx, Cz, Elapsed, Remaining;
             public bool Tracks;         // whether the zone follows the squad until the lock time
+            public float ShapeScale;
             public float Angle;         // degrees the zone has turned, clockwise seen from above
             public bool Sustaining;     // telegraph is over and a sustained pattern is dealing damage
             public float SustainRemaining, TickIn;
             public int Hits, Lost;      // totals so far, for sustained patterns
+            public bool Landed;         // the zone has gone off at least once (near misses are judged on that first moment only)
         }
 
         public AttackSequence Sequence;
@@ -40,6 +42,13 @@ namespace BoneSquadKiting.Bosses
         public System.Action<PatternDefinition> OnStart;
         public System.Action<int, int> OnResolved; // units hit, units lost (totals, once the pattern is over)
         public System.Action<int, int> OnDamage;   // units hit, units lost, every time damage lands (each sustained tick too)
+        /// <summary>
+        /// A zone went off, caught nobody, and this many units stood within NearMissMargin of it. Judged
+        /// once per pattern, on the moment it first goes off.
+        /// </summary>
+        public System.Action<int> OnNearMiss;
+        /// <summary>How close to a zone's edge (outside it) counts as a near miss. 0 = near misses are off.</summary>
+        public static float NearMissMargin = 1f;
 
         public void Tick(FormationController squad, Boss boss, float dt)
         {
@@ -86,6 +95,11 @@ namespace BoneSquadKiting.Bosses
                 Current = a;
                 return;
             }
+            if (a.Pattern.BurstEffect != null)
+            {
+                var effect = Object.Instantiate(a.Pattern.BurstEffect, new Vector3(a.Cx, 0.03f, a.Cz), Quaternion.Euler(0f, a.Angle, 0f));
+                if (a.Pattern.ScaleWithSquad) effect.transform.localScale *= a.ShapeScale;
+            }
             Damage(ref a, squad.Units, GameConstants.PatternUnitDamage);   // burst: once, at the angle it has reached
             Finish(a, boss);
         }
@@ -95,8 +109,9 @@ namespace BoneSquadKiting.Bosses
             if (Sequence == null || Sequence.Patterns == null || Sequence.Patterns.Length == 0) return;
             var p = Sequence.Patterns[Index % Sequence.Patterns.Length];
             Index++;
-            var shape = p.ScaleWithSquad ? p.Shape.Scaled(FormationSlots.SquadFraction(squad.AliveCount)) : p.Shape;
-            Current = new Active { Pattern = p, Shape = shape, Tracks = TrackSquad, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
+            float scale = p.ScaleWithSquad ? FormationSlots.SquadFraction(squad.AliveCount) : 1f;
+            var shape = p.ScaleWithSquad ? p.Shape.Scaled(scale) : p.Shape;
+            Current = new Active { Pattern = p, Shape = shape, ShapeScale = scale, Tracks = TrackSquad, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
             OnStart?.Invoke(p);
         }
 
@@ -116,6 +131,17 @@ namespace BoneSquadKiting.Bosses
             var caught = new List<SquadUnit>();
             foreach (var u in units)
                 if (!u.Dead && DangerShapeEval.InDanger(a.Shape, a.Cx, a.Cz, u.X, u.Z, a.Angle)) caught.Add(u);
+            if (!a.Landed)
+            {
+                a.Landed = true;
+                if (caught.Count == 0 && NearMissMargin > 0f)
+                {
+                    int near = 0;
+                    foreach (var u in units)
+                        if (!u.Dead && DangerShapeEval.NearDanger(a.Shape, a.Cx, a.Cz, u.X, u.Z, a.Angle, NearMissMargin)) near++;
+                    if (near > 0) OnNearMiss?.Invoke(near);
+                }
+            }
             int aliveBefore = 0; foreach (var u in units) if (!u.Dead) aliveBefore++;
             foreach (var u in caught) SquadDamage.Apply(units, u, amount);
             int aliveAfter = 0; foreach (var u in units) if (!u.Dead) aliveAfter++;

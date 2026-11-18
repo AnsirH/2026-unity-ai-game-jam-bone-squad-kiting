@@ -1,8 +1,8 @@
 namespace BoneSquadKiting.Core
 {
-    public enum PatternId { Core, Gate, Quadrant, Shell }
+    public enum PatternId { Core, Gate, Quadrant, Shell, TripleSlash }
 
-    public enum DangerShapeType { Disc, Annulus, CrossBandsX, QuadrantBoxes }
+    public enum DangerShapeType { Disc, Annulus, CrossBandsX, QuadrantBoxes, ThreeLanes }
 
     /// <summary>
     /// Danger zone geometry as data. Evaluated by <see cref="DangerShapeEval"/>.
@@ -14,14 +14,17 @@ namespace BoneSquadKiting.Core
         public DangerShapeType Type;
         public float RMax;                 // Disc: danger when r < RMax
         public float RMin, ROut;           // Annulus: danger when RMin < r < ROut
+        public float LaneSpacing, LaneHalfWidth; // ThreeLanes: center-to-center spacing and half width of one lane
         public float Inner, Outer, HalfZ;  // CrossBandsX: Inner < |dx| < Outer and |dz| < HalfZ
                                            // QuadrantBoxes: |dx| and |dz| both in (Inner, Outer)
+
+        public float ThreeLaneHalfSpan => LaneSpacing + LaneHalfWidth;
 
         /// <summary>The same shape with every dimension multiplied by <paramref name="k"/>.</summary>
         public DangerShape Scaled(float k) => new()
         {
             Type = Type, RMax = RMax * k, RMin = RMin * k, ROut = ROut * k,
-            Inner = Inner * k, Outer = Outer * k, HalfZ = HalfZ * k,
+            Inner = Inner * k, Outer = Outer * k, HalfZ = HalfZ * k, LaneSpacing = LaneSpacing * k, LaneHalfWidth = LaneHalfWidth * k,
         };
 
         public static DangerShape Disc(float r) => new() { Type = DangerShapeType.Disc, RMax = r };

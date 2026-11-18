@@ -8,23 +8,30 @@ namespace BoneSquadKiting.Core
     {
         const int Segments = 64;
 
-        public static Mesh Build(DangerShape s)
+        /// <summary>
+        /// <paramref name="maxStep"/> above 0 cuts the area into pieces no longer than that along each side,
+        /// so the mesh has points inside it that can be lifted onto uneven ground. 0 = as few triangles as possible.
+        /// </summary>
+        public static Mesh Build(DangerShape s, float maxStep = 0f)
         {
             var v = new List<Vector3>();
             var t = new List<int>();
             switch (s.Type)
             {
-                case DangerShapeType.Disc: Ring(v, t, 0f, s.RMax); break;
-                case DangerShapeType.Annulus: Ring(v, t, s.RMin, s.ROut); break;
+                case DangerShapeType.Disc: Ring(v, t, 0f, s.RMax, maxStep); break;
+                case DangerShapeType.Annulus: Ring(v, t, s.RMin, s.ROut, maxStep); break;
                 case DangerShapeType.CrossBandsX:
-                    Box(v, t, s.Inner, s.Outer, -s.HalfZ, s.HalfZ);
-                    Box(v, t, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ);
+                    Box(v, t, s.Inner, s.Outer, -s.HalfZ, s.HalfZ, maxStep);
+                    Box(v, t, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ, maxStep);
+                    break;
+                case DangerShapeType.ThreeLanes:
+                    Box(v, t, -s.ThreeLaneHalfSpan, s.ThreeLaneHalfSpan, -s.HalfZ, s.HalfZ, maxStep);
                     break;
                 case DangerShapeType.QuadrantBoxes:
-                    Box(v, t, s.Inner, s.Outer, s.Inner, s.Outer);
-                    Box(v, t, -s.Outer, -s.Inner, s.Inner, s.Outer);
-                    Box(v, t, s.Inner, s.Outer, -s.Outer, -s.Inner);
-                    Box(v, t, -s.Outer, -s.Inner, -s.Outer, -s.Inner);
+                    Box(v, t, s.Inner, s.Outer, s.Inner, s.Outer, maxStep);
+                    Box(v, t, -s.Outer, -s.Inner, s.Inner, s.Outer, maxStep);
+                    Box(v, t, s.Inner, s.Outer, -s.Outer, -s.Inner, maxStep);
+                    Box(v, t, -s.Outer, -s.Inner, -s.Outer, -s.Inner, maxStep);
                     break;
             }
             var m = new Mesh { name = "DangerShape " + s.Type };
@@ -35,31 +42,46 @@ namespace BoneSquadKiting.Core
             return m;
         }
 
-        static void Ring(List<Vector3> v, List<int> t, float rIn, float rOut)
+        static int Steps(float length, float maxStep) =>
+            maxStep <= 0f ? 1 : Mathf.Clamp(Mathf.CeilToInt(Mathf.Abs(length) / maxStep), 1, 64);
+
+        static void Ring(List<Vector3> v, List<int> t, float rIn, float rOut, float maxStep)
         {
+            int bands = Steps(rOut - rIn, maxStep), row = bands + 1;
             int b = v.Count;
             for (int i = 0; i <= Segments; i++)
             {
                 float a = Mathf.PI * 2f * i / Segments;
                 float c = Mathf.Cos(a), sn = Mathf.Sin(a);
-                v.Add(new Vector3(c * rIn, 0, sn * rIn));
-                v.Add(new Vector3(c * rOut, 0, sn * rOut));
+                for (int k = 0; k <= bands; k++)
+                {
+                    float r = Mathf.Lerp(rIn, rOut, (float)k / bands);
+                    v.Add(new Vector3(c * r, 0, sn * r));
+                }
             }
             for (int i = 0; i < Segments; i++)
-            {
-                int k = b + i * 2;
-                t.Add(k); t.Add(k + 3); t.Add(k + 1);
-                t.Add(k); t.Add(k + 2); t.Add(k + 3);
-            }
+                for (int k = 0; k < bands; k++)
+                {
+                    int p = b + i * row + k, q = p + row;   // p: this spoke, q: the next spoke
+                    t.Add(p); t.Add(q + 1); t.Add(p + 1);
+                    t.Add(p); t.Add(q); t.Add(q + 1);
+                }
         }
 
-        static void Box(List<Vector3> v, List<int> t, float x0, float x1, float z0, float z1)
+        static void Box(List<Vector3> v, List<int> t, float x0, float x1, float z0, float z1, float maxStep)
         {
+            int nx = Steps(x1 - x0, maxStep), nz = Steps(z1 - z0, maxStep), row = nz + 1;
             int b = v.Count;
-            v.Add(new Vector3(x0, 0, z0)); v.Add(new Vector3(x0, 0, z1));
-            v.Add(new Vector3(x1, 0, z1)); v.Add(new Vector3(x1, 0, z0));
-            t.Add(b); t.Add(b + 1); t.Add(b + 2);
-            t.Add(b); t.Add(b + 2); t.Add(b + 3);
+            for (int i = 0; i <= nx; i++)
+                for (int k = 0; k <= nz; k++)
+                    v.Add(new Vector3(Mathf.Lerp(x0, x1, (float)i / nx), 0, Mathf.Lerp(z0, z1, (float)k / nz)));
+            for (int i = 0; i < nx; i++)
+                for (int k = 0; k < nz; k++)
+                {
+                    int p = b + i * row + k, q = p + row;
+                    t.Add(p); t.Add(p + 1); t.Add(q + 1);
+                    t.Add(p); t.Add(q + 1); t.Add(q);
+                }
         }
     }
 }

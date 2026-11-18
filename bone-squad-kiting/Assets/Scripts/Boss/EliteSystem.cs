@@ -18,6 +18,7 @@ namespace BoneSquadKiting.Bosses
 
         public System.Action<Elite, PatternDefinition> OnPatternStarted;
         public System.Action<Elite, int, int> OnPatternResolved;   // elite, units hit, units lost
+        public System.Action<Elite, int> OnNearMiss;               // elite, units that stood just outside its zone
         public System.Action<Elite> OnDied;
         public System.Action<Elite> OnArrived;   // finished walking its entry route
 
@@ -44,6 +45,7 @@ namespace BoneSquadKiting.Bosses
             };
             e.Attacks.OnStart += p => OnPatternStarted?.Invoke(e, p);
             e.Attacks.OnResolved += (hit, lost) => OnPatternResolved?.Invoke(e, hit, lost);
+            e.Attacks.OnNearMiss += near => OnNearMiss?.Invoke(e, near);
             Elites.Add(e);
             registry?.Register(e);
             return e;

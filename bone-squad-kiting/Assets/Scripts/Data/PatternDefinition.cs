@@ -21,6 +21,10 @@ namespace BoneSquadKiting.Data
         [Tooltip("Use a dark crimson warning for a lethal attack. Visual only.")]
         public bool LethalTelegraph;
 
+        [Tooltip("One effect to spawn at the center of the entire burst when its warning ends.")]
+        public GameObject BurstEffect;
+        public Material LaneWarningMaterial;
+
         [Header("Sustained patterns only")]
         public PatternKind Kind = PatternKind.Burst;
         public float SustainSeconds = 4f;   // how long the zone stays live after the telegraph

@@ -116,9 +116,9 @@ namespace BoneSquadKiting.EditorTools
 
             var ground = Lit("Ground", Hex("#0d2434"));
             var unit = Lit("Unit", Hex("#35e0d0"), Hex("#35e0d0") * 0.6f);
-            var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f);
+            var boss = Lit("Boss", Hex("#c22a2a"), Hex("#ff3b30") * 1.6f, faction: Faction.Enemy);
             var shot = Lit("Shot", Hex("#ffe27a"), Hex("#ffd24a") * 2.5f);
-            var telegraph = Upsert($"{MatDir}/Telegraph.mat", Shader.Find("Sprites/Default"));
+            var telegraph = Upsert($"{MatDir}/Telegraph.mat", TelegraphShader());
             telegraph.color = Color.white;
             EditorUtility.SetDirty(telegraph);
 
@@ -308,7 +308,7 @@ namespace BoneSquadKiting.EditorTools
             var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>();
             if (System.IO.File.Exists(MainMenuSceneBuilder.Path)) scenes.Add(new EditorBuildSettingsScene(MainMenuSceneBuilder.Path, true));   // first: the game opens on it
             if (System.IO.File.Exists(StageKitBuilder.GamePath)) scenes.Add(new EditorBuildSettingsScene(StageKitBuilder.GamePath, true));
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            // The arena is no longer part of the game: the boss stage is the last map of the game scene.
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
@@ -445,14 +445,24 @@ namespace BoneSquadKiting.EditorTools
             return a;
         }
 
-        internal static Material Lit(string name, Color baseColor, Color? emission = null)
+        internal enum Faction { Ally, Enemy }
+
+        internal static Material Lit(string name, Color baseColor, Color? emission = null, Faction? faction = null)
         {
-            var m = Upsert($"{MatDir}/{name}.mat", Shader.Find("Universal Render Pipeline/Lit"));
+            Material parent = null;
+            if (faction.HasValue)
+            {
+                string example = faction == Faction.Ally ? "AllyMobExample" : "EnemyMobExample";
+                parent = Load<Material>($"Assets/Art/Material/MobExamples/{example}.mat");
+            }
+            var shader = parent != null ? parent.shader : Shader.Find("Universal Render Pipeline/Lit");
+            var m = Upsert($"{MatDir}/{name}.mat", shader);
+            if (parent != null && m.parent != parent) m.parent = parent;
             m.SetColor("_BaseColor", baseColor);
             m.SetFloat("_Smoothness", 0.1f);
             if (emission.HasValue)
             {
-                m.EnableKeyword("_EMISSION");
+                if (!faction.HasValue) m.EnableKeyword("_EMISSION");
                 m.SetColor("_EmissionColor", emission.Value);
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             }
@@ -460,10 +470,18 @@ namespace BoneSquadKiting.EditorTools
             return m;
         }
 
+        /// <summary>Danger zones draw over everything (no depth test), so terrain never hides them.</summary>
+        internal static Shader TelegraphShader() =>
+            Shader.Find("BoneSquadKiting/TelegraphOverlay") ?? Shader.Find("Sprites/Default");
+
         internal static Material Upsert(string path, Shader shader)
         {
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m != null) { m.shader = shader; return m; }
+            if (m != null)
+            {
+                if (m.shader != shader) m.shader = shader;
+                return m;
+            }
             m = new Material(shader);
             AssetDatabase.CreateAsset(m, path);
             return m;
