@@ -31,7 +31,12 @@ namespace BoneSquadKiting.Game
         public string StageTitle = "";      // shown when the stage starts and on its clear screen, e.g. "스테이지 1"
         public string NextScene = "";       // scene to load after this stage is cleared; empty = this is the last stage
 
-        public bool IsFinalStage => string.IsNullOrEmpty(NextScene);
+        public bool IsFinalStage => Run != null ? Run.IsLast && string.IsNullOrEmpty(Run.NextScene) : string.IsNullOrEmpty(NextScene);
+
+        /// <summary>Set when this director's stages are run by a StageRun (several stages in one scene).</summary>
+        [System.NonSerialized] public StageRun Run;
+        /// <summary>While true nothing advances and orders are ignored (a stage switch is under way).</summary>
+        [System.NonSerialized] public bool Frozen;
 
         // Set when moving on to the next stage, so that stage starts playing at once instead of showing the title screen.
         static bool _continueRun;
@@ -181,8 +186,10 @@ namespace BoneSquadKiting.Game
         public void Proceed()
         {
             if (Phase != GamePhase.Win) return;
+            if (Run != null && !Run.IsLast) { Run.Advance(); return; }   // next map in this same scene
+            string next = Run != null ? Run.NextScene : NextScene;
             if (IsFinalStage) { _continueRun = false; SceneManager.LoadScene(0); }
-            else { _continueRun = true; SceneManager.LoadScene(NextScene); }
+            else { _continueRun = true; SceneManager.LoadScene(next); }
         }
 
         public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
@@ -226,9 +233,12 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public void IssueOrder(SquadOrder o)
         {
-            if (Phase != GamePhase.Play || Paused || InCutscene) return;
+            if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return;
             Squad.Order = o;
-            Squad.FaceToward(o.Kind == OrderKind.AttackTarget && o.Target != null ? o.Target.Pos : o.Point);
+            // Only a plain move turns a ring to put its leader in front. An attack order leaves the ring as it
+            // stands (and stops a turn in progress): turning units cannot fire, and the point of the order is to.
+            if (o.Kind == OrderKind.Move) Squad.FaceToward(o.Point);
+            else Squad.HoldFacing();
             if (o.Kind == OrderKind.AttackTarget && o.Target != null)
             {
                 bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
@@ -341,7 +351,7 @@ namespace BoneSquadKiting.Game
         /// <summary>Advance the match by dt. Public so tests can drive time.</summary>
         public void Step(float dt)
         {
-            if (Phase != GamePhase.Play || Paused) return;
+            if (Phase != GamePhase.Play || Paused || Frozen) return;
             ApplyTuning();
             if (InCutscene)
             {

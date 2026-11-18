@@ -170,6 +170,9 @@ namespace BoneSquadKiting.Squad
             ApplySlots(def);
         }
 
+        /// <summary>Stop turning the ring: it stays as it stands now, wherever its leader is.</summary>
+        public void HoldFacing() { LeaderFacing = RingFacing; }
+
         /// <summary>Stop where the anchor is now.</summary>
         public void Halt() { Destination = Anchor; }
 

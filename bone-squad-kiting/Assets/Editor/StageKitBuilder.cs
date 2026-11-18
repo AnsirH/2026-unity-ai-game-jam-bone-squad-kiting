@@ -33,6 +33,8 @@ namespace BoneSquadKiting.EditorTools
         public const string MarkerDir = "Assets/Prefabs/Stage";
         public const string GuidePath = "Assets/Scenes/StageSetupGuide.unity";
         public const string MoveTuningPath = "Assets/Scenes/MoveTuning.unity";
+        public const string GamePath = "Assets/Scenes/Game.unity";
+        public const string ArtScenePath = "Assets/Scenes/BackgroundTest.unity";
 
         [MenuItem("BoneSquadKiting/Rebuild Stage Kit")]
         public static void BuildKit()
@@ -338,6 +340,62 @@ namespace BoneSquadKiting.EditorTools
                 EditorSceneManager.SaveScene(scene, MoveTuningPath);
             });
             Debug.Log("StageKitBuilder: wrote " + MoveTuningPath);
+        }
+
+        /// <summary>
+        /// The scene the game is played in: every stage's map in one scene, run by a StageRun. It starts as a
+        /// copy of the artists' scene (so it has their lighting and their map instances; the maps stay prefab
+        /// instances, so later art changes arrive by themselves), with the stage list added. It is made only
+        /// when it does not exist yet: after that it is edited by hand (more stages, other wave plans).
+        /// </summary>
+        [MenuItem("BoneSquadKiting/Create Game Scene (if missing)")]
+        public static void BuildGame()
+        {
+            if (System.IO.File.Exists(GamePath)) { Debug.Log("StageKitBuilder: " + GamePath + " already exists; left as it is."); ArenaSceneBuilder.SetBuildScenes(); return; }
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(KitPath) == null) BuildKit();
+            if (!AssetDatabase.CopyAsset(ArtScenePath, GamePath)) { Debug.LogError("StageKitBuilder: could not copy " + ArtScenePath); return; }
+
+            var previous = SceneManager.GetActiveScene();
+            var scene = EditorSceneManager.OpenScene(GamePath, OpenSceneMode.Additive);
+            try
+            {
+                // The maps: root objects that hold a StageStart, in name order (Stage01Map, Stage02Map, ...).
+                var maps = new List<GameObject>();
+                foreach (var root in scene.GetRootGameObjects())
+                    if (root.GetComponentInChildren<StageStart>(true) != null) maps.Add(root);
+                maps.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+
+                var go = new GameObject("Stage Run");
+                SceneManager.MoveGameObjectToScene(go, scene);
+                go.transform.SetAsFirstSibling();
+                var run = go.AddComponent<StageRun>();
+                run.NextScene = "Arena";
+                for (int i = 0; i < maps.Count; i++)
+                {
+                    run.Stages.Add(new StageRun.Entry { Map = maps[i], Title = $"스테이지 {i + 1}", WavePlan = LatestWavePlan($"Stage{i + 1}"), ClearRule = StageClearRule.ReachEnd });
+                    maps[i].SetActive(i == 0);
+                }
+                EditorSceneManager.SaveScene(scene);
+            }
+            finally
+            {
+                SceneManager.SetActiveScene(previous);
+                EditorSceneManager.CloseScene(scene, true);
+            }
+            ArenaSceneBuilder.SetBuildScenes();
+            AssetDatabase.SaveAssets();
+            Debug.Log("StageKitBuilder: wrote " + GamePath);
+        }
+
+        // The newest version in a stage's wave folder (names sort as _v01, _v02, ...), or null.
+        static WavePlan LatestWavePlan(string stage)
+        {
+            string folder = "Assets/Data/Waves/" + stage;
+            if (!AssetDatabase.IsValidFolder(folder)) return null;
+            var paths = new List<string>();
+            foreach (var guid in AssetDatabase.FindAssets("t:WavePlan", new[] { folder })) paths.Add(AssetDatabase.GUIDToAssetPath(guid));
+            paths.Sort(string.CompareOrdinal);
+            return paths.Count > 0 ? AssetDatabase.LoadAssetAtPath<WavePlan>(paths[paths.Count - 1]) : null;
         }
 
         // The how-to, written on screen (Game view) so it is in front of whoever opens the scene.

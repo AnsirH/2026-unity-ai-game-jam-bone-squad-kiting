@@ -118,9 +118,22 @@ public class SquadLeaderTests
         Assert.That(Vector2.Dot(_fc.LeaderFacing, new Vector2(-1, 0)), Is.GreaterThan(0.95f), "the order sets where the ring should face");
         _fc.Halt(); for (int i = 0; i < 300; i++) _fc.Tick(0.02f);   // the ring turns there
         Assert.That(Vector2.Dot(_fc.Units[0].Slot.normalized, new Vector2(-1, 0)), Is.GreaterThan(0.95f));
+        // Attack orders do not turn the ring: turning units cannot fire.
+        var slots = new Vector2[_fc.Units.Count];
+        for (int i = 0; i < slots.Length; i++) slots[i] = _fc.Units[i].Slot;
         dir.IssueOrder(SquadOrder.AttackMove(_fc.Anchor + new Vector2(0f, 6f)));
-        _fc.Halt(); for (int i = 0; i < 300; i++) _fc.Tick(0.02f);
-        Assert.That(Vector2.Dot(_fc.Units[0].Slot.normalized, new Vector2(0, 1)), Is.GreaterThan(0.95f), "attack-move clicks count too");
+        _fc.Halt(); for (int i = 0; i < 100; i++) _fc.Tick(0.02f);
+        for (int i = 0; i < slots.Length; i++) Assert.AreEqual(slots[i], _fc.Units[i].Slot, "attack-move leaves the ring as it is");
+
+        // ...and an attack order given mid-turn stops the turn where it is.
+        dir.IssueOrder(SquadOrder.Move(_fc.Anchor + new Vector2(0f, 6f)));
+        _fc.Halt(); for (int i = 0; i < 10; i++) _fc.Tick(0.02f);
+        dir.IssueOrder(SquadOrder.AttackMove(_fc.Anchor + new Vector2(6f, 0f)));
+        _fc.Halt();
+        for (int i = 0; i < slots.Length; i++) slots[i] = _fc.Units[i].Slot;
+        for (int i = 0; i < 100; i++) _fc.Tick(0.02f);
+        for (int i = 0; i < slots.Length; i++) Assert.AreEqual(slots[i], _fc.Units[i].Slot, "the turn stopped");
+        foreach (var u in _fc.Units) Assert.IsFalse(u.Moving, "everyone is standing, so everyone can fire");
     }
 
     [Test]

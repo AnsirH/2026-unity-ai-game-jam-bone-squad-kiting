@@ -86,7 +86,7 @@ public class TuningAndArtTests
         Assert.IsNotNull(tuning); Assert.IsNotNull(art);
         string tuningGuid = AssetDatabase.AssetPathToGUID("Assets/Data/GameTuning.asset");
         string artGuid = AssetDatabase.AssetPathToGUID("Assets/Data/Art/ArtSet.asset");
-        foreach (var scene in new[] { "Stage1", "Stage2", "Stage3", "Stage4", "Arena" })
+        foreach (var scene in new[] { "Test_Stage1", "Test_Stage2", "Test_Stage3", "Test_Stage4", "Arena" })
         {
             string text = System.IO.File.ReadAllText($"Assets/Scenes/{scene}.unity");
             StringAssert.Contains(tuningGuid, text, scene + " references the shared tuning asset");

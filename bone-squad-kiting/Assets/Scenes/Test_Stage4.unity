@@ -56140,7 +56140,7 @@ MonoBehaviour:
   Stage: {fileID: 815152039}
   Waves: {fileID: 815152038}
   StageTitle: "\uC2A4\uD14C\uC774\uC9C0 4"
-  NextScene: Arena
+  NextScene: 
   Tuning: {fileID: 11400000, guid: 447ac52f31ce9ba479661e117a0526d8, type: 2}
   UnitFireRange: 5.5
   SquadEngageRange: 5
