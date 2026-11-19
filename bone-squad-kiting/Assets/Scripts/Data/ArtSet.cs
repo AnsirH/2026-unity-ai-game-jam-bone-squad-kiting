@@ -34,6 +34,23 @@ namespace BoneSquadKiting.Data
             public Vector3 Rotation;
         }
 
+        /// <summary>How a mob or a mini boss leaves when it dies: one clip for every humanoid enemy, then ash.</summary>
+        [System.Serializable]
+        public class EnemyDeathLook
+        {
+            public AnimationClip Clip;                  // humanoid; empty = enemies vanish at once, as before
+            public float DissolveStart = 0.9f;          // seconds into the clip the body reaches the ground
+            public float DissolveSeconds = 0.9f;        // how long it takes to turn to ash and go
+            public Color AshColor = new(0.16f, 0.15f, 0.14f, 1f);
+            [ColorUsage(false, true)] public Color EdgeColor = new(1.5f, 0.75f, 0.35f, 1f);
+            [Range(0f, 0.25f)] public float EdgeWidth = 0.08f;
+            public Shader DissolveShader;               // used for models whose own material cannot dissolve
+            public int MaxAtOnce = 40;                  // more deaths than this at the same time just vanish
+        }
+
+        [Header("Enemy death (mobs and mini bosses)")]
+        public EnemyDeathLook EnemyDeath = new();
+
         [Header("Enemy projectiles (one entry per enemy type)")]
         public EnemyProjectile[] EnemyProjectiles = System.Array.Empty<EnemyProjectile>();
         [Header("Squad units (24 soldiers share one model; the leader has its own)")]

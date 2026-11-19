@@ -121,10 +121,28 @@ namespace BoneSquadKiting.Mobs
                 var v = _live[m];
                 _live.Remove(m);
                 if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
-                v.Root.gameObject.SetActive(false);
-                if (!_free.TryGetValue(m.Def, out var stack)) _free[m.Def] = stack = new Stack<View>();
-                stack.Push(v);
+                var look = Art != null ? Art.EnemyDeath : null;
+                // Killed (not just cleared away with the stage): it falls and turns to ash before its view is free again.
+                if (!m.Alive && v.Visual != null && look != null && look.Clip != null && DeathFade.ActiveCount < look.MaxAtOnce)
+                {
+                    if (!v.Root.TryGetComponent<DeathFade>(out var fade)) fade = v.Root.gameObject.AddComponent<DeathFade>();
+                    var def = m.Def;
+                    DyingCount++;
+                    fade.Play(v.Visual.Animator, look, () => { DyingCount--; Release(def, v); });
+                    continue;
+                }
+                Release(m.Def, v);
             }
+        }
+
+        /// <summary>How many dead mobs are still falling or dissolving.</summary>
+        public int DyingCount { get; private set; }
+
+        void Release(MobDefinition def, View v)
+        {
+            v.Root.gameObject.SetActive(false);
+            if (!_free.TryGetValue(def, out var stack)) _free[def] = stack = new Stack<View>();
+            stack.Push(v);
         }
 
         void DrawShots()
