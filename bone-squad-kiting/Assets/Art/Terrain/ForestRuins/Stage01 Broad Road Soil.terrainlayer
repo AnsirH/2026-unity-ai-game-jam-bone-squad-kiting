@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1953259897 &8574412962073106934
+TerrainLayer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Stage01 Broad Road Soil
+  m_DiffuseTexture: {fileID: 2800000, guid: 051fe96ff83a2496b931da8d77beb4cd, type: 3}
+  m_NormalMapTexture: {fileID: 2800000, guid: 9cb651a9233a8436b9edbec49d143b81, type: 3}
+  m_MaskMapTexture: {fileID: 2800000, guid: b7182fac77cbd476cb82683fb5a58482, type: 3}
+  m_TileSize: {x: 29.7, y: 31.9}
+  m_TileOffset: {x: 9.73, y: 13.91}
+  m_Specular: {r: 0, g: 0, b: 0, a: 0}
+  m_Metallic: 0
+  m_Smoothness: 0.045
+  m_NormalScale: 0.75
+  m_DiffuseRemapMin: {x: 0, y: 0, z: 0, w: 0}
+  m_DiffuseRemapMax: {x: 0.84, y: 0.88, z: 0.91, w: 1}
+  m_MaskMapRemapMin: {x: 0, y: 0, z: 0, w: 0}
+  m_MaskMapRemapMax: {x: 1, y: 1, z: 1, w: 1}
+  m_SmoothnessSource: 1

@@ -13,7 +13,6 @@ namespace BoneSquadKiting.Fx
         const float LaunchInterval = 0.25f;
         const float FlightDuration = 0.13f;
         const float WindupStart = 0.75f;
-        const float ConvergenceStart = 0.84f;
         const float SettleTime = 0.99f;
         const float WideOrbitRadius = 3.2f;
         const float LineOrbitRadius = 1.8f;
@@ -136,8 +135,8 @@ namespace BoneSquadKiting.Fx
         void Pose(Orbit orbit, Vector3 center, float progress)
         {
             LaunchDueBones(orbit, center, progress);
-            float windup = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(WindupStart, ConvergenceStart, progress));
-            float pull = Mathf.InverseLerp(ConvergenceStart, SettleTime, progress);
+            float windup = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(WindupStart, ReviveSystem.ConvergenceStart, progress));
+            float pull = Mathf.InverseLerp(ReviveSystem.ConvergenceStart, SettleTime, progress);
             float converge = Mathf.SmoothStep(0f, 1f, pull * pull);
             float radius = orbit.Radius * (1f + 0.13f * windup);
             float turn = Mathf.Min(progress, SettleTime) * 1.45f + 0.10f * converge;

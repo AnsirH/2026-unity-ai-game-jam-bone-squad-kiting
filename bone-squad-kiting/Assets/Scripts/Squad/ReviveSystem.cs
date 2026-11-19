@@ -12,11 +12,14 @@ namespace BoneSquadKiting.Squad
     /// </summary>
     public class ReviveSystem
     {
+        public const float ConvergenceStart = 0.84f;
+
         public class Revive
         {
             public SquadUnit Reviver, Target;
             public Vector2 AppearOffset;
             public float Elapsed;
+            public bool Assembling;
         }
 
         public float Duration = 3f;
@@ -25,6 +28,7 @@ namespace BoneSquadKiting.Squad
         public readonly List<Revive> Active = new();
 
         public System.Action<SquadUnit, SquadUnit> OnStarted;     // reviver, dead unit
+        public System.Action OnAssemblyStarted;
         public System.Action<SquadUnit, SquadUnit> OnCompleted;   // reviver, revived unit
         public System.Action<SquadUnit, SquadUnit> OnCancelled;   // reviver (now dead), unit that stays dead
 
@@ -99,6 +103,11 @@ namespace BoneSquadKiting.Squad
                     continue;
                 }
                 r.Elapsed += dt;
+                if (!r.Assembling && r.Elapsed >= Duration * ConvergenceStart)
+                {
+                    r.Assembling = true;
+                    OnAssemblyStarted?.Invoke();
+                }
                 if (r.Elapsed < Duration) continue;
 
                 r.Reviver.Reviving = false;

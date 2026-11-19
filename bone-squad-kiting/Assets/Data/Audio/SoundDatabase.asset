@@ -14,25 +14,138 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Audio.SoundDatabaseSO
   Bgm:
   - Id: bgm.stage
-    Clip: {fileID: 0}
+    Clip: {fileID: 8300000, guid: 43fde3f11e324be6a3bc65b70a6b5c0b, type: 3}
     Volume: 1
     Pitch: 1
     Loop: 1
   - Id: bgm.boss
-    Clip: {fileID: 0}
+    Clip: {fileID: 8300000, guid: 2af71363746b4d5f900a611a9d13f286, type: 3}
+    Volume: 1
+    Pitch: 1
+    Loop: 1
+  - Id: bgm.stage2
+    Clip: {fileID: 8300000, guid: 59f5ce8168384023a1ade9245dfb14fa, type: 3}
+    Volume: 1
+    Pitch: 1
+    Loop: 1
+  - Id: bgm.stage3
+    Clip: {fileID: 8300000, guid: 2ad165df27964183a532171dab36511f, type: 3}
     Volume: 1
     Pitch: 1
     Loop: 1
   Sfx:
   - Id: squad.revive
-    Clip: {fileID: 0}
+    Clip: {fileID: 8300000, guid: f8584d47d6a240c5866b171a6e3b2b71, type: 3}
     Volume: 1
     Pitch: 1
+    StartOffset: 0.048
   - Id: stage.clear
     Clip: {fileID: 0}
     Volume: 1
     Pitch: 1
+    StartOffset: 0
   - Id: squad.defeat
     Clip: {fileID: 0}
     Volume: 1
     Pitch: 1
+    StartOffset: 0
+  - Id: squad.crossbow.fire
+    Clip: {fileID: 8300000, guid: 04050f7054c7454880f6ce04bf0a0b5f, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.042
+  - Id: squad.arrow.hit.armor
+    Clip: {fileID: 8300000, guid: 7620fb07685f4e0c9caf2a0aa088147b, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.043
+  - Id: squad.arrow.hit.humanoid
+    Clip: {fileID: 8300000, guid: a478ee00ee14420d90f1aeb4bfa13dfa, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.026
+  - Id: squad.formation.command
+    Clip: {fileID: 8300000, guid: bb568613650c4d7aa3018c6542757057, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.042
+  - Id: squad.revive.magic
+    Clip: {fileID: 8300000, guid: c49839d454054f56a6463226638e2ec2, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.041
+  - Id: squad.hit.bones
+    Clip: {fileID: 8300000, guid: f071ca4c1f3a4719b0350628ddc8eaca, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.047
+  - Id: enemy.firemage.scorch
+    Clip: {fileID: 8300000, guid: b03fafdd9f9f4554aa055f6bc4ec9fb2, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.043
+  - Id: enemy.firemage.eruption
+    Clip: {fileID: 8300000, guid: 54dad6b348df43c8a415073f590c8d00, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.069
+  - Id: enemy.javelin.shout
+    Clip: {fileID: 8300000, guid: 95123c2878eb4ef898db202dd18f40e7, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.05
+  - Id: enemy.javelin.flight
+    Clip: {fileID: 8300000, guid: 89367c181e484e3083e8de382dea384e, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.053
+  - Id: enemy.javelin.split
+    Clip: {fileID: 8300000, guid: b870dd1de7f444a097d88d731272e94d, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.039
+  - Id: enemy.javelin.impact
+    Clip: {fileID: 8300000, guid: 1953952364a4421b857616eac61483e4, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.044
+  - Id: enemy.catapult.launch
+    Clip: {fileID: 8300000, guid: 29f68df62822402886dd634a7e643d31, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.027
+  - Id: enemy.catapult.flight
+    Clip: {fileID: 8300000, guid: 250e6cc50ca54186b2b0638353e930c1, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.073
+  - Id: enemy.catapult.impact
+    Clip: {fileID: 8300000, guid: 668da4ab68a54773a98b47145abd9590, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0.061
+  - Id: boss.spinningblade.swing
+    Clip: {fileID: 8300000, guid: 343acfd835f046dfb8b2d354dabda844, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.spinningblade.flight
+    Clip: {fileID: 8300000, guid: 8799258e14ec45229b4955dc2045552e, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.greatsword.summon
+    Clip: {fileID: 8300000, guid: 8b3b1f70dc4f429e9a22813e53f3de8e, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.greatsword.fall
+    Clip: {fileID: 8300000, guid: e2e6ef6d9ca54d43982051a0a8da20f9, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.greatsword.impact
+    Clip: {fileID: 8300000, guid: 1566a56564544f4c8ce8a3cad8387d2d, type: 3}
+    Volume: 1
+    Pitch: 1
+    StartOffset: 0

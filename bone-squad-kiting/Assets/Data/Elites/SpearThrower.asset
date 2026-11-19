@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: SpearThrower
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
   DisplayName: "\uCC3D\uD22C\uCC99\uBCD1"
+  Armored: 1
+  CastSound: 2
   MaxHp: 4000
   Speed: 2
   Radius: 0.8

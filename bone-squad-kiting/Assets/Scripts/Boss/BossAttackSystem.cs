@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Data;
 using BoneSquadKiting.Squad;
@@ -34,6 +35,7 @@ namespace BoneSquadKiting.Bosses
         public AttackSequence Sequence;
         /// <summary>Patterns given directly (a mini boss's list). Used instead of Sequence when set.</summary>
         public IReadOnlyList<PatternDefinition> Patterns;
+        public CastVoice CastSound;
         public Active? Current;
         public int Index;
         public float NextAttack = GameConstants.FirstAttackDelay;
@@ -83,7 +85,11 @@ namespace BoneSquadKiting.Bosses
                 return;
             }
 
+            float previousRemaining = a.Remaining;
             a.Remaining = Mathf.Max(0, a.Pattern.Time - a.Elapsed);
+            float approach = Mathf.Min(GameConstants.CastTrackLockTime, a.Pattern.Time * 0.5f);
+            if (previousRemaining > approach && a.Remaining <= approach)
+                CastSounds.Approach(CastSound, a.Pattern.Id);
             if (a.Tracks && a.Remaining > GameConstants.CastTrackLockTime)
             {
                 float k = Mathf.Min(1, dt * TrackLerp);
@@ -100,6 +106,7 @@ namespace BoneSquadKiting.Bosses
             }
             Current = a;
             if (a.Remaining > 0) return;
+            CastSounds.Land(CastSound, a.Pattern.Id);
 
             if (a.Pattern.Kind == PatternKind.Sustained && a.Pattern.SustainSeconds > 0f)
             {
@@ -130,6 +137,7 @@ namespace BoneSquadKiting.Bosses
             float scale = p.ScaleWithSquad ? FormationSlots.SquadFraction(squad.AliveCount) : 1f;
             var shape = p.ScaleWithSquad ? p.Shape.Scaled(scale) : p.Shape;
             Current = new Active { Pattern = p, Shape = shape, ShapeScale = scale, Tracks = TrackSquad, Cx = squad.Anchor.x, Cz = squad.Anchor.y, Elapsed = 0, Remaining = p.Time };
+            CastSounds.Begin(CastSound, p.Id);
             OnStart?.Invoke(p);
         }
 

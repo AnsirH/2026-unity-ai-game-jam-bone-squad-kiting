@@ -12,8 +12,8 @@ namespace BoneSquadKiting.UI
     /// </summary>
     public class Hud : MonoBehaviour
     {
-        static readonly Color Normal = new(0.12f, 0.16f, 0.22f, 0.9f);
-        static readonly Color Selected = new(0.1f, 0.55f, 0.5f, 0.95f);
+        static readonly Color Normal = new(0.045f, 0.055f, 0.065f, 0.96f);
+        static readonly Color Selected = new(0.30f, 0.24f, 0.14f, 0.98f);
         static readonly Color Recommended = new(0.85f, 0.6f, 0.1f, 0.95f);
         static readonly Color Tracking = new(1f, 0.75f, 0.2f);
         static readonly Color Locked = new(1f, 0.2f, 0.15f);
@@ -50,6 +50,7 @@ namespace BoneSquadKiting.UI
 
         void Start()
         {
+            HudSkin.Apply(this);
             if (Director == null) return;
             var formations = Director.Squad.Formations;
             for (int i = 0; i < FormationButtons.Length && i < formations.Count; i++)
@@ -181,8 +182,10 @@ namespace BoneSquadKiting.UI
             for (int i = 0; i < FormationButtons.Length && i < formations.Count; i++)
             {
                 string id = formations[i].Id;
-                FormationButtons[i].image.color = id == recommend ? Recommended
-                    : id == Director.Squad.Formation ? Selected : Normal;
+                bool artwork = FormationButtons[i].image.sprite != null;
+                FormationButtons[i].image.color = artwork
+                    ? (id == recommend ? new Color(1f, .88f, .55f) : id == Director.Squad.Formation ? Color.white : new Color(.64f,.64f,.64f))
+                    : id == recommend ? Recommended : id == Director.Squad.Formation ? Selected : Normal;
             }
 
             if (Toast != null && Toast.text.Length > 0 && Time.unscaledTime >= _toastUntil) Toast.text = "";
@@ -204,6 +207,7 @@ namespace BoneSquadKiting.UI
                     GamePhase.Win => Director.IsFinalStage ? "처음으로 (Enter)" : "다음 스테이지 (Enter)",
                     _ => "다시 시작 (Enter)",
                 };
+                HudSkin.RefreshTitleFont(this);
             }
         }
 

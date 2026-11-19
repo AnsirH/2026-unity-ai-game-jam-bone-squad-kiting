@@ -12,7 +12,7 @@ namespace BoneSquadKiting.Bosses
         public TrailRenderer Trail;
         public CatapultImpact ImpactPrefab;
         [Min(0f)] public float ReleaseSeconds = 1.25f;
-        const float ReleaseClipTime = 0.575f; // Upward swing in the authored Fire clip.
+        float _releaseClipTime;
 
         static readonly int Fire = Animator.StringToHash("Base Layer.Fire");
         static readonly int Idle = Animator.StringToHash("Base Layer.Idle");
@@ -25,6 +25,13 @@ namespace BoneSquadKiting.Bosses
 
         void Awake()
         {
+            foreach (var marker in FireClip.events)
+                if (marker.functionName == nameof(Audio.AnimationSound.PlayClipSound)
+                    && marker.stringParameter == "enemy.catapult.launch")
+                {
+                    _releaseClipTime = marker.time;
+                    break;
+                }
             _loadedPosition = Stone.transform.localPosition;
             _loadedRotation = Stone.transform.localRotation;
         }
@@ -57,8 +64,8 @@ namespace BoneSquadKiting.Bosses
             _casting = true;
             float release = Mathf.Min(ReleaseSeconds, cast.Pattern.Time * 0.6f);
             float clipTime = release > 0f && cast.Elapsed < release
-                ? ReleaseClipTime * cast.Elapsed / release
-                : Mathf.Lerp(ReleaseClipTime, FireClip.length, Mathf.InverseLerp(release, cast.Pattern.Time, cast.Elapsed));
+                ? _releaseClipTime * cast.Elapsed / release
+                : Mathf.Lerp(_releaseClipTime, FireClip.length, Mathf.InverseLerp(release, cast.Pattern.Time, cast.Elapsed));
             if (!_flying && cast.Elapsed >= release) Release(cast);
             PoseArm(clipTime);
             if (!_flying) return;
@@ -70,16 +77,25 @@ namespace BoneSquadKiting.Bosses
 
         void PoseArm(float clipTime)
         {
+            // Seeking for a pose must not replay a marker on every frame of a paused cast.
+            bool events = Arm.fireEvents;
+            Arm.fireEvents = false;
             Arm.Play(Fire, 0, Mathf.Clamp(clipTime / FireClip.length, 0f, 0.999f));
             Arm.Update(0f);
+            Arm.fireEvents = events;
         }
 
         void Release(BossAttackSystem.Active cast)
         {
             // Sample the authored swing at release even when the current frame has stepped past it.
-            PoseArm(ReleaseClipTime - 0.01f);
+            float beforeRelease = Mathf.Max(0f, _releaseClipTime - 0.01f);
+            PoseArm(beforeRelease);
             Vector3 before = Stone.transform.position;
-            PoseArm(ReleaseClipTime);
+            // Advance across the actual Animation Event exactly once. Unity dispatches
+            // the timber snap on the arm Animator as the stone leaves its socket.
+            Arm.speed = 1f;
+            Arm.Update(_releaseClipTime - beforeRelease + 0.0001f);
+            Arm.speed = 0f;
             _launch = Stone.transform.position;
             _releaseRotation = Stone.transform.rotation;
             _target = new Vector3(cast.Cx, GroundHeight.Y(cast.Cx, cast.Cz), cast.Cz);
@@ -92,6 +108,7 @@ namespace BoneSquadKiting.Bosses
             Trail.enabled = true;
             Trail.emitting = true;
             _flying = true;
+            Audio.SoundManager.Current?.PlaySfx("enemy.catapult.flight");
         }
 
         void Land(BossAttackSystem.Active cast)
@@ -100,6 +117,7 @@ namespace BoneSquadKiting.Bosses
             Stone.transform.position = ground;
             Trail.emitting = false;
             Instantiate(ImpactPrefab, ground, Quaternion.identity).Show(cast.Shape.RMax);
+            Audio.SoundManager.Current?.PlaySfx("enemy.catapult.impact");
         }
 
         void Reload()

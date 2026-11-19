@@ -31,6 +31,7 @@ namespace BoneSquadKiting.Mobs
             public UnitVisual Visual;      // model only
             public Vector2 LastPos;
             public float LastCd;
+            public MobShot LastWindup;
             public bool Seen;
         }
 
@@ -239,8 +240,12 @@ namespace BoneSquadKiting.Mobs
                     var want = Quaternion.Euler(0f, Mathf.Atan2(face.x, face.y) * Mathf.Rad2Deg + m.Def.ModelYawOffset, 0f);
                     v.Root.rotation = Quaternion.RotateTowards(v.Root.rotation, want, TurnSpeed * Time.deltaTime);
                 }
-                if (m.AttackCd > v.LastCd + 1e-4f) v.Visual.PlayAttack(m.Def.AttackAnimSeconds);     // the cooldown jumped back up: it just hit
+                bool newAttack = m.Def.JavelinThrowClip != null
+                    ? m.PendingJavelin != null && m.PendingJavelin != v.LastWindup
+                    : m.AttackCd > v.LastCd + 1e-4f;
+                if (newAttack) v.Visual.PlayAttack(m.Def.AttackAnimSeconds);
                 else v.Visual.SetState(moving ? VisualState.Run : VisualState.Idle);
+                v.LastWindup = m.PendingJavelin;
             }
             else
             {
@@ -270,6 +275,16 @@ namespace BoneSquadKiting.Mobs
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
             if (v.Visual != null)
             {
+                if (m.Def.JavelinThrowClip != null && v.Visual.Animator != null &&
+                    v.Visual.Animator.TryGetComponent<Audio.AnimationSound>(out var receiver))
+                {
+                    var system = Director.Mobs;
+                    m.HasThrowAnimator = true;
+                    if (m.PendingJavelin != null) m.WindupLeft = m.Def.AttackAnimSeconds;
+                    v.LastWindup = null;
+                    receiver.TryReleaseJavelin = () => Director.Mobs == system && Director.Phase == GamePhase.Play
+                        && !Director.Paused && !Director.Frozen && !Director.InCutscene && system.ReleaseJavelin(m);
+                }
                 // Face the squad from the start instead of whichever way the last owner was looking.
                 var squad = Director != null ? Director.Squad : null;
                 var to = squad != null ? squad.Anchor - m.Pos : Vector2.up;

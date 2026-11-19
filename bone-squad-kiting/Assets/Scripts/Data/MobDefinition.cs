@@ -8,6 +8,8 @@ namespace BoneSquadKiting.Data
     public class MobDefinition : ScriptableObject
     {
         public string DisplayName = "Grunt";
+        [Tooltip("Bolts hit a metal shell or armor on this enemy.")]
+        public bool Armored;
         public float Radius = 0.3f;
         public float Speed = 3.2f;          // well under the squad's 7.4 so it can always be outrun
         public float Hp = 66f;              // two unit shots
@@ -18,6 +20,20 @@ namespace BoneSquadKiting.Data
         [Header("Ranged attack (Attack Range 0 = melee)")]
         public float AttackRange = 0f;      // stops this far from a unit and shoots instead of walking up to it
         public float ShotSpeed = 6f;        // the shot flies straight at where the unit was; a moving squad can step out of it
+        [Tooltip("The clip whose ReleaseJavelin event launches this thrower's projectile.")]
+        public AnimationClip JavelinThrowClip;
+        public float JavelinReleaseTime { get; private set; }
+
+        void OnEnable()
+        {
+            if (JavelinThrowClip == null) return;
+            foreach (var marker in JavelinThrowClip.events)
+                if (marker.functionName == nameof(Audio.AnimationSound.ReleaseJavelin))
+                {
+                    JavelinReleaseTime = marker.time;
+                    break;
+                }
+        }
         public float ShotRadius = 0.25f;
         [Tooltip("0 keeps the existing constant-speed, distance-limited shot.")]
         [Min(0f)] public float ShotLifetime;

@@ -11,7 +11,7 @@ namespace BoneSquadKiting.Audio
         AudioSource[] voices;
         int nextVoice;
 
-        internal void Play(SoundEntry entry)
+        internal void Play(SfxEntry entry)
         {
             voices ??= new AudioSource[Mathf.Max(1, maxVoices)];
             int slot = nextVoice;
@@ -37,6 +37,7 @@ namespace BoneSquadKiting.Audio
             source.clip = entry.Clip;
             source.pitch = Mathf.Clamp(entry.Pitch, 0.01f, 3f);
             source.volume = Mathf.Clamp01(entry.Volume);
+            source.timeSamples = Mathf.Clamp(Mathf.RoundToInt(entry.StartOffset * entry.Clip.frequency), 0, entry.Clip.samples - 1);
             source.Play();
             nextVoice = (slot + 1) % voices.Length;
         }

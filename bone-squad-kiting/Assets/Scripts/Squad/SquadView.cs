@@ -107,6 +107,7 @@ namespace BoneSquadKiting.Squad
             float natural = v.Visual.NaturalAttackLength;
             v.Visual.AttackPlaybackScale = natural > 0f && u.AttackInterval > 0f && natural > u.AttackInterval ? natural / u.AttackInterval : 1f;
             u.AttackWindup = v.Visual.AttackEventTime; u.AttackDuration = v.Visual.AttackLength;
+            u.HasReleaseEvent = u.AttackWindup > 0f && v.Visual.Animator.isActiveAndEnabled && v.Visual.Animator.fireEvents;
             RegisterMuzzle(v, u);
             if (u.ShotCount != v.ShotsSeen) { v.ShotsSeen = u.ShotCount; v.Visual.PlayAttack(); }
             if (u.Moving) v.Visual.CancelAttack();
@@ -173,7 +174,9 @@ namespace BoneSquadKiting.Squad
                     view.Visual.AttackReleased = () =>
                     {
                         if (_director == null) _director = FindSquadDirector();
-                        if (_director != null && _director.Shots != null && Squad != null && index < Squad.Units.Count)
+                        if (_director != null && _director.Phase == GamePhase.Play && !_director.Paused
+                            && !_director.Frozen && !_director.InCutscene && _director.Shots != null
+                            && Squad != null && index < Squad.Units.Count && view.ShotsSeen == Squad.Units[index].ShotCount)
                         {
                             RegisterMuzzle(view, Squad.Units[index]);
                             _director.Shots.ReleasePending(Squad.Units[index]);
