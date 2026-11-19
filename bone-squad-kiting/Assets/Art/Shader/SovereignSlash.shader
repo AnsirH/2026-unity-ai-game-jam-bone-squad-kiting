@@ -5,6 +5,7 @@ Shader "BoneSquad/Sovereign Slash"
         [HDR] _Edge ("Haki edge", Color) = (0.025,0.40,1.35,1)
         _Windup ("Telegraph before strike (s)", Float) = 1.15
         _StrikeDuration ("Strike and wake (s)", Float) = 0.4
+        _GroundMarkLift ("Ground mark lift (world metres)", Float) = 0
         _Elapsed ("Strike time override (s, -1 = loop)", Float) = -1
     }
     SubShader
@@ -23,7 +24,7 @@ Shader "BoneSquad/Sovereign Slash"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Edge;
-                float _Windup, _StrikeDuration, _Elapsed;
+                float _Windup, _StrikeDuration, _Elapsed, _GroundMarkLift;
             CBUFFER_END
 
             struct Input { float3 pos : POSITION; float2 uv : TEXCOORD0; float2 part : TEXCOORD1; };
@@ -119,7 +120,9 @@ Shader "BoneSquad/Sovereign Slash"
                     float midspan = lerp(0.06, 1.56, smoothstep(0.0,0.17,a));
                     p.xy = float2(midspan - p.y, 1.05 + p.x);
                 }
-                o.pos=TransformWorldToHClip(WorldUprightPosition(p)+ribbonOffsetWS);
+                float3 world = WorldUprightPosition(p) + ribbonOffsetWS;
+                if (v.part.x < .5) world.y += _GroundMarkLift;
+                o.pos = TransformWorldToHClip(world);
                 return o;
             }
             half4 Frag(Output i):SV_Target

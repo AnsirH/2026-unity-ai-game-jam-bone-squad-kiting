@@ -1,6 +1,10 @@
 Shader "BoneSquad/Frost Knight Blue Fire"
 {
-    Properties { _BurnPhase ("Burn Phase", Range(0,1)) = 1 }
+    Properties
+    {
+        _BurnPhase ("Burn Phase", Range(0,1)) = 1
+        _FireTiling ("Flame cells across the area", Vector) = (8,6,0,0)
+    }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent+10" "RenderType"="Transparent" }
@@ -16,6 +20,7 @@ Shader "BoneSquad/Frost Knight Blue Fire"
 
             CBUFFER_START(UnityPerMaterial)
                 float _BurnPhase;
+                float4 _FireTiling;
             CBUFFER_END
 
             struct Varyings { float4 positionCS : SV_POSITION; float3 box : TEXCOORD0; };
@@ -58,7 +63,7 @@ Shader "BoneSquad/Frost Knight Blue Fire"
                 {
                     float3 p = i.box + ray * ((k+.5)*stride);
                     float y = saturate(p.y+.5);
-                    float2 uv = p.xz * float2(8,6);
+                    float2 uv = p.xz * _FireTiling.xy;
                     float2 bend = y * float2(sin(uv.y*2+age*10-y*6),cos(uv.x*2-age*8+y*5)) * .53;
                     float broad = Noise(uv + bend + float2(age*.7,0));
                     float detail = Noise(uv*2.4 + bend + float2(-age*2.5,y*4-age*5));
@@ -78,6 +83,7 @@ Shader "BoneSquad/Frost Knight Blue Fire"
                     float tongue = edge * envelope * (1-smoothstep(radius*.25,radius+.025,length(frac(grid)-center)))
                         * (1-smoothstep(tip-.07,tip,y));
                     density = .65*density + 1.7*tongue;
+                    density += edge * envelope * (1-smoothstep(.03,.16,y)) * .65;
                     float core = saturate((height-y)*2.5 + floorFlash*.45);
                     float alpha = 1-exp(-density*stride*4.3);
                     float3 blue = lerp(float3(.002,.10,.48),float3(.012,.82,1.07),core);
