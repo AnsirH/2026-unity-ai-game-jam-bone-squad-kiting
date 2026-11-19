@@ -47,7 +47,11 @@ namespace BoneSquadKiting.Mobs
 
         public void Clear(EnemyRegistry registry)
         {
-            foreach (var m in Mobs) registry?.Unregister(m);
+            foreach (var m in Mobs)
+            {
+                m.PendingJavelin = null;
+                registry?.Unregister(m);
+            }
             Mobs.Clear();
             Shots.Clear();
         }
@@ -102,6 +106,12 @@ namespace BoneSquadKiting.Mobs
             // 6. attack
             foreach (var m in Mobs)
             {
+                if (m.PendingJavelin != null)
+                {
+                    m.WindupLeft -= dt;
+                    if (m.WindupLeft <= 0f) ReleaseJavelin(m);
+                    continue;
+                }
                 if (m.AttackCd > 0f) continue;
                 if (m.Def.IsRanged)
                 {
@@ -110,7 +120,13 @@ namespace BoneSquadKiting.Mobs
                     m.AttackCd = m.Def.AttackPeriod;
                     var to = new Vector2(aim.X, aim.Z) - m.Pos;
                     var dir = to.sqrMagnitude > 1e-6f ? to.normalized : Vector2.up;
-                    Shots.Add(new MobShot { X = m.X, Z = m.Z, Dir = dir, Def = m.Def, Left = m.Def.AttackRange * 1.5f });
+                    var shot = new MobShot { X = m.X, Z = m.Z, Dir = dir, Def = m.Def, Left = m.Def.AttackRange * 1.5f };
+                    if (m.Def.JavelinThrowClip == null) Shots.Add(shot);
+                    else
+                    {
+                        m.PendingJavelin = shot;
+                        m.WindupLeft = m.HasThrowAnimator ? m.Def.AttackAnimSeconds : m.Def.JavelinReleaseTime;
+                    }
                     continue;
                 }
                 var target = NearestUnit(squad, m.Pos, m.Def.Radius + UnitRadius + m.Def.AttackReach);
@@ -143,6 +159,18 @@ namespace BoneSquadKiting.Mobs
                 if (dir != Vector2.zero) return dir;
             }
             return toAnchor.sqrMagnitude > 1e-6f ? toAnchor.normalized : Vector2.zero;
+        }
+
+        public bool ReleaseJavelin(Mob mob)
+        {
+            var shot = mob.PendingJavelin;
+            if (!mob.Alive || shot == null) return false;
+            mob.PendingJavelin = null;
+            shot.X = mob.X;
+            shot.Z = mob.Z;
+            Shots.Add(shot);
+            Audio.CastSounds.ThrowJavelin();
+            return true;
         }
 
         // Shots fly straight. One hits the first living unit it touches; walls and its travel limit end it.

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BoneSquadKiting.Visuals;
 
@@ -11,6 +12,9 @@ namespace BoneSquadKiting.Data
     public class EliteDefinition : ScriptableObject
     {
         public string DisplayName = "미니 보스";
+        [Tooltip("Bolts hit a metal shell or armor on this enemy.")]
+        public bool Armored;
+        public BoneSquadKiting.Audio.CastVoice CastSound;
         public float MaxHp = 4000f;
         public float Speed = 2f;              // slower than mobs (3.2): the swarm arrives first. 0 = fixed in place (a cannon)
         /// <summary>True for one that never moves. It may be placed off walkable ground.</summary>
@@ -19,7 +23,7 @@ namespace BoneSquadKiting.Data
         public float StopDistance = 3f;      // stops walking this close to the nearest unit
 
         [Header("Area attacks")]
-        public AttackSequence Patterns;
+        public List<PatternDefinition> Patterns = new();   // cast in this order, then from the top again
         public float FirstAttackDelay = 3f;   // seconds after appearing before the first cast
         public float AttackGap = 4.5f;        // seconds between casts
         public float AttackGapRandom = 0f;    // up to this many extra seconds, picked anew for each gap (irregular fire)

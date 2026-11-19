@@ -29,6 +29,7 @@ namespace BoneSquadKiting.Squad
         public float AttackWindup, AttackDuration;
         public BoneSquadKiting.Combat.IEnemy PendingTarget;   // what the attack in progress is aimed at
         public float WindupLeft;
+        public bool HasReleaseEvent;
         public float PendingReserve;   // damage counted on for the attack in progress
         public float AttackInterval;   // seconds this unit's attacks are meant to be apart (set by the shot system)
 

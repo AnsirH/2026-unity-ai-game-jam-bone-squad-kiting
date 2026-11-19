@@ -1,8 +1,10 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Stage;
@@ -21,6 +23,40 @@ public class StageRunTests
     }
 
     static Vector2 Flat(Vector3 v) => new(v.x, v.z);
+
+    [UnityTest]
+    public IEnumerator MusicFollowsTheMenuAndMapsWithOnePersistentPlayer()
+    {
+        yield return SceneManager.LoadSceneAsync("MainMenu");
+        yield return null;
+        var sound = SoundManager.Current;
+        Assert.AreEqual("bgm.stage3", sound.CurrentBgmId);
+
+        yield return SceneManager.LoadSceneAsync("Game");
+        yield return null;
+        Assert.AreSame(sound, SoundManager.Current);
+        Assert.AreEqual(1, Object.FindObjectsByType<SoundManager>(FindObjectsSortMode.None).Length);
+        Assert.AreEqual("bgm.stage", sound.CurrentBgmId);
+
+        yield return new WaitForSecondsRealtime(0.6f);
+        var run = Object.FindFirstObjectByType<StageRun>();
+        var sources = sound.GetComponentsInChildren<AudioSource>();
+        var outgoing = sources.Single(source => source.isPlaying);
+        run.Enter(1);
+        Assert.AreEqual("bgm.stage2", sound.CurrentBgmId);
+        var incoming = sources.Single(source => source != outgoing && source.isPlaying);
+        Assert.Greater(outgoing.volume, incoming.volume);
+        yield return new WaitForSecondsRealtime(0.6f);
+        Assert.IsFalse(outgoing.isPlaying);
+        Assert.Greater(incoming.volume, 0f);
+
+        run.Enter(2);
+        Assert.AreEqual("bgm.boss", sound.CurrentBgmId);
+        yield return SceneManager.LoadSceneAsync("MainMenu");
+        yield return null;
+        Assert.AreSame(sound, SoundManager.Current);
+        Assert.AreEqual("bgm.stage3", sound.CurrentBgmId);
+    }
 
     [Test]
     public void BuildOrder_IsTheGameSceneThenTheArena()

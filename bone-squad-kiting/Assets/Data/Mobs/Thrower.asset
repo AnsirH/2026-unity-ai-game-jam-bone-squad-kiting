@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Thrower
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.MobDefinition
   DisplayName: Thrower
+  Armored: 1
   Radius: 0.3
   Speed: 2.7
   Hp: 44
@@ -21,6 +22,7 @@ MonoBehaviour:
   AttackReach: 0.1
   AttackRange: 6.5
   ShotSpeed: 6
+  JavelinThrowClip: {fileID: 7400000, guid: f3247a2c1e85849c5b3b06a1d47fc1d7, type: 2}
   ShotRadius: 0.25
   ShotLifetime: 1.5
   ShotSpeedCurve:

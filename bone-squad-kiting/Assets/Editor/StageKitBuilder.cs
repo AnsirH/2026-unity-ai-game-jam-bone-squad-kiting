@@ -369,6 +369,7 @@ namespace BoneSquadKiting.EditorTools
                     if (root.GetComponentInChildren<StageStart>(true) != null) maps.Add(root);
                 maps.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
 
+                PrefabUtility.InstantiatePrefab(Resources.Load<GameObject>("Audio/SoundManager"), scene);
                 var go = new GameObject("Stage Run");
                 SceneManager.MoveGameObjectToScene(go, scene);
                 go.transform.SetAsFirstSibling();

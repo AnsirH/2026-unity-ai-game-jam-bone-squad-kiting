@@ -36,7 +36,8 @@ namespace BoneSquadKiting.Bosses
             }
             e.Attacks = new BossAttackSystem
             {
-                Sequence = def.Patterns,
+                Patterns = def.Patterns,
+                CastSound = def.CastSound,
                 NextAttack = def.FirstAttackDelay + Random.value * def.AttackGapRandom,
                 TrackSquad = false,          // the zone stays where it was announced, so it can be walked out of
                 FixedGap = def.AttackGap,

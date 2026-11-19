@@ -13,11 +13,14 @@ MonoBehaviour:
   m_Name: SpearThrower
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
   DisplayName: "\uCC3D\uD22C\uCC99\uBCD1"
+  Armored: 1
+  CastSound: 2
   MaxHp: 4000
   Speed: 2
   Radius: 0.8
   StopDistance: 3
-  Patterns: {fileID: 11400000, guid: 790133b1c8fbe3a41ab4f1c3d490af07, type: 2}
+  Patterns:
+  - {fileID: 11400000, guid: 41a7d0346008cd149983678aeb54ff1d, type: 2}
   FirstAttackDelay: 3
   AttackGap: 4.5
   AttackGapRandom: 0

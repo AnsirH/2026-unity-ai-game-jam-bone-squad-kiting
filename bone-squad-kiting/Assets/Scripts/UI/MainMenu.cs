@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Stage;
@@ -38,6 +39,7 @@ namespace BoneSquadKiting.UI
         void Start()
         {
             Time.timeScale = 1f;
+            SoundManager.Current?.PlayBgm("bgm.stage3");
             Build();
             Refresh();
         }
@@ -100,7 +102,8 @@ namespace BoneSquadKiting.UI
 
         void Build()
         {
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var art = Resources.Load<HudArtwork>("HudArtwork");
+            var font = art != null && art.KoreanFont != null ? art.KoreanFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Root = new GameObject("Main Menu", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Root.transform.SetParent(transform, false);
             var canvas = Root.GetComponent<Canvas>();
@@ -117,14 +120,26 @@ namespace BoneSquadKiting.UI
             wr.anchorMin = Vector2.zero; wr.anchorMax = Vector2.one; wr.offsetMin = wr.offsetMax = Vector2.zero;
 
             var title = MakeText(_widgets.transform, "Title", font, 72, Title);
+            if (art != null && art.TitleFont != null) title.font = art.TitleFont;
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0.5f, 1f);
             title.rectTransform.anchoredPosition = new Vector2(0f, -130f); title.rectTransform.sizeDelta = new Vector2(1200f, 120f);
 
-            NewGameButton = MakeButton("New Game", font, "새 게임", 90f, out _);
+            NewGameButton = MakeButton("New Game", font, "새 게임", 120f, out _);
             ContinueButton = MakeButton("Continue", font, "이어하기", 0f, out var continueLabel);
-            QuitButton = MakeButton("Quit", font, "게임 종료", -90f, out _);
+            QuitButton = MakeButton("Quit", font, "게임 종료", -120f, out _);
             ContinueLabel = continueLabel;
+            if (art != null && art.StartButton != null)
+                foreach (var button in new[] { NewGameButton, ContinueButton, QuitButton })
+                {
+                    button.image.sprite = art.StartButton;
+                    button.image.color = Color.white;
+                    ((RectTransform)button.transform).sizeDelta = new Vector2(650f, 160f);
+                    var colors = button.colors;
+                    colors.highlightedColor = new Color(1f, .92f, .75f);
+                    colors.pressedColor = new Color(.65f, .58f, .45f);
+                    button.colors = colors;
+                }
 
             _fade = MakeImage(Root.transform, "Fade", new Color(0f, 0f, 0f, 0f));
             _fade.raycastTarget = false;
@@ -139,7 +154,7 @@ namespace BoneSquadKiting.UI
         {
             var img = MakeImage(_widgets.transform, name, new Color(0.12f, 0.16f, 0.22f, 0.95f));
             img.rectTransform.anchorMin = img.rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            img.rectTransform.anchoredPosition = new Vector2(330f, y); img.rectTransform.sizeDelta = new Vector2(420f, 72f);
+            img.rectTransform.anchoredPosition = new Vector2(390f, y); img.rectTransform.sizeDelta = new Vector2(550f, 96f);
             var button = img.gameObject.AddComponent<Button>();
             button.targetGraphic = img;
             var colors = button.colors;
@@ -148,7 +163,7 @@ namespace BoneSquadKiting.UI
             colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
             button.colors = colors;
             var nav = button.navigation; nav.mode = Navigation.Mode.None; button.navigation = nav;
-            label = MakeText(img.transform, "Text", font, 30, text);
+            label = MakeText(img.transform, "Text", font, 28, text);
             label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
             return button;

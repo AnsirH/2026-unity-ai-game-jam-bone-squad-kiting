@@ -13,11 +13,15 @@ MonoBehaviour:
   m_Name: DarkFlameMage
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
   DisplayName: "\uAC80\uC815\uBD88\uAF43\uB9C8\uBC95\uC0AC"
+  Armored: 0
+  CastSound: 1
   MaxHp: 4000
   Speed: 2
   Radius: 0.8
   StopDistance: 3
-  Patterns: {fileID: 11400000, guid: fc439cdd5271c1e44bae606d80215d4a, type: 2}
+  Patterns:
+  - {fileID: 11400000, guid: ec0d90245c4c84d459651fc1f147e448, type: 2}
+  - {fileID: 11400000, guid: 986f8584ae4c00e4798c9313d1374855, type: 2}
   FirstAttackDelay: 3
   AttackGap: 4.5
   AttackGapRandom: 0
@@ -32,6 +36,7 @@ MonoBehaviour:
   HealthBarHeight: 2.68
   ModelScale: 1.4
   ModelYawOffset: 0
+  ModelGroundOffset: 0
   States:
     Idle: 
     Run: 

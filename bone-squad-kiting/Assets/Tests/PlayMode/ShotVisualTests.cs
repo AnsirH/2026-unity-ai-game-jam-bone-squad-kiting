@@ -32,6 +32,7 @@ public class ShotVisualTests
     public void SetUp()
     {
         _fc = SquadTestRig.MakeFc(leader: true);
+        if (Object.FindFirstObjectByType<AudioListener>() == null) _fc.gameObject.AddComponent<AudioListener>();
         _shots = new ShotSystem();
         _reg = new EnemyRegistry();
         _enemy = new FakeEnemy { Pos = _fc.Anchor + new Vector2(6f, 0f) };

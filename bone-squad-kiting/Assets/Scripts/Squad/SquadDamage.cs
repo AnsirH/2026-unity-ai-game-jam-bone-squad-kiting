@@ -28,7 +28,11 @@ namespace BoneSquadKiting.Squad
             if (victim.Dead) return victim;
             victim.Hp -= amount;
             victim.Flash = 1f;
-            if (victim.Hp <= 0f) victim.Dead = true;
+            if (victim.Hp <= 0f)
+            {
+                victim.Dead = true;
+                BoneSquadKiting.Audio.SoundManager.Current?.PlayVolleySfx("squad.hit.bones");
+            }
             return victim;
         }
 

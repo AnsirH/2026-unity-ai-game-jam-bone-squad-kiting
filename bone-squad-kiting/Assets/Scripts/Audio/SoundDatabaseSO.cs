@@ -13,6 +13,13 @@ namespace BoneSquadKiting.Audio
     }
 
     [Serializable]
+    public sealed class SfxEntry : SoundEntry
+    {
+        [Min(0f), Tooltip("Skip leading silence in the source clip (seconds).")]
+        public float StartOffset;
+    }
+
+    [Serializable]
     public sealed class BgmEntry : SoundEntry
     {
         public bool Loop = true;
@@ -22,10 +29,10 @@ namespace BoneSquadKiting.Audio
     public sealed class SoundDatabaseSO : ScriptableObject
     {
         public BgmEntry[] Bgm = Array.Empty<BgmEntry>();
-        public SoundEntry[] Sfx = Array.Empty<SoundEntry>();
+        public SfxEntry[] Sfx = Array.Empty<SfxEntry>();
 
         public BgmEntry FindBgm(string id) => Find(Bgm, id);
-        public SoundEntry FindSfx(string id) => Find(Sfx, id);
+        public SfxEntry FindSfx(string id) => Find(Sfx, id);
 
         static T Find<T>(T[] entries, string id) where T : SoundEntry
         {
