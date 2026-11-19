@@ -20,26 +20,26 @@ MonoBehaviour:
   Blend: 0
   Sections:
   - FromProgress: 0
-    Interval: 10
+    Interval: 8
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 8
   - FromProgress: 0.35
-    Interval: 8
+    Interval: 7.5
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 12
     - Mob: {fileID: 11400000, guid: d2541eaa21726ac42b858f8998152e3b, type: 2}
       Count: 3
   - FromProgress: 0.6
-    Interval: 6
+    Interval: 7.3
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 16
     - Mob: {fileID: 11400000, guid: d2541eaa21726ac42b858f8998152e3b, type: 2}
       Count: 5
   - FromProgress: 0.85
-    Interval: 5
+    Interval: 7
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 22

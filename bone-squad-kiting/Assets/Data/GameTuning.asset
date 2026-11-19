@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c273213f9fda1747afbf9b4a38d479b, type: 3}
   m_Name: GameTuning
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.GameTuning
-  UnitFireRange: 5.5
-  SquadEngageRange: 5
+  UnitFireRange: 9
+  SquadEngageRange: 8
   ThreatRadius: 4
   AttackMoveRadius: 4
   AnchorSpeed: 3.08
-  UnitBaseSpeed: 2.1
+  UnitBaseSpeed: 2.8
   UnitSpeedDistGain: 2.4
   UnitSpeedDistCap: 9
   AnchorArrive: 0.024
@@ -25,8 +25,8 @@ MonoBehaviour:
   RotationStepDegrees: 15
   RotationSpeed: 0
   SeatSize: 0.5
-  UnitDamage: 33
-  UnitAttackInterval: 0.76
+  UnitDamage: 35
+  UnitAttackInterval: 0.6
   UnitAttackIntervalRandom: 0.16
   LeaderDamage: 33
   LeaderAttackInterval: 1.35

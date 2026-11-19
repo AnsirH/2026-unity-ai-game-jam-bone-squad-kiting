@@ -12,27 +12,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d3e5a91c4b24f6e8a1b0c2d9e4f6a71, type: 3}
   m_Name: Stage2_v01
   m_EditorClassIdentifier: 
-  Note: "v01: the old curve values (11 s -> 6 s, 8 -> 24 mobs) as four rows."
+  Note: 'v01: the old curve values (11 s -> 6 s, 8 -> 24 mobs) as four rows.'
   FirstWaveDelay: 3
   Blend: 0
   Sections:
   - FromProgress: 0
-    Interval: 11
+    Interval: 9
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 8
   - FromProgress: 0.25
-    Interval: 9.75
+    Interval: 9
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 12
   - FromProgress: 0.5
-    Interval: 8.5
+    Interval: 7
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 16
-  - FromProgress: 0.75
-    Interval: 7.25
+  - FromProgress: 0.184
+    Interval: 6.7
     Mobs:
     - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
       Count: 20
