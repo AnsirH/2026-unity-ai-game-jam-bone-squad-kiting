@@ -137,6 +137,8 @@ namespace BoneSquadKiting.Game
             Enemies = new EnemyRegistry();
             if (Boss != null) Enemies.Register(Boss);
             Mobs = new MobSystem();
+            Mobs.OnMobDied += _ => SoundManager.Current?.PlayVolleySfx("enemy.mob.death");
+            Mobs.OnProjectileHit += (shot, _) => { if (shot.Def != null && shot.Def.JavelinThrowClip == null) SoundManager.Current?.PlayVolleySfx("enemy.caster.hit"); };
             Elites = new EliteSystem();
             Elites.OnPatternStarted += (e, p) => PatternStarted?.Invoke(p);
             Elites.OnPatternResolved += (e, hit, lost) =>
@@ -180,11 +182,11 @@ namespace BoneSquadKiting.Game
             Shots = new ShotSystem();
             Shots.OnLaunched += shot =>
             {
-                if (!shot.Heavy) SoundManager.Current?.PlayVolleySfx("squad.crossbow.fire");
+                SoundManager.Current?.PlayVolleySfx(shot.Heavy ? "squad.leader.throw" : "squad.crossbow.fire");
             };
             Shots.OnTargetHit += shot =>
             {
-                if (shot.Heavy) return;
+                if (shot.Heavy) { SoundManager.Current?.PlayVolleySfx("squad.leader.hit"); return; }
                 bool metal;
                 if (shot.Target is Mob mob) metal = mob.Def.Armored;
                 else if (shot.Target is Elite elite) metal = elite.Def.Armored;
@@ -420,6 +422,7 @@ namespace BoneSquadKiting.Game
             var elite = Elites.Spawn(m.Definition, pos, Enemies, route, m.EntrySpeed);
             m.MarkTriggered(elite);
             MiniBossAppeared?.Invoke(elite);
+            if (!m.PresentFromStart) SoundManager.Current?.PlaySfx("enemy.miniboss.appear");
             if (!m.PresentFromStart && (m.IntroWhen == MiniBossIntroWhen.OnAppear || !elite.Entering)) PlayMiniBossIntro(m, elite);
             return elite;
         }
@@ -444,6 +447,7 @@ namespace BoneSquadKiting.Game
         void OnMiniBossDied(Elite elite)
         {
             MiniBossDefeated?.Invoke(elite);
+            SoundManager.Current?.PlaySfx("enemy.miniboss.death");
             if (Fight != null) return;                                // the boss fight's mages: the fight goes on
             foreach (var m in _miniBosses) if (!m.Defeated) return;   // others remain (including ones yet to appear)
             Mobs.Clear(Enemies);
@@ -475,6 +479,8 @@ namespace BoneSquadKiting.Game
         void Update() => Step(Mathf.Min(MaxDt, Time.deltaTime));
 
         /// <summary>Advance the match by dt. Public so tests can drive time.</summary>
+        readonly Footsteps _footsteps = new();
+
         public void Step(float dt)
         {
             if (Phase != GamePhase.Play || Paused || Frozen) return;
@@ -488,12 +494,18 @@ namespace BoneSquadKiting.Game
 
             if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
 
+            var anchorBefore = Squad.Anchor;
             Squad.Tick(dt);
+            _footsteps.Tick((Squad.Anchor - anchorBefore).magnitude, dt);
 
             if (Waves != null)
             {
                 int spawned = Waves.Tick(Squad, Mobs, Enemies, dt);
-                if (spawned > 0) WaveStarted?.Invoke(Waves.WavesSpawned, spawned);
+                if (spawned > 0)
+                {
+                    WaveStarted?.Invoke(Waves.WavesSpawned, spawned);
+                    SoundManager.Current?.PlaySfx("stage.wave.start");
+                }
             }
             Mobs.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
             if (Mobs.UnitsKilledLastTick > 0) Squad.Reform();   // close up around the survivors

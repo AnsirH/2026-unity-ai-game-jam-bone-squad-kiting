@@ -976,7 +976,7 @@ MonoBehaviour:
     UseSceneLight: 1
   - Map: {fileID: 5653229164141259420}
     Title: "\uC2A4\uD14C\uC774\uC9C0 2"
-    BgmId: bgm.stage
+    BgmId: bgm.stage2
     WavePlan: {fileID: 11400000, guid: 70b73692317644dbac65329d413d92ba, type: 2}
     ClearRule: 1
     CameraYaw: 0
@@ -984,7 +984,7 @@ MonoBehaviour:
     UseSceneLight: 1
   - Map: {fileID: 774998199}
     Title: "\uBCF4\uC2A4 \uC2A4\uD14C\uC774\uC9C0"
-    BgmId: bgm.stage
+    BgmId: bgm.boss
     WavePlan: {fileID: 0}
     ClearRule: 1
     CameraYaw: 0

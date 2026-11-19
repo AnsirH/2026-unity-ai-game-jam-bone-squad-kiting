@@ -145,6 +145,8 @@ namespace BoneSquadKiting.UI
             _fade.raycastTarget = false;
             _fade.rectTransform.anchorMin = Vector2.zero; _fade.rectTransform.anchorMax = Vector2.one;
             _fade.rectTransform.offsetMin = _fade.rectTransform.offsetMax = Vector2.zero;
+            foreach (var button in new[] { NewGameButton, ContinueButton, QuitButton })
+                button.onClick.AddListener(() => BoneSquadKiting.Audio.SoundManager.Current?.PlaySfx("ui.click"));
             NewGameButton.onClick.AddListener(NewGame);
             ContinueButton.onClick.AddListener(Continue);
             QuitButton.onClick.AddListener(Quit);

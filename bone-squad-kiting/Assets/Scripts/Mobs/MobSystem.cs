@@ -121,7 +121,7 @@ namespace BoneSquadKiting.Mobs
                     var to = new Vector2(aim.X, aim.Z) - m.Pos;
                     var dir = to.sqrMagnitude > 1e-6f ? to.normalized : Vector2.up;
                     var shot = new MobShot { X = m.X, Z = m.Z, Dir = dir, Def = m.Def, Left = m.Def.AttackRange * 1.5f };
-                    if (m.Def.JavelinThrowClip == null) Shots.Add(shot);
+                    if (m.Def.JavelinThrowClip == null) { Shots.Add(shot); Audio.CastSounds.CasterFire(); }
                     else
                     {
                         m.PendingJavelin = shot;

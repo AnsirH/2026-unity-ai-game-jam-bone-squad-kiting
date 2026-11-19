@@ -88,6 +88,7 @@ namespace BoneSquadKiting.UI
         }
         void OnOverlayButton()
         {
+            BoneSquadKiting.Audio.SoundManager.Current?.PlaySfx("ui.click");
             if (Director.Phase == GamePhase.Win) Director.Proceed();
             else Director.Restart();
         }

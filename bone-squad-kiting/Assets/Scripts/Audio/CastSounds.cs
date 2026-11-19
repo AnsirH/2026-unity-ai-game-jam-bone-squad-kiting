@@ -14,6 +14,9 @@ namespace BoneSquadKiting.Audio
             SoundManager.Current?.PlayVolleySfx("enemy.javelin.flight");
         }
 
+        /// <summary>A ranged mob lets go of its magic bolt.</summary>
+        public static void CasterFire() => SoundManager.Current?.PlayVolleySfx("enemy.caster.fire");
+
         public static void Begin(CastVoice voice, PatternId pattern)
         {
             if (voice == CastVoice.FireMage)

@@ -40,13 +40,13 @@ MonoBehaviour:
     Pitch: 1
     StartOffset: 0.048
   - Id: stage.clear
-    Clip: {fileID: 0}
-    Volume: 1
+    Clip: {fileID: 8300000, guid: 1d3cfba8d94f63f4c8eed7dc8632d9b9, type: 3}
+    Volume: 0.8
     Pitch: 1
     StartOffset: 0
   - Id: squad.defeat
-    Clip: {fileID: 0}
-    Volume: 1
+    Clip: {fileID: 8300000, guid: 6726bf852133dc447b3fcd53eb279437, type: 3}
+    Volume: 0.8
     Pitch: 1
     StartOffset: 0
   - Id: squad.crossbow.fire
@@ -192,5 +192,65 @@ MonoBehaviour:
   - Id: boss.frostknight.lethal.hit
     Clip: {fileID: 8300000, guid: 5969a00a9bd83df419449285028965c3, type: 3}
     Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: stage.wave.start
+    Clip: {fileID: 8300000, guid: 63d03b19adc5cdd4491239c91bf88074, type: 3}
+    Volume: 0.55
+    Pitch: 1
+    StartOffset: 0
+  - Id: enemy.miniboss.appear
+    Clip: {fileID: 8300000, guid: a7bec7c6a9ef83d4b9be9ff08caf169a, type: 3}
+    Volume: 0.7
+    Pitch: 1
+    StartOffset: 0
+  - Id: enemy.miniboss.death
+    Clip: {fileID: 8300000, guid: 9b864602c27a829458814bf6bd3eb2b6, type: 3}
+    Volume: 0.7
+    Pitch: 1
+    StartOffset: 0
+  - Id: enemy.mob.death
+    Clip: {fileID: 8300000, guid: f78edb31345e6fd4e8af50661160f544, type: 3}
+    Volume: 0.35
+    Pitch: 1
+    StartOffset: 0
+  - Id: squad.leader.throw
+    Clip: {fileID: 8300000, guid: 2a4f29c6525b15b409117cbd1d254521, type: 3}
+    Volume: 0.5
+    Pitch: 1
+    StartOffset: 0
+  - Id: squad.leader.hit
+    Clip: {fileID: 8300000, guid: 1fd8441a63c2b9749acf7563439a373a, type: 3}
+    Volume: 0.55
+    Pitch: 1
+    StartOffset: 0
+  - Id: enemy.caster.fire
+    Clip: {fileID: 8300000, guid: 24ed6272099beae4cbe3030285902241, type: 3}
+    Volume: 0.35
+    Pitch: 1
+    StartOffset: 0
+  - Id: enemy.caster.hit
+    Clip: {fileID: 8300000, guid: 2a7796a5484530044860ede49adc8e44, type: 3}
+    Volume: 0.35
+    Pitch: 1
+    StartOffset: 0
+  - Id: ui.click
+    Clip: {fileID: 8300000, guid: 70f6b25eb0e6d694891b366e34bdc06c, type: 3}
+    Volume: 0.6
+    Pitch: 1
+    StartOffset: 0
+  - Id: squad.footstep.1
+    Clip: {fileID: 8300000, guid: 98ec019822b2e754fb772f3a2fe3efcc, type: 3}
+    Volume: 0.22
+    Pitch: 1
+    StartOffset: 0
+  - Id: squad.footstep.2
+    Clip: {fileID: 8300000, guid: 18978d4f7b0dc804884333ce4ea662e2, type: 3}
+    Volume: 0.22
+    Pitch: 1
+    StartOffset: 0
+  - Id: squad.footstep.3
+    Clip: {fileID: 8300000, guid: 42328452af739e941bf3d06cf8205b89, type: 3}
+    Volume: 0.22
     Pitch: 1
     StartOffset: 0
