@@ -47,6 +47,8 @@ namespace BoneSquadKiting.Visuals
         ArtSet.EnemyDeathLook _look;
         System.Action _done;
         float _start;
+        float _turnLeft;          // degrees of sideways turn still to apply
+        const float TurnSeconds = 0.15f;   // the turn is spread over the first moment of the fall, not snapped
 
         /// <summary>Total seconds a death takes with this look, for a model that can play the clip.</summary>
         public static float Seconds(ArtSet.EnemyDeathLook look) => look.DissolveStart + look.DissolveSeconds;
@@ -54,7 +56,7 @@ namespace BoneSquadKiting.Visuals
         public void Play(Animator animator, ArtSet.EnemyDeathLook look, System.Action done)
         {
             if (Playing) Stop();
-            _look = look; _done = done; Elapsed = 0f; Amount = 0f;
+            _look = look; _done = done; Elapsed = 0f; Amount = 0f; _turnLeft = 0f;
             Playing = true; ActiveCount++;
             _block ??= new MaterialPropertyBlock();
 
@@ -68,6 +70,11 @@ namespace BoneSquadKiting.Visuals
                 var motion = look.MirroredClip != null && Random.value < 0.5f ? look.MirroredClip : look.Clip;   // so they do not all fall the same way
                 var clip = AnimationClipPlayable.Create(_graph, motion);
                 clip.SetApplyFootIK(false);
+                // A little faster or slower, and thrown a little to one side, so a crowd does not fall as one.
+                float speed = 1f + Random.Range(-look.SpeedJitter, look.SpeedJitter);
+                clip.SetSpeed(speed);
+                _start = look.DissolveStart / speed;      // it lands sooner or later by the same factor
+                _turnLeft = Random.Range(-look.YawJitter, look.YawJitter);
                 output.SetSourcePlayable(clip);
                 _graph.Play();
             }
@@ -114,6 +121,13 @@ namespace BoneSquadKiting.Visuals
         {
             if (!Playing) return;
             Elapsed += Time.deltaTime;
+            if (_turnLeft != 0f)
+            {
+                float total = _look.YawJitter > 0f ? _look.YawJitter : 1f;
+                float step = Mathf.Min(Mathf.Abs(_turnLeft), total / TurnSeconds * Time.deltaTime) * Mathf.Sign(_turnLeft);
+                transform.Rotate(0f, step, 0f, Space.World);
+                _turnLeft -= step;
+            }
             Amount = _look.DissolveSeconds > 0f ? Mathf.Clamp01((Elapsed - _start) / _look.DissolveSeconds) : (Elapsed >= _start ? 1f : 0f);
             if (Amount >= 1f) { var done = _done; Stop(); done?.Invoke(); return; }
             Apply();
@@ -140,7 +154,7 @@ namespace BoneSquadKiting.Visuals
         public void Stop()
         {
             if (!Playing) return;
-            Playing = false; ActiveCount--; _done = null; Amount = 0f;
+            Playing = false; ActiveCount--; _done = null; Amount = 0f; _turnLeft = 0f;
             if (_graph.IsValid()) _graph.Destroy();
             for (int i = 0; i < _renderers.Count; i++)
             {

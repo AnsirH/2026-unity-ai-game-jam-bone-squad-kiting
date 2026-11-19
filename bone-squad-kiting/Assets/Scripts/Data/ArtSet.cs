@@ -40,6 +40,8 @@ namespace BoneSquadKiting.Data
         {
             public AnimationClip Clip;                  // humanoid; empty = enemies vanish at once, as before
             public AnimationClip MirroredClip;          // the same fall, left and right swapped; picked half the time when set
+            [Range(0f, 0.2f)] public float SpeedJitter = 0.07f;   // each fall plays this much faster or slower at most (0.07 = 93%..107%); keep it small, it is an airborne move
+            [Range(0f, 60f)] public float YawJitter = 22f;         // each body is thrown up to this many degrees to the left or right of straight back
             public float DissolveStart = 0.9f;          // seconds into the clip the body reaches the ground
             public float DissolveSeconds = 0.9f;        // how long it takes to turn to ash and go
             public Color AshColor = new(0.16f, 0.15f, 0.14f, 1f);
