@@ -81,8 +81,12 @@ public class FrostKnightFightTests
         Assert.AreEqual(2, _fight.Phase);
 
         Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Charging), "phase 2 opens with a charge");
-        Assert.IsFalse(_fight.Targetable, "it cannot be hit while it attacks");
+        Assert.IsFalse(_fight.Targetable, "not yet: it is only just appearing");
         Assert.AreEqual(FrostKnightAttack.Charge, _fight.Attack);
+        Assert.IsTrue(RunUntil(() => _fight.Targetable, 0.5f), "in the air with the sword raised it can be hit");
+        Assert.IsTrue(_fight.Casting); Assert.Contains(_boss, _enemies.Enemies);
+        Assert.IsTrue(RunUntil(() => !_fight.Casting));
+        Assert.IsFalse(_fight.Targetable, "once the sword has come down it is out of reach again");
         Assert.That(Mathf.Abs(Vector2.Dot(_boss.Position - _arena.Center, _arena.Right)), Is.GreaterThan(10f), "it shows up at the side of the room");
         Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Slamming), "then the lethal slam");
         Assert.IsTrue(_fight.Telegraphs[0].Pattern.LethalTelegraph);
@@ -103,6 +107,30 @@ public class FrostKnightFightTests
         Assert.AreEqual("Die", _fight.Anim);
         Assert.IsFalse(_fight.Won, "not won until the death is over");
         Assert.IsTrue(RunUntil(() => _fight.Won));
+    }
+
+    [Test]
+    public void Circle_IsSmallerThanTheRingFormation_AndShrinksWithTheSquad()
+    {
+        const float ringRadius = 3.7f;                            // the ring formation's (E) radius for a full squad
+        _roll = 0.9f;                                             // the circle, not the parallel lines
+        SquadDamage.Invincible = true;
+        MoveSquad(_arena.Center);
+        Assert.IsTrue(RunUntil(() => _fight.Casting));
+        Assert.AreEqual(FrostKnightAttack.Circle, _fight.Attack);
+        var cast = _fight.Telegraphs[0];
+        Assert.AreEqual("ring", cast.Pattern.Recommend, "the HUD recommends the ring formation");
+        Assert.That(cast.Shape.RMax, Is.LessThan(ringRadius - 0.3f), "units on the ring stand outside the circle");
+        Assert.That(Vector2.Distance(new Vector2(cast.Cx, cast.Cz), _fc.Anchor), Is.LessThan(0.1f), "on the squad");
+        Assert.IsTrue(RunUntil(() => !_fight.Casting));
+
+        // Half the squad is gone: the ring is half as wide, and so is the circle.
+        int kill = _fc.Units.Count / 2;
+        foreach (var u in _fc.Units) { if (kill == 0) break; if (u.IsLeader) continue; u.Dead = true; kill--; }
+        float fraction = _fc.AliveCount / (float)_fc.Units.Count;
+        Assert.IsTrue(RunUntil(() => _fight.Casting));
+        Assert.That(_fight.Telegraphs[0].Shape.RMax, Is.EqualTo(_arena.Tuning.CircleRadius * fraction).Within(0.01f));
+        Assert.That(_fight.Telegraphs[0].Shape.RMax, Is.LessThan(ringRadius * fraction - 0.1f));
     }
 
     // Skip to phase 2 with the squad standing at a given place of the room (x to the right, z toward the throne).

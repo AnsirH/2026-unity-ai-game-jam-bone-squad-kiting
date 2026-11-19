@@ -32,7 +32,7 @@ namespace BoneSquadKiting.Bosses
     public class FrostKnightFight
     {
         // Lengths of the model's motions at speed 1, and when the sword lands in them.
-        public const float ChargeHitAt = 7f, ChargeLength = 7.67f, PlantHitAt = 0.25f, DieLength = 9.58f;
+        public const float ChargeShownAt = 1.35f, ChargeHitAt = 7f, ChargeLength = 7.67f, PlantHitAt = 0.25f, DieLength = 9.58f;
         const float PlantLead = 0.3f;          // the boss shows up this long before the plant motion starts
 
         public readonly Boss Boss;
@@ -102,7 +102,7 @@ namespace BoneSquadKiting.Bosses
             Boss.HpFloor = Tuning.MaxHp * Tuning.PhaseOneEndsAt;
             Boss.Position = _seat; Boss.Facing = _seatFacing;
             _patterns[(int)FrostKnightAttack.Parallel] = Pattern("평행 참격", "두 줄 사이나 바깥으로", "두 줄을 따라 벱니다. 줄을 피하세요!", "line", false);
-            _patterns[(int)FrostKnightAttack.Circle] = Pattern("대검 낙하", "원 밖으로", "대검이 떨어집니다. 원 밖으로 나가세요!", "", false);
+            _patterns[(int)FrostKnightAttack.Circle] = Pattern("대검 낙하", "E · 원형", "대검이 떨어집니다. 원형으로 벌리세요!", "ring", false);
             _patterns[(int)FrostKnightAttack.Charge] = Pattern("가로 차징", "두 줄을 피해서", "방을 가로질러 두 줄을 벱니다!", "line", false);
             _patterns[(int)FrostKnightAttack.LethalLeft] = Pattern("즉사 내려찍기", "오른쪽으로", "왼쪽 전체가 즉사 범위입니다!", "", true);
             _patterns[(int)FrostKnightAttack.LethalRight] = Pattern("즉사 내려찍기", "왼쪽으로", "오른쪽 전체가 즉사 범위입니다!", "", true);
@@ -164,6 +164,8 @@ namespace BoneSquadKiting.Bosses
                     break;
 
                 case FrostKnightState.Charging:
+                    // In the air with the sword raised it can be hit: from when it has appeared until the sword comes down.
+                    SetTargetable(Tuning.ChargeCanBeHit && _casting && StateTime >= ChargeShownAt / Mathf.Max(0.1f, Tuning.ChargeAnimSpeed));
                     if (!_casting && StateTime >= ChargeLength / Mathf.Max(0.1f, Tuning.ChargeAnimSpeed)) Hide();
                     break;
 
@@ -204,7 +206,12 @@ namespace BoneSquadKiting.Bosses
                 Cast(FrostKnightAttack.Parallel, DangerShape.BandsX(Tuning.ParallelInner, Tuning.ParallelOuter, Tuning.ParallelHalfLength),
                     _center, angle, Tuning.SlamHitSeconds, false);
             }
-            else Cast(FrostKnightAttack.Circle, DangerShape.Disc(Tuning.CircleRadius), _squad.Anchor, 0f, Tuning.SlamHitSeconds, false);
+            else
+            {
+                // Dodged by the ring formation, so it shrinks with the squad the way the ring does.
+                float scale = Tuning.CircleScalesWithSquad ? FormationSlots.SquadFraction(_squad.AliveCount) : 1f;
+                Cast(FrostKnightAttack.Circle, DangerShape.Disc(Tuning.CircleRadius * scale), _squad.Anchor, 0f, Tuning.SlamHitSeconds, false);
+            }
             _wait = Tuning.SlamRecoverSeconds + Tuning.ThroneAttackGap;
         }
 

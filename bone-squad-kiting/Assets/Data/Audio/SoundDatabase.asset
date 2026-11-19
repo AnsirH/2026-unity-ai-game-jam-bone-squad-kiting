@@ -149,3 +149,48 @@ MonoBehaviour:
     Volume: 1
     Pitch: 1
     StartOffset: 0
+  - Id: boss.frostknight.wake
+    Clip: {fileID: 8300000, guid: 8da5e09cb00ea4d4bb35b1df7d97dc0c, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.stun
+    Clip: {fileID: 8300000, guid: 74072ef4046366a479c607397133120d, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.rise
+    Clip: {fileID: 8300000, guid: 27d67465eab55ed4990d7f7661a8b2e4, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.vanish
+    Clip: {fileID: 8300000, guid: 2024c569ff15c2046ba6db9a159bf306, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.appear
+    Clip: {fileID: 8300000, guid: 3029c523711a2e141b55c7fa313e81b9, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.groggy
+    Clip: {fileID: 8300000, guid: 5bb10dc03b111894593e43924b7bf2f0, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.death
+    Clip: {fileID: 8300000, guid: 7d3278f19b4b81f49b6d405511f2c8a9, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.lethal.warn
+    Clip: {fileID: 8300000, guid: 0a4bd451ddb49cf4ea1c883d888c86e8, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0
+  - Id: boss.frostknight.lethal.hit
+    Clip: {fileID: 8300000, guid: 5969a00a9bd83df419449285028965c3, type: 3}
+    Volume: 0.85
+    Pitch: 1
+    StartOffset: 0

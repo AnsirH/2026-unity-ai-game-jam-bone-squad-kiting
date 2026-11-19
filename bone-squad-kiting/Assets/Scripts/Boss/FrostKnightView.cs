@@ -34,10 +34,28 @@ namespace BoneSquadKiting.Bosses
         public float LethalShake = 0.6f;
         public float ShakeSeconds = 0.35f;
 
-        [Header("Sounds")]
+        [Header("Sounds (ids in the sound database; an empty or unknown id plays nothing)")]
+        [Tooltip("The sword is summoned: a throne attack or a charge begins.")]
         public string CastSound = "boss.greatsword.summon";
+        [Tooltip("Any attack lands.")]
         public string HitSound = "boss.greatsword.impact";
-        public string ChargeSound = "boss.spinningblade.swing";
+        [Tooltip("The circle attack's sword starts to fall.")]
+        public string CircleFallSound = "boss.greatsword.fall";
+        [Tooltip("The charged slash is swung, and its wave flies across the room.")]
+        public string ChargeSwingSound = "boss.spinningblade.swing";
+        public string ChargeFlightSound = "boss.spinningblade.flight";
+        [Tooltip("The squad walks in and the boss raises its head.")]
+        public string WakeSound = "boss.frostknight.wake";
+        public string StunSound = "boss.frostknight.stun";
+        public string RiseSound = "boss.frostknight.rise";
+        [Tooltip("Fading out of sight, and showing up for an attack.")]
+        public string VanishSound = "boss.frostknight.vanish";
+        public string AppearSound = "boss.frostknight.appear";
+        public string GroggySound = "boss.frostknight.groggy";
+        public string DeathSound = "boss.frostknight.death";
+        [Tooltip("The lethal slam: its warning starts, and it lands.")]
+        public string LethalWarnSound = "boss.frostknight.lethal.warn";
+        public string LethalHitSound = "boss.frostknight.lethal.hit";
 
         FrostKnightFight _fight;
         int _serial = -1;
@@ -84,6 +102,7 @@ namespace BoneSquadKiting.Bosses
                 && fight.Telegraphs.Count > 0 && fight.Telegraphs[0].Remaining <= CircleEffectLead)
             {
                 _circleShown = true;
+                Sfx(CircleFallSound);
                 var cast = fight.Telegraphs[0];
                 var at = new Vector3(cast.Cx, BoneSquadKiting.Stage.GroundHeight.Y(cast.Cx, cast.Cz), cast.Cz);
                 var fx = Instantiate(CircleEffect, at, Quaternion.identity);
@@ -95,15 +114,31 @@ namespace BoneSquadKiting.Bosses
         // A new match (or none): forget the old fight, sit on the throne with the head bowed.
         void Bind(FrostKnightFight fight)
         {
-            if (_fight != null) { _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; }
+            if (_fight != null) { _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; _fight.OnState -= OnState; }
             _fight = fight;
             _serial = -1;
             if (_ref != null) _ref.Enemy = fight?.Boss;
             if (fight == null) { Place(null); if (Animator != null && Animator.isActiveAndEnabled) { Animator.speed = 1f; Animator.Play("HeadBowed", 0, 0f); } return; }
-            fight.OnCast += OnCast; fight.OnHit += OnHit;
+            fight.OnCast += OnCast; fight.OnHit += OnHit; fight.OnState += OnState;
         }
 
-        void OnDestroy() { if (_fight != null) { _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; } }
+        void OnDestroy() { if (_fight != null) { _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; _fight.OnState -= OnState; } }
+
+        static void Sfx(string id) { if (!string.IsNullOrEmpty(id)) SoundManager.Current?.PlaySfx(id); }
+
+        void OnState(FrostKnightState state)
+        {
+            switch (state)
+            {
+                case FrostKnightState.Throne: Sfx(WakeSound); break;
+                case FrostKnightState.Stunned: Sfx(StunSound); break;
+                case FrostKnightState.Rising: Sfx(RiseSound); break;
+                case FrostKnightState.Charging: Sfx(AppearSound); break;
+                case FrostKnightState.Groggy: Sfx(GroggySound); break;
+                case FrostKnightState.Vanishing: Sfx(VanishSound); break;
+                case FrostKnightState.Dying: Sfx(DeathSound); break;
+            }
+        }
 
         // Seated states sit at the throne seat's height; on the floor it stands on the ground.
         void Place(FrostKnightFight fight)
@@ -122,6 +157,7 @@ namespace BoneSquadKiting.Bosses
         void PlayMotion(FrostKnightFight fight)
         {
             _serial = fight.AnimSerial;
+            if (fight.Anim == "SwordPlant") Sfx(AppearSound);            // the lethal slam: it shows up just before it strikes
             if (Animator == null) return;
             Animator.speed = Mathf.Max(0.05f, fight.AnimSpeed);
             // Blend times are in real seconds, so they do not stretch with the motion's speed.
@@ -133,13 +169,15 @@ namespace BoneSquadKiting.Bosses
         void OnCast(FrostKnightAttack attack, BossAttackSystem.Active cast)
         {
             _circleShown = false;
-            SoundManager.Current?.PlaySfx(attack == FrostKnightAttack.Charge ? ChargeSound : CastSound);
+            Sfx(attack >= FrostKnightAttack.LethalLeft ? LethalWarnSound : CastSound);
         }
 
         void OnHit(FrostKnightAttack attack, BossAttackSystem.Active cast, int hit, int lost)
         {
-            SoundManager.Current?.PlaySfx(HitSound);
             bool lethal = attack >= FrostKnightAttack.LethalLeft;
+            Sfx(HitSound);
+            if (lethal) Sfx(LethalHitSound);
+            if (attack == FrostKnightAttack.Charge) { Sfx(ChargeSwingSound); Sfx(ChargeFlightSound); }
             float shake = lethal ? LethalShake : HitShake;
             if (shake <= 0f) return;
             if (_cam == null) _cam = FindFirstObjectByType<BoneSquadKiting.Cameras.EdgeScrollCamera>();

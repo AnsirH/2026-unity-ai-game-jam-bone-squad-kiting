@@ -27,7 +27,10 @@ namespace BoneSquadKiting.Bosses
         public float ParallelHalfLength = 20f;
         [Tooltip("The lines are turned by up to this many degrees either way, anew for every attack.")]
         public float ParallelMaxAngle = 40f;
-        public float CircleRadius = 6f;
+        [Tooltip("The circle is dodged with the ring formation (E): keep it smaller than the ring's radius (3.7).")]
+        public float CircleRadius = 3.1f;
+        [Tooltip("The circle shrinks as the squad does, the same way the ring formation does, so the ring keeps dodging it.")]
+        public bool CircleScalesWithSquad = true;
 
         [Header("Between the phases: the mages")]
         public EliteDefinition[] Mages = new EliteDefinition[0];
@@ -47,6 +50,8 @@ namespace BoneSquadKiting.Bosses
         public float ChargeRowOffset = 5.5f;
         [Tooltip("The pair of rows is moved up or down the room by up to this much, anew for every charge.")]
         public float ChargeShift = 3f;
+        [Tooltip("While it hangs in the air with the sword raised, the squad can hit it: from when it has appeared until the sword comes down.")]
+        public bool ChargeCanBeHit = true;
         [Tooltip("Warning time of the lethal slam.")]
         public float LethalWarnSeconds = 2.4f;
         [Tooltip("The middle zone of the lethal slam is this share of the room's width.")]
