@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BoneSquadKiting.Visuals;
 
@@ -22,7 +23,7 @@ namespace BoneSquadKiting.Data
         public float StopDistance = 3f;      // stops walking this close to the nearest unit
 
         [Header("Area attacks")]
-        public AttackSequence Patterns;
+        public List<PatternDefinition> Patterns = new();   // cast in this order, then from the top again
         public float FirstAttackDelay = 3f;   // seconds after appearing before the first cast
         public float AttackGap = 4.5f;        // seconds between casts
         public float AttackGapRandom = 0f;    // up to this many extra seconds, picked anew for each gap (irregular fire)
