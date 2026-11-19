@@ -3,12 +3,12 @@ using UnityEngine;
 namespace BoneSquadKiting.Audio
 {
     /// <summary>
-    /// The squad's footsteps: while the formation is travelling, one of a few step sounds plays at a walking
+    /// The squad's footsteps: while the formation is travelling, one of several single boot steps plays, picked at random, at a walking
     /// beat. It is one sound for the whole squad, not one per soldier.
     /// </summary>
     public sealed class Footsteps
     {
-        public static readonly string[] Ids = { "squad.footstep.1", "squad.footstep.2", "squad.footstep.3" };
+        public static readonly string[] Ids = { "squad.footstep.1", "squad.footstep.2", "squad.footstep.3", "squad.footstep.4", "squad.footstep.5", "squad.footstep.6", "squad.footstep.7", "squad.footstep.8" };
         public float Interval = 0.3f;         // seconds between steps while moving
         public float MinSpeed = 0.5f;         // slower than this (metres per second) is standing still
 
