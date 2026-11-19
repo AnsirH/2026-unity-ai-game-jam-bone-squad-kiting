@@ -54,12 +54,74 @@ namespace BoneSquadKiting.Cameras
         Vector2 _focusPoint, _focusReturn;
         float _focusDuration, _focusElapsed = -1f;
 
+        enum BossFocusPhase { None, Watching, Returning }
+        const float BossFocusBlendSeconds = .65f;
+        const float BossDeathPitch = 45f;
+        const float BossDeathViewportFill = .86f;
+        BossFocusPhase _bossFocus;
+        Vector2 _bossBlendStart, _squadAtFocus;
+        float _focusHeight, _blendStartHeight, _bossTargetHeight;
+        Transform _bossTorso;
+        Quaternion _gameplayRotation, _bossShotRotation;
+        float _shotBlend, _startShotBlend, _shotDistance;
+        bool _followReturn;
+
         public bool Focusing => _focusElapsed >= 0f;
+        public bool BossDeathFocusActive => _bossFocus != BossFocusPhase.None;
+
+        public void BeginBossDeathFocus(Vector2 point, float targetHeight = 0f, float subjectHeight = 8.4f, Transform torso = null)
+        {
+            if (!Focusing) _focusReturn = LookAt;
+            if (!BossDeathFocusActive) _gameplayRotation = transform.rotation;
+            _bossShotRotation = Quaternion.Euler(BossDeathPitch, _gameplayRotation.eulerAngles.y, 0f);
+            if (_camera == null) _camera = GetComponent<Camera>();
+            float halfFov = .5f * (_camera != null ? _camera.fieldOfView : 30f) * Mathf.Deg2Rad;
+            float pitch = BossDeathPitch * Mathf.Deg2Rad;
+            float halfHeight = .5f * subjectHeight;
+            // Project the knight's height along the tilted camera, allowing room for the nearer end.
+            _shotDistance = halfHeight * (Mathf.Cos(pitch) / (Mathf.Tan(halfFov) * BossDeathViewportFill) + .5f * Mathf.Sin(pitch));
+            _bossTorso = torso;
+            _startShotBlend = _shotBlend;
+            _bossBlendStart = LookAt;
+            _blendStartHeight = _focusHeight;
+            _bossTargetHeight = targetHeight;
+            _followReturn = FollowSquad && Squad != null;
+            if (_followReturn) _squadAtFocus = Squad.Anchor;
+            _focusPoint = point;
+            _focusElapsed = 0f;
+            _bossFocus = BossFocusPhase.Watching;
+        }
+
+        public void EndBossDeathFocus()
+        {
+            if (_bossFocus != BossFocusPhase.Watching) return;
+            _bossBlendStart = LookAt;
+            _focusElapsed = 0f;
+            _blendStartHeight = _focusHeight;
+            _startShotBlend = _shotBlend;
+            _bossFocus = BossFocusPhase.Returning;
+        }
+
+        public void CancelBossDeathFocus()
+        {
+            if (!BossDeathFocusActive) return;
+            LookAt = BossReturnPoint();
+            _focusHeight = 0f;
+            transform.rotation = _gameplayRotation;
+            _shotBlend = 0f;
+            _bossTorso = null;
+            _bossFocus = BossFocusPhase.None;
+            _focusElapsed = -1f;
+            Apply();
+        }
+
+        Vector2 BossReturnPoint() => _followReturn && Squad != null
+            ? _focusReturn + (Squad.Anchor - _squadAtFocus) : _focusReturn;
 
         /// <summary>Glide to a point, hold, and return to where the view was, over <paramref name="seconds"/>.</summary>
         public void FocusOn(Vector2 point, float seconds)
         {
-            if (seconds <= 0f) return;
+            if (seconds <= 0f || BossDeathFocusActive) return;
             if (!Focusing) _focusReturn = LookAt;
             _focusPoint = point; _focusDuration = seconds; _focusElapsed = 0f;
         }
@@ -69,6 +131,25 @@ namespace BoneSquadKiting.Cameras
         {
             if (!Focusing) return false;
             _focusElapsed += dt;
+            if (BossDeathFocusActive)
+            {
+                bool returning = _bossFocus == BossFocusPhase.Returning;
+                Vector3 subject = _bossTorso != null ? _bossTorso.position : new Vector3(_focusPoint.x, _bossTargetHeight, _focusPoint.y);
+                Vector2 target = returning ? BossReturnPoint() : new Vector2(subject.x, subject.z);
+                float blend = Mathf.SmoothStep(0f, 1f, _focusElapsed / BossFocusBlendSeconds);
+                LookAt = Vector2.Lerp(_bossBlendStart, target, blend);
+                _focusHeight = Mathf.Lerp(_blendStartHeight, returning ? 0f : subject.y, blend);
+                _shotBlend = Mathf.Lerp(_startShotBlend, returning ? 0f : 1f, blend);
+                transform.rotation = Quaternion.Slerp(_gameplayRotation, _bossShotRotation, _shotBlend);
+                if (returning && _focusElapsed >= BossFocusBlendSeconds)
+                {
+                    _bossFocus = BossFocusPhase.None;
+                    _bossTorso = null;
+                    _focusElapsed = -1f;
+                }
+                Apply();
+                return true;
+            }
             float t = Mathf.Clamp01(_focusElapsed / _focusDuration);
             const float edge = 0.3f;   // share of the time spent travelling each way
             float w = t < edge ? Mathf.SmoothStep(0f, 1f, t / edge)
@@ -199,6 +280,7 @@ namespace BoneSquadKiting.Cameras
 
         void OnDisable()
         {
+            CancelBossDeathFocus();
             CombatShakeStrength = 0f;
             ClearPresentationShake();
         }
@@ -252,7 +334,8 @@ namespace BoneSquadKiting.Cameras
             LookAt = new Vector2(Mathf.Clamp(LookAt.x, BoundsMin.x, BoundsMax.x), Mathf.Clamp(LookAt.y, BoundsMin.y, BoundsMax.y));
             if (Gates != null && !Focusing)   // a directed look (mini boss intro) may go past a closed gate
                 foreach (var gate in Gates) if (gate != null) LookAt = gate.Clamp(LookAt);
-            transform.position = new Vector3(LookAt.x, 0f, LookAt.y) - transform.forward * Distance + ShakeOffset;
+            float distance = BossDeathFocusActive ? Mathf.Lerp(Distance, _shotDistance, _shotBlend) : Distance;
+            transform.position = new Vector3(LookAt.x, _focusHeight, LookAt.y) - transform.forward * distance + ShakeOffset;
         }
 
         static Vector3 Flat(Vector3 v)

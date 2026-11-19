@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using BoneSquadKiting.Cameras;
+using BoneSquadKiting.Squad;
 
 /// <summary>The camera stays on the squad and leans toward the mouse, never losing the squad's center.</summary>
 public class CameraFollowTests
@@ -93,6 +94,68 @@ public class CameraFollowTests
         var lean = _cam.Lean;
         _cam.Follow(new Vector2(30f, -40f), new Vector2(0f, 1f), 0.02f);
         Assert.That(Vector2.Distance(_cam.LookAt, new Vector2(30f, -40f) + lean), Is.LessThan(1e-3f));
+    }
+
+    [Test]
+    public void BossDeath_HoldsOnTheKnightThenGlidesBackToTheMovingSquad()
+    {
+        _cam.enabled = true;
+        var squad = _cam.gameObject.AddComponent<FormationController>();
+        _cam.Squad = squad;
+        squad.Anchor = new Vector2(4f, -2f);
+        _cam.Follow(squad.Anchor, new Vector2(.4f, 0f), .02f);
+        Vector2 start = _cam.LookAt;
+        Vector2 offset = start - squad.Anchor;
+        var boss = new Vector2(15f, 12f);
+
+        _cam.BeginBossDeathFocus(boss);
+        Assert.AreEqual(start, _cam.LookAt);
+        _cam.TickFocus(.15f);
+        Assert.That(Vector2.Distance(_cam.LookAt, boss), Is.InRange(.01f, Vector2.Distance(start, boss) - .01f));
+        _cam.TickFocus(1f);
+        squad.Anchor += new Vector2(6f, -3f);
+        _cam.TickFocus(5f);
+        Assert.IsTrue(_cam.Focusing);
+        Assert.That(Vector2.Distance(_cam.LookAt, boss), Is.LessThan(.001f));
+
+        _cam.EndBossDeathFocus();
+        _cam.TickFocus(.15f);
+        Vector2 destination = squad.Anchor + offset;
+        Assert.That(Vector2.Distance(_cam.LookAt, destination), Is.InRange(.01f, Vector2.Distance(boss, destination) - .01f));
+        _cam.TickFocus(1f);
+        Assert.IsFalse(_cam.Focusing);
+        Assert.That(Vector2.Distance(_cam.LookAt, destination), Is.LessThan(.001f));
+    }
+
+    [Test]
+    public void BossDeath_FramesTheTorsoAt45DegreesThenRestoresTheGameplayShot()
+    {
+        var boss = new Vector2(2f, 4f);
+        var torso = new Vector3(boss.x, 4f, boss.y);
+        _cam.Follow(boss, Vector2.zero, .02f);
+        Vector3 originalPosition = _view.transform.position;
+        Quaternion originalRotation = _view.transform.rotation;
+        float originalFov = _view.fieldOfView;
+        float originalDistance = _cam.Distance;
+
+        _cam.BeginBossDeathFocus(boss, torso.y);
+        _cam.TickFocus(.15f);
+        Assert.That(_view.transform.eulerAngles.x, Is.InRange(45.01f, 59.99f), "the camera tilts gradually");
+        _cam.TickFocus(1f);
+        Assert.That(_view.transform.eulerAngles.x, Is.EqualTo(45f).Within(.01f));
+        var framed = _view.WorldToViewportPoint(torso);
+        Assert.That(framed.x, Is.EqualTo(.5f).Within(.001f));
+        Assert.That(framed.y, Is.EqualTo(.5f).Within(.001f));
+        Assert.That(framed.z, Is.GreaterThan(_view.nearClipPlane).And.LessThan(originalDistance * .75f),
+            "the close-up moves substantially closer than the squad view");
+
+        _cam.EndBossDeathFocus();
+        _cam.TickFocus(.15f);
+        Assert.That(_view.transform.eulerAngles.x, Is.InRange(45.01f, 59.99f), "the return also tilts gradually");
+        _cam.TickFocus(1f);
+        Assert.That(Quaternion.Angle(_view.transform.rotation, originalRotation), Is.LessThan(.05f));
+        Assert.That(Vector3.Distance(_view.transform.position, originalPosition), Is.LessThan(.001f));
+        Assert.That(_view.fieldOfView, Is.EqualTo(originalFov).Within(.001f));
     }
 
     [Test]

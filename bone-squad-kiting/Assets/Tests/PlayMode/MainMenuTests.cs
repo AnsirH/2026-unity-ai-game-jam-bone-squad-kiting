@@ -181,9 +181,17 @@ public class MainMenuTests
         // Clearing the last stage (the boss dies) finishes the game: nothing is left to continue.
         arena.Tuning.DieAnimSpeed = 20f;
         fight.Kill();
+        var camera = run.Kit.Cam;
+        Assert.IsTrue(camera.Focusing, "the death starts a camera move");
+        camera.TickFocus(1f);
+        fight.Tick(BoneSquadKiting.Bosses.FrostKnightFight.DieLength / arena.Tuning.DieAnimSpeed + .01f);
+        director.Step(.01f);
+        Assert.IsTrue(fight.Won);
+        Assert.AreEqual(GamePhase.Play, director.Phase, "the victory screen waits for the camera to return");
         float until = Time.time + 5f;
         while (director.Phase != GamePhase.Win && Time.time < until) yield return null;
         Assert.AreEqual(GamePhase.Win, director.Phase);
+        Assert.IsFalse(camera.Focusing);
         Assert.IsFalse(GameProgress.HasSave, "the save is cleared");
         Assert.AreEqual("", GameProgress.NextScene);
 

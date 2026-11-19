@@ -92,6 +92,8 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public bool InCutscene => _cutsceneRemaining > 0f;
         float _cutsceneRemaining;
+        float _bossBodyHeight;
+        Transform _bossTorso;
         int _aliveLastStep;
         MiniBossSpawn[] _miniBosses = new MiniBossSpawn[0];
 
@@ -225,13 +227,23 @@ namespace BoneSquadKiting.Game
         // and the stage is cleared when the boss is dead, whatever its clear rule says.
         void StartBossFight()
         {
+            if (Fight != null) Fight.OnState -= OnBossCameraState;
+            if (Stage != null && Stage.Cam != null) Stage.Cam.CancelBossDeathFocus();
             Fight = null;
             BossArena arena = null;
             foreach (var a in FindObjectsByType<BossArena>(FindObjectsSortMode.None))
                 if (a.isActiveAndEnabled && a.gameObject.scene == gameObject.scene) { arena = a; break; }
             if (arena == null) return;
             if (Boss == null) Boss = new Boss(); else Enemies.Unregister(Boss);     // the fight decides when it can be hit
+            var knight = arena.GetComponentInChildren<FrostKnightView>(true);
+            _bossBodyHeight = knight != null && knight.TryGetComponent<CapsuleCollider>(out var body)
+                ? body.height * Mathf.Abs(body.transform.lossyScale.y) : 8.4f;
+            var animator = knight != null ? knight.GetComponentInChildren<Animator>(true) : null;
+            _bossTorso = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Spine) : null;
+            if (_bossTorso == null && animator != null)
+                _bossTorso = System.Array.Find(animator.GetComponentsInChildren<Transform>(true), bone => bone.name == "mixamorig:Spine");
             Fight = new FrostKnightFight(arena, Boss, Squad, Enemies, Elites);
+            Fight.OnState += OnBossCameraState;
             Fight.OnPatternStarted += p => PatternStarted?.Invoke(p);
             Fight.OnNearMiss += OnNearMiss;
             Fight.OnHit += (attack, cast, hit, lost) =>
@@ -240,6 +252,21 @@ namespace BoneSquadKiting.Game
                 PatternResolved?.Invoke(hit, lost);
             };
         }
+
+        void OnBossCameraState(FrostKnightState state)
+        {
+            var cam = Stage != null ? Stage.Cam : null;
+            if (cam == null || !cam.isActiveAndEnabled) return;
+            if (state == FrostKnightState.Dying)
+            {
+                Vector2 feet = Fight.Boss.Position;
+                cam.BeginBossDeathFocus(feet, GroundHeight.Y(feet.x, feet.y) + .5f * _bossBodyHeight, _bossBodyHeight, _bossTorso);
+            }
+            if (state == FrostKnightState.Dead) cam.EndBossDeathFocus();
+        }
+
+        bool ReturningFromBossDeath => Fight != null && Fight.Won && Stage != null &&
+            Stage.Cam != null && Stage.Cam.BossDeathFocusActive;
 
         /// <summary>
         /// After a win: go on. Loads the next stage (which starts right away with a fresh squad), or after
@@ -471,7 +498,7 @@ namespace BoneSquadKiting.Game
 
         bool StageCleared()
         {
-            if (Fight != null) return Fight.Won;
+            if (Fight != null) return Fight.Won && !ReturningFromBossDeath;
             bool reachedEnd = Stage != null && Stage.ReachedEnd;
             switch (ClearRule)
             {
@@ -487,7 +514,7 @@ namespace BoneSquadKiting.Game
         /// <summary>Advance the match by dt. Public so tests can drive time.</summary>
         public void Step(float dt)
         {
-            if (Phase != GamePhase.Play || Paused || Frozen) return;
+            if (Phase != GamePhase.Play || Paused || Frozen || ReturningFromBossDeath) return;
             ApplyTuning();
             if (InCutscene)
             {
