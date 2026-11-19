@@ -10,7 +10,9 @@
 
 ## 이미지와 폰트
 
-`Assets/Resources/HudArtwork.asset`에 `Assets/Art/UI/DarkFantasy`의 스프라이트를 연결한다.
+`Assets/Resources/HudArtwork.asset`에 `Assets/Art/UI/VintageBone`의 스프라이트를 연결한다.
+현재 스타일은 누렇게 삭은 뼈, 녹슨 철과 닳은 가죽이다. 이전 금속 스타일은
+`Assets/Art/UI/DarkFantasy`에 보존한다.
 중앙 패널·상태창·시작 버튼·진형 버튼·구분선을 각각 사용하며 글자는 별도 Text다.
 진형 버튼의 오른쪽 영역에 키와 이름을 배치하고 선택 시 틴트를 밝게 한다.
 생존 수·DPS·체력·결과 제목은 기존 HUD에서 계속 갱신한다.
