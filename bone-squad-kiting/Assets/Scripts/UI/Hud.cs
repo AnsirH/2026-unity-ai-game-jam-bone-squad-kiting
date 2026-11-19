@@ -131,9 +131,10 @@ namespace BoneSquadKiting.UI
 
             // The bar shows the boss, or on a stage without one, the mini boss currently in play.
             Elite elite = Director.Elites != null && Director.Elites.Elites.Count > 0 ? Director.Elites.Elites[0] : null;
-            bool showBar = Director.HasBoss || elite != null;
+            bool hasBoss = Director.HasBoss || Director.Fight != null;
+            bool showBar = hasBoss || elite != null;
             if (BossBar != null && BossBar.activeSelf != showBar) BossBar.SetActive(showBar);
-            if (elite != null && !Director.HasBoss)
+            if (elite != null && !hasBoss)
             {
                 SetFill(BossFill, elite.HpFrac);
                 BossText.text = $"{elite.Def.DisplayName}  {Mathf.CeilToInt(elite.HpFrac * 100)}%   {Mathf.CeilToInt(elite.Health)} / {elite.Def.MaxHp:0}";
@@ -143,7 +144,9 @@ namespace BoneSquadKiting.UI
                 float frac = Director.Boss != null ? Director.Boss.HpFrac : 1f;
                 float hp = Director.Boss != null ? Director.Boss.Hp : GameConstants.BossMax;
                 SetFill(BossFill, frac);
-                BossText.text = $"BOSS  {Mathf.CeilToInt(frac * 100)}%   {Mathf.CeilToInt(hp)} / {GameConstants.BossMax:0}";
+                float max = Director.Boss != null ? Director.Boss.MaxHp : GameConstants.BossMax;
+                string bossName = Director.Fight != null ? Director.Fight.BossName : "BOSS";
+                BossText.text = $"{bossName}  {Mathf.CeilToInt(frac * 100)}%   {Mathf.CeilToInt(hp)} / {max:0}";
             }
 
             int alive = Director.AliveCount;
