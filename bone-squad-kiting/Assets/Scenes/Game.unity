@@ -969,7 +969,6 @@ MonoBehaviour:
   - Map: {fileID: 7195129892775068385}
     Title: "\uC2A4\uD14C\uC774\uC9C0 1"
     BgmId: bgm.stage
-    Footsteps: 0
     WavePlan: {fileID: 11400000, guid: 46592228117b4924aa2233f599b20ddd, type: 2}
     ClearRule: 1
     CameraYaw: 0
@@ -978,7 +977,6 @@ MonoBehaviour:
   - Map: {fileID: 5653229164141259420}
     Title: "\uC2A4\uD14C\uC774\uC9C0 2"
     BgmId: bgm.stage2
-    Footsteps: 0
     WavePlan: {fileID: 11400000, guid: 70b73692317644dbac65329d413d92ba, type: 2}
     ClearRule: 1
     CameraYaw: 0
@@ -987,7 +985,6 @@ MonoBehaviour:
   - Map: {fileID: 774998199}
     Title: "\uBCF4\uC2A4 \uC2A4\uD14C\uC774\uC9C0"
     BgmId: bgm.boss
-    Footsteps: 2
     WavePlan: {fileID: 0}
     ClearRule: 1
     CameraYaw: 0

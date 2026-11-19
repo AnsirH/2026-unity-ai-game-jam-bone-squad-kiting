@@ -479,8 +479,6 @@ namespace BoneSquadKiting.Game
         void Update() => Step(Mathf.Min(MaxDt, Time.deltaTime));
 
         /// <summary>Advance the match by dt. Public so tests can drive time.</summary>
-        readonly Footsteps _footsteps = new();
-
         public void Step(float dt)
         {
             if (Phase != GamePhase.Play || Paused || Frozen) return;
@@ -494,9 +492,7 @@ namespace BoneSquadKiting.Game
 
             if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
 
-            var anchorBefore = Squad.Anchor;
             Squad.Tick(dt);
-            _footsteps.Tick((Squad.Anchor - anchorBefore).magnitude, dt, Squad.Anchor, Run?.CurrentEntry?.Footsteps ?? FootstepSurface.Dirt);
 
             if (Waves != null)
             {

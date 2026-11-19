@@ -28,8 +28,6 @@ namespace BoneSquadKiting.Stage
             public string Title = "Stage";
             [Tooltip("Music ID in the sound database for this stage.")]
             public string BgmId = "bgm.stage";
-            [Tooltip("What the squad's footsteps sound like on this stage. A Terrain's painted layers and a ground mesh's material name override it where they say what they are (grass, soil, stone …).")]
-            public BoneSquadKiting.Audio.FootstepSurface Footsteps = BoneSquadKiting.Audio.FootstepSurface.Dirt;
             [Tooltip("This stage's waves. Empty = no waves.")]
             public WavePlan WavePlan;
             public StageClearRule ClearRule = StageClearRule.ReachEnd;
