@@ -50,6 +50,7 @@ namespace BoneSquadKiting.UI
 
         void Start()
         {
+            if (GetComponent<HitCounterHud>() == null) gameObject.AddComponent<HitCounterHud>();
             HudSkin.Apply(this);
             if (Director == null) return;
             var formations = Director.Squad.Formations;
@@ -187,7 +188,7 @@ namespace BoneSquadKiting.UI
                 string id = formations[i].Id;
                 bool artwork = FormationButtons[i].image.sprite != null;
                 FormationButtons[i].image.color = artwork
-                    ? (id == recommend ? new Color(1f, .88f, .55f) : id == Director.Squad.Formation ? Color.white : new Color(.64f,.64f,.64f))
+                    ? (id == recommend ? new Color(.7f, .7f, .67f) : id == Director.Squad.Formation ? new Color(.56f,.56f,.54f) : new Color(.4f,.4f,.39f))
                     : id == recommend ? Recommended : id == Director.Squad.Formation ? Selected : Normal;
             }
 

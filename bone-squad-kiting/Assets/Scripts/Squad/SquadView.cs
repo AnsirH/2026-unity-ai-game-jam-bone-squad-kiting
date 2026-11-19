@@ -35,6 +35,7 @@ namespace BoneSquadKiting.Squad
             public Transform SpawnPoint;   // projectile origin authored in the character prefab
             public int ShotsSeen;
             public int Index;
+            public GameObject SpeedBuff;
         }
 
         readonly List<View> _views = new();
@@ -85,6 +86,7 @@ namespace BoneSquadKiting.Squad
                 if (v.Root.gameObject.activeSelf != alive) v.Root.gameObject.SetActive(alive);
                 if (!alive) continue;
                 var u = Squad.Units[i];
+                UpdateSpeedBuff(v, u);
                 if (v.Visual != null) DriveModel(v, u);
                 else DriveCapsule(v, u);
             }
@@ -105,13 +107,42 @@ namespace BoneSquadKiting.Squad
             // The model's attack animation decides when the projectile leaves and how long the motion takes.
             // A unit meant to attack more often than its attack motion lasts plays the motion faster.
             float natural = v.Visual.NaturalAttackLength;
-            v.Visual.AttackPlaybackScale = natural > 0f && u.AttackInterval > 0f && natural > u.AttackInterval ? natural / u.AttackInterval : 1f;
+            v.Visual.AttackPlaybackScale = (natural > 0f && u.AttackInterval > 0f && natural > u.AttackInterval ? natural / u.AttackInterval : 1f) * u.AttackCycleSpeed;
             u.AttackWindup = v.Visual.AttackEventTime; u.AttackDuration = v.Visual.AttackLength;
             u.HasReleaseEvent = u.AttackWindup > 0f && v.Visual.Animator.isActiveAndEnabled && v.Visual.Animator.fireEvents;
             RegisterMuzzle(v, u);
             if (u.ShotCount != v.ShotsSeen) { v.ShotsSeen = u.ShotCount; v.Visual.PlayAttack(); }
             if (u.Moving) v.Visual.CancelAttack();
             v.Visual.SetState(u.Moving ? VisualState.Run : u.Reviving && v.Visual.Has(VisualState.Revive) ? VisualState.Revive : VisualState.Idle);
+        }
+
+        void UpdateSpeedBuff(View view, SquadUnit unit)
+        {
+            bool show = Art != null && Art.ShowAttackSpeedBuff && !unit.Dead && !unit.Moving && !unit.Reviving && unit.AtAttackSpeedCap;
+            if (show && view.SpeedBuff == null && Art != null && Art.AttackSpeedBuffPrefab != null)
+            {
+                view.SpeedBuff = Instantiate(Art.AttackSpeedBuffPrefab);
+                view.SpeedBuff.name = "Maximum Attack Speed Buff";
+                view.SpeedBuff.SetActive(false);
+                view.SpeedBuff.transform.localScale *= Art.AttackSpeedBuffScale;
+                // Preserve the authored world size even when character FBX roots use a 100x scale.
+                view.SpeedBuff.transform.position = view.Root.position + Vector3.up * Art.AttackSpeedBuffHeight;
+                view.SpeedBuff.transform.SetParent(view.Root, true);
+                foreach (var ps in view.SpeedBuff.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                    main.stopAction = ParticleSystemStopAction.None;
+                }
+            }
+            if (view.SpeedBuff == null || view.SpeedBuff.activeSelf == show) return;
+            view.SpeedBuff.SetActive(show);
+            foreach (var ps in view.SpeedBuff.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (show && ps.gameObject.activeInHierarchy) ps.Play(false);
+                else if (!show) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
         }
 
         void DriveCapsule(View v, SquadUnit u)

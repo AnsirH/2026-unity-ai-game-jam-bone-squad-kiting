@@ -7,5 +7,6 @@ namespace BoneSquadKiting.UI
         public Sprite Menu, Stats, StartButton, Divider;
         public Sprite[] Formations;
         public Font KoreanFont, TitleFont;
+        public Color ArtworkTint = Color.white;
     }
 }

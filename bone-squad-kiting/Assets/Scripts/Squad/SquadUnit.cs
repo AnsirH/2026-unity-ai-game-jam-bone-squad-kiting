@@ -32,6 +32,11 @@ namespace BoneSquadKiting.Squad
         public bool HasReleaseEvent;
         public float PendingReserve;   // damage counted on for the attack in progress
         public float AttackInterval;   // seconds this unit's attacks are meant to be apart (set by the shot system)
+        public int StationaryHits;
+        public float AttackSpeedMultiplier = 1f, AttackCycleSpeed = 1f;
+        public bool AtAttackSpeedCap;
+        public float AttackStreakGraceLeft;
+        public int AttackStreakEpoch;
 
         /// <summary>
         /// Walk toward a world position, faster the further away it is (prototype update()). The caller

@@ -24,6 +24,11 @@ namespace BoneSquadKiting.Data
     [CreateAssetMenu(menuName = "BoneSquadKiting/Art Set")]
     public class ArtSet : ScriptableObject
     {
+        [Header("Maximum attack speed aura")]
+        public GameObject AttackSpeedBuffPrefab;
+        public bool ShowAttackSpeedBuff = true;
+        public float AttackSpeedBuffHeight = 0.05f;
+        [Min(0.001f)] public float AttackSpeedBuffScale = 0.12f;
         [System.Serializable]
         public class EnemyProjectile
         {
