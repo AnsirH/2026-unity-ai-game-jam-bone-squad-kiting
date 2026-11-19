@@ -91,7 +91,7 @@ namespace BoneSquadKiting.Bosses
                 if (z.Pattern != a.Pattern || !z.Shape.Equals(a.Shape))
                 {
                     if (z.Filter.sharedMesh != null) Destroy(z.Filter.sharedMesh);
-                    z.Filter.sharedMesh = DangerShapeMesh.Build(a.Shape, GroundStep);
+                    z.Filter.sharedMesh = DangerShapeMesh.Build(a.Shape, GroundStep, a.GrowLanesThroughCast);
                     z.Filter.sharedMesh.MarkDynamic();
                     z.Flat = z.Filter.sharedMesh.vertices; z.Laid = new Vector3[z.Flat.Length]; z.HasPlacement = false;
                     z.Pattern = a.Pattern; z.Shape = a.Shape;
@@ -110,12 +110,15 @@ namespace BoneSquadKiting.Bosses
                 bool locked = !a.Tracks || a.Remaining <= GameConstants.CastTrackLockTime;
                 bool lethal = a.Pattern != null && a.Pattern.LethalTelegraph;
                 // A lane warning fades out just before it strikes.
-                float fade = a.Shape.Type == DangerShapeType.ThreeLanes && !a.Sustaining
-                    ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(a.Remaining / 0.4f)) : 1f;
+                float fadeSeconds = a.Shape.Type == DangerShapeType.ThreeLanes && !a.GrowLanesThroughCast ? .4f : a.WarningFadeSeconds;
+                float fade = fadeSeconds > 0f && !a.Sustaining
+                    ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((a.Remaining - a.WarningEndLead) / fadeSeconds)) : 1f;
                 _block.Clear();
                 if (Animated)
                 {
                     SetAnimated(z, locked, a.Sustaining, lethal);
+                    if (a.GrowLanesThroughCast)
+                        _block.SetFloat(ProgressId, Mathf.Clamp01(a.Elapsed / Mathf.Max(.001f, a.Pattern.Time)));
                     _block.SetFloat(OpacityId, fade);
                 }
                 else

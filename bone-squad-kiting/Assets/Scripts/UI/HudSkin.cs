@@ -115,7 +115,8 @@ namespace BoneSquadKiting.UI
             if (image == null || sprite == null) return;
             image.sprite = sprite;
             image.type = Image.Type.Simple;
-            image.color = Color.white;
+            var art = Resources.Load<HudArtwork>("HudArtwork");
+            image.color = art != null ? art.ArtworkTint : Color.white;
             var outline = image.GetComponent<Outline>();
             if (outline != null) outline.enabled = false;
         }

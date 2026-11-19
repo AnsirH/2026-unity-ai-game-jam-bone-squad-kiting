@@ -61,7 +61,7 @@ public class FrostKnightFightTests
         Assert.IsTrue(_fight.Targetable); Assert.Contains(_boss, _enemies.Enemies);
         Assert.IsTrue(RunUntil(() => _fight.Casting), "a throne attack starts");
         Assert.AreEqual("RaiseHands", _fight.Anim);
-        Assert.AreEqual(1, _fight.Telegraphs.Count, "and its zone is warned about");
+        Assert.AreEqual(3, _fight.Telegraphs.Count, "the main strike and two empty parts of the room are warned together");
         int hits = 0; _fight.OnHit += (a, c, h, l) => hits++;
         Assert.IsTrue(RunUntil(() => hits == 1), "it goes off");
         Assert.AreEqual(0, _fight.Telegraphs.Count);
@@ -81,9 +81,8 @@ public class FrostKnightFightTests
         Assert.AreEqual(2, _fight.Phase);
 
         Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Charging), "phase 2 opens with a charge");
-        Assert.IsFalse(_fight.Targetable, "not yet: it is only just appearing");
+        Assert.IsTrue(_fight.Targetable, "open to attacks from the start of the charge");
         Assert.AreEqual(FrostKnightAttack.Charge, _fight.Attack);
-        Assert.IsTrue(RunUntil(() => _fight.Targetable, 0.5f), "in the air with the sword raised it can be hit");
         Assert.IsTrue(_fight.Casting); Assert.Contains(_boss, _enemies.Enemies);
         Assert.IsTrue(RunUntil(() => !_fight.Casting));
         Assert.IsFalse(_fight.Targetable, "once the sword has come down it is out of reach again");
@@ -129,7 +128,7 @@ public class FrostKnightFightTests
         foreach (var u in _fc.Units) { if (kill == 0) break; if (u.IsLeader) continue; u.Dead = true; kill--; }
         float fraction = _fc.AliveCount / (float)_fc.Units.Count;
         Assert.IsTrue(RunUntil(() => _fight.Casting));
-        Assert.That(_fight.Telegraphs[0].Shape.RMax, Is.EqualTo(_arena.Tuning.CircleRadius * fraction).Within(0.01f));
+        Assert.That(_fight.Telegraphs[0].Shape.RMax, Is.EqualTo(ringRadius * _arena.Tuning.CircleRingRatio * fraction).Within(0.01f));
         Assert.That(_fight.Telegraphs[0].Shape.RMax, Is.LessThan(ringRadius * fraction - 0.1f));
     }
 
@@ -147,32 +146,131 @@ public class FrostKnightFightTests
         MoveSquad(_arena.Point(x, z));
     }
 
-    [Test]
-    public void Charge_HitsTheTwoRowsAcrossTheRoom_AndSparesTheStripBetweenThem()
+    [TestCase(0f)]
+    [TestCase(.5f)]
+    public void SoldiersCanDamageTheBossDuringCharge(float fraction)
     {
-        _arena.Tuning.ChargeShift = 0f; _arena.Tuning.ChargeRowOffset = 8f;
-        ToPhaseTwoAt(-9f, 0f);                                    // on the line between the rows, far to the left
+        ToPhaseTwoAt(0f, 0f);
         Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Charging));
-        float hp = 0f; foreach (var u in _fc.Units) hp += u.Hp;
-        Assert.IsTrue(RunUntil(() => !_fight.Casting));
-        float after = 0f; foreach (var u in _fc.Units) after += u.Hp;
-        Assert.AreEqual(hp, after, 0.01f, "between the rows nobody is hurt");
-
-        // The same charge again, now standing in a row at the far right end of the room.
-        SetUp2ndCharge(new Vector2(10f, _arena.Tuning.ChargeRowOffset));
-        Assert.That(after2, Is.LessThan(before2), "the row is hit along its whole length");
+        Run(_fight.Telegraphs[0].Remaining * fraction);
+        var p = _boss.Position + Vector2.right * 3f;
+        var units = new[] { new SquadUnit { X = p.x, Z = p.y } };
+        var shots = new ShotSystem();
+        float hp = _boss.Hp;
+        for (int i = 0; i < 15 && _boss.Hp == hp; i++)
+        {
+            shots.Tick(units, _enemies, SquadOrder.Move(p), .02f);
+            _fight.Tick(.02f);
+        }
+        Assert.IsTrue(_fight.Casting);
+        Assert.Less(_boss.Hp, hp);
     }
 
-    float before2, after2;
-    void SetUp2ndCharge(Vector2 at)
+    [TestCase(0f)]
+    [TestCase(.1f)]
+    [TestCase(.49f)]
+    [TestCase(.9f)]
+    public void ThroneAttacks_LockTheSquadCenterAndWarnTwoEmptySpots(float roll)
     {
-        _arena.Tuning.AttackOrder = "C";
-        RunUntil(() => _fight.State == FrostKnightState.Groggy); RunUntil(() => _fight.State == FrostKnightState.Hidden);
-        MoveSquad(_arena.Point(at.x, at.y));
-        RunUntil(() => _fight.State == FrostKnightState.Charging);
-        before2 = 0f; foreach (var u in _fc.Units) before2 += u.Hp;
-        RunUntil(() => !_fight.Casting);
-        after2 = 0f; foreach (var u in _fc.Units) after2 += u.Hp;
+        _roll = roll;
+        var anchor = _arena.Point(3f, -2f);
+        MoveSquad(anchor);
+        Assert.IsTrue(RunUntil(() => _fight.Casting));
+        Assert.AreEqual(3, _fight.Telegraphs.Count);
+        var main = _fight.Telegraphs[0];
+        var copy = _fight.Telegraphs[1];
+        Assert.That(new Vector2(main.Cx, main.Cz), Is.EqualTo(anchor));
+        for (int i = 1; i < _fight.Telegraphs.Count; i++)
+        {
+            var zone = _fight.Telegraphs[i];
+            Assert.AreEqual(main.Shape, zone.Shape);
+            Assert.LessOrEqual(Mathf.Abs(Mathf.DeltaAngle(_arena.Yaw, zone.Angle)), 45.01f);
+            for (int j = 0; j < i; j++)
+            {
+                var other = _fight.Telegraphs[j];
+                Assert.GreaterOrEqual(Mathf.Abs(Mathf.DeltaAngle(zone.Angle, other.Angle)), 22.49f);
+                Assert.AreNotEqual(new Vector2(zone.Cx, zone.Cz), new Vector2(other.Cx, other.Cz));
+            }
+            foreach (var u in _fc.Units)
+                Assert.IsFalse(BoneSquadKiting.Core.DangerShapeEval.InDanger(zone.Shape, zone.Cx, zone.Cz, u.X, u.Z, zone.Angle));
+        }
+
+        var p = new Vector2(copy.Cx, copy.Cz);
+        if (_fight.Attack == FrostKnightAttack.Parallel)
+        {
+            var offset = Quaternion.Euler(0f, copy.Angle, 0f) * Vector3.right * ((copy.Shape.Inner + copy.Shape.Outer) * .5f);
+            p += new Vector2(offset.x, offset.z);
+        }
+        MoveSquad(p);
+        Run(main.Remaining * .5f);
+        Assert.AreEqual(anchor, new Vector2(_fight.Telegraphs[0].Cx, _fight.Telegraphs[0].Cz));
+        Assert.AreEqual(_fight.Telegraphs[0].Remaining, _fight.Telegraphs[1].Remaining);
+        Assert.AreEqual(_fight.Telegraphs[0].Remaining, _fight.Telegraphs[2].Remaining);
+        var warned = _fight.Telegraphs.ToArray();
+        int impacts = 0, hits = -1;
+        _fight.OnHit += (attack, cast, hit, lost) =>
+        {
+            impacts++; hits = hit;
+            for (int i = 0; i < warned.Length; i++)
+            {
+                Assert.AreEqual(warned[i].Angle, _fight.Telegraphs[i].Angle);
+                Assert.AreEqual(warned[i].Cx, _fight.Telegraphs[i].Cx);
+                Assert.AreEqual(warned[i].Cz, _fight.Telegraphs[i].Cz);
+            }
+        };
+        Assert.IsTrue(RunUntil(() => !_fight.Casting));
+        Assert.AreEqual(1, impacts);
+        Assert.AreEqual(0, hits);
+    }
+
+    [TestCase(0f, 90f)]
+    [TestCase(.9f, -90f)]
+    public void Charge_WarnsFromTheBossSideAndHitsOnlyTheThreeLanes(float roll, float yaw)
+    {
+        _roll = roll;
+        _arena.Tuning.ChargeShift = 0f;
+        ToPhaseTwoAt(0f, 0f);
+        Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Charging));
+        var cast = _fight.Telegraphs[0];
+        Assert.IsTrue(cast.GrowLanesThroughCast);
+        Assert.That(Mathf.DeltaAngle(yaw + _arena.Yaw, cast.Angle), Is.EqualTo(0f).Within(.01f));
+        var dir = Quaternion.Euler(0, cast.Angle, 0);
+        var origin = new Vector3(cast.Cx, 0, cast.Cz);
+        var start = origin - dir * Vector3.forward * cast.Shape.HalfZ;
+        Assert.That(Vector2.Distance(_boss.Position, new Vector2(start.x, start.z)), Is.LessThan(.01f));
+        Assert.That(cast.Shape.LaneSpacing - 2f * cast.Shape.LaneHalfWidth,
+            Is.EqualTo(_fc.Find("line").Spacing + _arena.Tuning.ChargeGapPadding).Within(.001f));
+        for (int i = 0; i < _fc.Units.Count; i++)
+        {
+            // The five samples alternate between the three lanes and the two gaps.
+            var p = origin + dir * new Vector3(((i + 1) % 5 - 2) * cast.Shape.LaneSpacing * .5f, 0f, cast.Shape.HalfZ * .8f);
+            _fc.Units[i].X = p.x;
+            _fc.Units[i].Z = p.z;
+        }
+        var hp = _fc.Units.ConvertAll(u => u.Hp);
+        Run(cast.Remaining * .5f);
+        for (int i = 0; i < hp.Count; i++) Assert.AreEqual(hp[i], _fc.Units[i].Hp);
+        Assert.IsTrue(RunUntil(() => !_fight.Casting));
+        for (int i = 0; i < _fc.Units.Count; i++)
+            Assert.AreEqual((i + 1) % 5 % 2 == 0, _fc.Units[i].Hp < hp[i], "lane/gap sample " + i);
+    }
+
+    [TestCase(0f, FrostKnightAttack.LethalLeft, -.25f)]
+    [TestCase(.5f, FrostKnightAttack.LethalRight, .25f)]
+    [TestCase(.9f, FrostKnightAttack.LethalCenter, 0f)]
+    public void LethalSlam_CoversHalfTheWidthAndTheFullDepth(float roll, FrostKnightAttack attack, float offset)
+    {
+        _arena.Tuning.AttackOrder = "L";
+        _roll = roll;
+        ToPhaseTwoAt(0f, 0f);
+        Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Slamming));
+        Assert.AreEqual(attack, _fight.Attack);
+        var cast = _fight.Telegraphs[0];
+        var center = _arena.Point(_arena.Size.x * offset, 0f);
+        Assert.That(Vector2.Distance(center, new Vector2(cast.Cx, cast.Cz)), Is.LessThan(.001f));
+        Assert.That(2f * cast.Shape.Outer, Is.EqualTo(_arena.Size.x * .5f));
+        Assert.That(2f * cast.Shape.HalfZ, Is.EqualTo(_arena.Size.y));
+        Assert.AreEqual(BoneSquadKiting.Core.DangerShapeType.Rectangle, cast.Shape.Type);
     }
 
     [Test]

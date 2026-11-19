@@ -17,6 +17,7 @@ namespace BoneSquadKiting.Squad
         public Vector2 Dir;     // which way it is flying
         public float Damage;    // what it deals when it lands, fixed when it is fired
         public float Reserve;   // how much of the target's health was counted on for it
+        public int AttackStreakEpoch;
     }
 
     /// <summary>
@@ -44,6 +45,73 @@ namespace BoneSquadKiting.Squad
         public float DamageMultiplier = 1f;    // applied to shots as they are fired (the near-miss buff); the director sets it
         public float ThreatRadius = 4f;        // a stopped unit shoots mobs this close before anything else
         public float AttackMoveRadius = 4f;    // attack-move prefers mobs this close to the clicked point
+        public bool StationaryRampEnabled;
+        public float SpeedGainPerHit = 0.01f, MaxAttackSpeedMultiplier = 1.25f;
+        public float AttackStreakGraceSeconds = 1f, HitCounterHoldSeconds = 2f;
+        public float MovingSpeedDecayPerSecond = 0.1f;
+        public int ConsecutiveHits { get; private set; }
+        public int HitSerial { get; private set; }
+        public float HitCounterRemaining { get; private set; }
+
+        static void ResetStreak(SquadUnit u)
+        {
+            u.StationaryHits = 0;
+            u.AttackSpeedMultiplier = 1f;
+            u.AtAttackSpeedCap = false;
+            u.AttackStreakGraceLeft = 0f;
+            u.AttackStreakEpoch++;
+        }
+
+        void UpdateStreak(SquadUnit u, EnemyRegistry registry, SquadOrder order, float dt)
+        {
+            if (!StationaryRampEnabled || u.Dead || u.Reviving)
+            { ResetStreak(u); return; }
+            if (!FireRules.CanFire(u, order))
+            {
+                u.StationaryHits = 0;
+                u.AttackStreakEpoch++; // Invalidate projectiles fired before moving.
+                u.AttackStreakGraceLeft = Mathf.Max(0f, AttackStreakGraceSeconds);
+                u.AttackSpeedMultiplier = Mathf.MoveTowards(u.AttackSpeedMultiplier, 1f,
+                    Mathf.Max(0f, MovingSpeedDecayPerSecond) * Mathf.Max(0f, dt));
+                UpdateMultiplier(u);
+                return;
+            }
+            if (u.AttackSpeedMultiplier <= 1f) return;
+            bool attacking = u.PendingTarget is { Alive: true } ||
+                Acquire(u, registry, order, FireRange, ThreatRadius, AttackMoveRadius) != null;
+            if (!attacking)
+                foreach (var shot in Shots)
+                    if (shot.Owner == u.Id && shot.AttackStreakEpoch == u.AttackStreakEpoch && shot.Target is { Alive: true })
+                    { attacking = true; break; }
+            if (attacking) u.AttackStreakGraceLeft = Mathf.Max(0f, AttackStreakGraceSeconds);
+            else u.AttackStreakGraceLeft -= dt;
+            if (!attacking && u.AttackStreakGraceLeft <= 0f) ResetStreak(u);
+            else UpdateMultiplier(u);
+        }
+
+        void UpdateMultiplier(SquadUnit u)
+        {
+            float cap = Mathf.Max(1f, MaxAttackSpeedMultiplier);
+            u.AttackSpeedMultiplier = Mathf.Clamp(u.AttackSpeedMultiplier, 1f, cap);
+            u.AtAttackSpeedCap = cap > 1f && u.AttackSpeedMultiplier >= cap - 0.0001f;
+        }
+
+        void RecordHit(Shot shot, IList<SquadUnit> units)
+        {
+            ConsecutiveHits++;
+            HitSerial++;
+            HitCounterRemaining = Mathf.Max(0.01f, HitCounterHoldSeconds);
+            if (!StationaryRampEnabled) return;
+            foreach (var u in units)
+            {
+                if (u.Id != shot.Owner || u.Dead || u.Moving || u.Reviving || u.AttackStreakEpoch != shot.AttackStreakEpoch) continue;
+                u.StationaryHits++;
+                u.AttackSpeedMultiplier *= 1f + Mathf.Max(0f, SpeedGainPerHit);
+                u.AttackStreakGraceLeft = Mathf.Max(0f, AttackStreakGraceSeconds);
+                UpdateMultiplier(u);
+                break;
+            }
+        }
 
         /// <summary>Updates the animated model's projectile spawn point for one unit.</summary>
         public void SetMuzzlePosition(int owner, Vector3 worldPosition) => _muzzlePositions[owner] = worldPosition;
@@ -81,8 +149,11 @@ namespace BoneSquadKiting.Squad
 
         public void Tick(IList<SquadUnit> units, EnemyRegistry registry, SquadOrder order, float dt)
         {
+            HitCounterRemaining = Mathf.Max(0f, HitCounterRemaining - dt);
+            if (HitCounterRemaining <= 0f) ConsecutiveHits = 0;
             foreach (var u in units)
             {
+                UpdateStreak(u, registry, order, dt);
                 u.AttackInterval = u.IsLeader ? LeaderInterval : UnitInterval;
                 if (u.PendingTarget != null)
                 {
@@ -96,7 +167,11 @@ namespace BoneSquadKiting.Squad
                 var target = Acquire(u, registry, order, FireRange, ThreatRadius, AttackMoveRadius);
                 if (target == null) continue;
                 float interval = u.IsLeader ? LeaderInterval + Random.value * LeaderIntervalRandom : UnitInterval + Random.value * UnitIntervalRandom;
-                u.Cd = Mathf.Max(interval, u.AttackDuration);     // never sooner than its attack motion allows
+                float speed = u.AttackSpeedMultiplier;
+                float naturalDuration = u.AttackDuration * u.AttackCycleSpeed;
+                float naturalWindup = u.AttackWindup * u.AttackCycleSpeed;
+                u.AttackCycleSpeed = speed;
+                u.Cd = Mathf.Max(interval / speed, naturalDuration / speed);
                 u.PendingReserve = u.IsLeader ? LeaderDamage : UnitDamage;
                 target.Reserved += u.PendingReserve;
                 u.Facing = (target.Pos - new Vector2(u.X, u.Z)).normalized;   // turn to face what it shoots
@@ -104,7 +179,7 @@ namespace BoneSquadKiting.Squad
                 u.PendingTarget = target;
                 // A visible model releases on its animation event. A culled Animator can
                 // skip events, so finish the wind-up at the end of that attack as a fallback.
-                u.WindupLeft = u.HasReleaseEvent ? u.AttackDuration : u.AttackWindup;
+                u.WindupLeft = (u.HasReleaseEvent ? naturalDuration : naturalWindup) / speed;
                 if (u.AttackWindup <= 0f) ReleasePending(u);
             }
 
@@ -127,6 +202,7 @@ namespace BoneSquadKiting.Squad
                     OnTargetHit?.Invoke(s);
                     Release(s);
                     (s.Target as IDamageable)?.ApplyDamage(s.Damage);
+                    if (s.Damage > 0f) RecordHit(s, units);
                     OnHit?.Invoke(s.Damage);
                     Shots.RemoveAt(i);
                     continue;
@@ -148,7 +224,7 @@ namespace BoneSquadKiting.Squad
             var target = u.PendingTarget;
             if (target == null) return;
             u.PendingTarget = null;
-            if (u.Dead || target is not { Alive: true }) { ReleaseReserve(target, u.PendingReserve); return; }
+            if (u.Dead || u.Reviving || target is not { Alive: true }) { ReleaseReserve(target, u.PendingReserve); return; }
             var dir = (target.Pos - new Vector2(u.X, u.Z)).normalized;
             bool hasMuzzle = _muzzlePositions.TryGetValue(u.Id, out var muzzle);
             var start = hasMuzzle
@@ -162,6 +238,7 @@ namespace BoneSquadKiting.Squad
                 HasWorldOrigin = hasMuzzle,
                 Life = GameConstants.ShotLife, Owner = u.Id, Target = target, Heavy = u.IsLeader, Dir = dir,
                 Damage = u.PendingReserve * DamageMultiplier, Reserve = u.PendingReserve,
+                AttackStreakEpoch = u.AttackStreakEpoch,
             });
             OnLaunched?.Invoke(Shots[Shots.Count - 1]);
         }

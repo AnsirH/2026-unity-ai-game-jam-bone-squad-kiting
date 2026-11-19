@@ -107,6 +107,8 @@ namespace BoneSquadKiting.EditorTools
             var camGo = new GameObject("Game Camera") { tag = "MainCamera" }; Under(camGo);
             var cam = camGo.AddComponent<Camera>();
             camGo.AddComponent<AudioListener>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
             cam.orthographic = false; cam.fieldOfView = A.CameraFov;
             cam.nearClipPlane = 0.3f; cam.farClipPlane = 300f;
             camGo.transform.rotation = Quaternion.Euler(A.CameraPitch, 180f + A.CameraYaw, 0f);

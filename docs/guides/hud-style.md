@@ -20,3 +20,13 @@
 한글은 `Assets/Art/UI/Fonts/NotoSerifKR-Regular.otf`, 영문 제목은
 `Cinzel-Regular.ttf`를 사용한다. 같은 폴더에 각 OFL 라이선스를 보관한다.
 메인 메뉴의 제목과 버튼에도 같은 폰트와 버튼 아트를 사용한다.
+
+## 메인 메뉴 직접 편집
+
+`MainMenu.unity`의 Main Menu Canvas는 씬에 저장된 uGUI다.
+Widgets 아래 Title과 New Game / Continue / Quit 버튼의 RectTransform, Image,
+Text를 직접 편집한다. Fade는 화면 전환용이므로 Widgets 바깥에 유지한다.
+버튼의 On Click에는 MainMenu의 NewGame / Continue / Quit이 저장되어 있다.
+실행 시 저장된 Canvas가 있으면 다시 만들거나 스타일을 덮어쓰지 않는다.
+이어하기 활성화와 화면 전환 페이드만 게임 상태에 맞춰 갱신한다.
+Canvas가 없는 이전 씬과 테스트는 기존 생성 경로를 사용한다.

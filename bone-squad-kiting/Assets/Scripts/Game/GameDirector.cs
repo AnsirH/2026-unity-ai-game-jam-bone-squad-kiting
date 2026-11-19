@@ -376,6 +376,12 @@ namespace BoneSquadKiting.Game
                 Shots.ThreatRadius = Tuning.ThreatRadius; Shots.AttackMoveRadius = Tuning.AttackMoveRadius;
                 Shots.UnitDamage = Tuning.UnitDamage; Shots.UnitInterval = Tuning.UnitAttackInterval; Shots.UnitIntervalRandom = Tuning.UnitAttackIntervalRandom;
                 Shots.LeaderDamage = Tuning.LeaderDamage; Shots.LeaderInterval = Tuning.LeaderAttackInterval; Shots.LeaderIntervalRandom = Tuning.LeaderAttackIntervalRandom;
+                Shots.StationaryRampEnabled = Tuning.StationaryRampEnabled;
+                Shots.SpeedGainPerHit = Tuning.SpeedGainPerHit;
+                Shots.MaxAttackSpeedMultiplier = Tuning.MaxAttackSpeedMultiplier;
+                Shots.MovingSpeedDecayPerSecond = Tuning.MovingSpeedDecayPerSecond;
+                Shots.AttackStreakGraceSeconds = Tuning.AttackStreakGraceSeconds;
+                Shots.HitCounterHoldSeconds = Tuning.HitCounterHoldSeconds;
             }
             if (Revives != null) Revives.AppearRadius = Tuning.ReviveAppearRadius;
             if (Mobs != null) { Mobs.SwitchDistance = Tuning.MobSwitchDistance; Mobs.MaxAlive = Tuning.MobMaxAlive; }

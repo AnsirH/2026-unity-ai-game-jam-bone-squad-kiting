@@ -22,15 +22,16 @@ namespace BoneSquadKiting.Bosses
         public float ThroneAttackGap = 1.2f;
         public float HitDamage = 55f;
         [Tooltip("The two parallel lines: each line's near and far edge from the middle, and half its length.")]
-        public float ParallelInner = 2f;
-        public float ParallelOuter = 6.5f;
-        public float ParallelHalfLength = 20f;
+        public float ParallelInner = 0.9f;
+        public float ParallelOuter = 3.3f;
+        public float ParallelHalfLength = 6f;
         [Tooltip("The lines are turned by up to this many degrees either way, anew for every attack.")]
-        public float ParallelMaxAngle = 40f;
-        [Tooltip("The circle is dodged with the ring formation (E): keep it smaller than the ring's radius (3.7).")]
+        public float ParallelMaxAngle = 45f;
+        [Tooltip("Circle radius when squad scaling is off or the squad has no ring formation.")]
         public float CircleRadius = 3.1f;
         [Tooltip("The circle shrinks as the squad does, the same way the ring formation does, so the ring keeps dodging it.")]
         public bool CircleScalesWithSquad = true;
+        [Range(.1f, .99f)] public float CircleRingRatio = .9f;
 
         [Header("Between the phases: the mages")]
         public EliteDefinition[] Mages = new EliteDefinition[0];
@@ -45,9 +46,10 @@ namespace BoneSquadKiting.Bosses
         public float AttackGap = 1.2f;
         [Tooltip("How fast the charged slash plays. Its sword lands 7 seconds into the motion at speed 1.")]
         public float ChargeAnimSpeed = 1.5f;
-        [Tooltip("The two rows of the charge: each row's width, and how far its middle is from the line between them.")]
+        [Tooltip("Width of each of the three horizontal charge lanes.")]
         public float ChargeRowWidth = 5f;
-        public float ChargeRowOffset = 5.5f;
+        [Tooltip("Extra clearance beyond the line formation's soldier spacing between adjacent lanes.")]
+        [Min(0f)] public float ChargeGapPadding = .12f;
         [Tooltip("The pair of rows is moved up or down the room by up to this much, anew for every charge.")]
         public float ChargeShift = 3f;
         [Tooltip("While it hangs in the air with the sword raised, the squad can hit it: from when it has appeared until the sword comes down.")]
@@ -55,7 +57,7 @@ namespace BoneSquadKiting.Bosses
         [Tooltip("Warning time of the lethal slam.")]
         public float LethalWarnSeconds = 2.4f;
         [Tooltip("The middle zone of the lethal slam is this share of the room's width.")]
-        [Range(0.1f, 0.9f)] public float LethalCenterShare = 1f / 3f;
+        [Range(0.1f, 0.9f)] public float LethalCenterShare = .5f;
         [Tooltip("If the squad leader stands in the lethal zone, the whole squad falls.")]
         public bool LethalKillsLeader = true;
         public float LethalHoldSeconds = 1f;

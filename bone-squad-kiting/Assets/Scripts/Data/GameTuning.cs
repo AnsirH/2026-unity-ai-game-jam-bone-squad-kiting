@@ -40,6 +40,14 @@ namespace BoneSquadKiting.Data
         [Min(0.05f)] public float LeaderAttackInterval = 1.35f;  // seconds from one throw to the next; shorter than the throw animation = the animation plays faster
         [Min(0f)] public float LeaderAttackIntervalRandom = 0f;
 
+        [Header("Stationary attack streak")]
+        public bool StationaryRampEnabled = true;
+        [Min(0f)] public float SpeedGainPerHit = 0.01f;
+        [Min(1f)] public float MaxAttackSpeedMultiplier = 1.25f;
+        [Min(0f)] public float MovingSpeedDecayPerSecond = 0.1f;
+        [Min(0f)] public float AttackStreakGraceSeconds = 1f;
+        [Min(0.1f)] public float HitCounterHoldSeconds = 2f;
+
         [Header("Near miss")]
         [Min(0f)] public float NearMissMargin = 1f;           // a zone that catches nobody, with a unit this close outside its edge = near miss (0 = off)
         [Min(1f)] public float NearMissDamageMultiplier = 1.2f; // the squad's damage while the near-miss buff lasts
@@ -47,7 +55,7 @@ namespace BoneSquadKiting.Data
 
         [Header("Revive")]
         [Min(0.1f)] public float ReviveSeconds = 3f;
-        [Min(0f)] public float ReviveAppearRadius = 0.6f; // revived units appear this far from the formation's center
+        [Min(0f)] public float ReviveAppearRadius = 0.6f; // revived units appear this far from the reviver
 
         [Header("Camera")]
         [Min(0f)] public float CameraScrollSpeed = 14f;   // world units per second at a screen edge

@@ -5,6 +5,8 @@ Shader "BoneSquad/Vertical Sovereign Slash"
         [HDR] _Edge ("Haki edge", Color) = (0.025,0.40,1.35,1)
         _Windup ("Telegraph before strike (s)", Float) = 1.15
         _StrikeDuration ("Strike and wake (s)", Float) = 0.4
+        _GroundMarkLift ("Ground mark lift (world metres)", Float) = 0
+        _ExtraTravel ("Added travel (local metres)", Float) = 0
         _Elapsed ("Strike time override (s, -1 = loop)", Float) = -1
     }
     SubShader
@@ -23,7 +25,7 @@ Shader "BoneSquad/Vertical Sovereign Slash"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Edge;
-                float _Windup, _StrikeDuration, _Elapsed;
+                float _Windup, _StrikeDuration, _Elapsed, _GroundMarkLift, _ExtraTravel;
             CBUFFER_END
 
             struct Input { float3 pos : POSITION; float2 uv : TEXCOORD0; float2 part : TEXCOORD1; };
@@ -39,7 +41,7 @@ Shader "BoneSquad/Vertical Sovereign Slash"
             {
                 // A brief gathering motion, then a single decisive stroke.
                 float t=saturate((age-0.095)/0.59);
-                return (1-pow(1-t,1.45))*8.47+0.34;
+                return (1-pow(1-t,1.45))*(8.47 + _ExtraTravel)+0.34;
             }
             float Envelope(float age)
             {
@@ -82,7 +84,7 @@ Shader "BoneSquad/Vertical Sovereign Slash"
                 float3 p;
                 float3 ribbonOffsetWS=0;
                 if(v.part.x<0.5)
-                    p=float3(v.pos.x*3,0.035,(v.pos.y+0.5)*10);
+                    p=float3(v.pos.x*3,0.035,(v.pos.y+0.5)*(10 + _ExtraTravel));
                 else if(v.part.x<1.5)
                     p=Crest(v.uv.x,v.uv.y,a);
                 else
@@ -121,7 +123,9 @@ Shader "BoneSquad/Vertical Sovereign Slash"
                     p.xy = float2(p.x, p.y - midspan) * 3;
                     p.z = nose + (p.z - nose) * 3;
                 }
-                o.pos=TransformWorldToHClip(WorldUprightPosition(p)+ribbonOffsetWS);
+                float3 world = WorldUprightPosition(p) + ribbonOffsetWS;
+                if (v.part.x < .5) world.y += _GroundMarkLift;
+                o.pos = TransformWorldToHClip(world);
                 return o;
             }
             half4 Frag(Output i):SV_Target
@@ -131,7 +135,7 @@ Shader "BoneSquad/Vertical Sovereign Slash"
                 float2 uv=i.uv;
                 if(i.part.x<0.5)
                 {
-                    float z=uv.y*10;
+                    float z=uv.y*(10 + _ExtraTravel);
                     float lag=Head(a)-z;
                     float x=uv.x*2-1 + 0.22*sin(uv.y*5)-0.14;
                     float wake=smoothstep(-0.22,0.33,lag)*exp(-0.59*max(lag,0))*(1-smoothstep(0.66,1,a));
@@ -142,7 +146,7 @@ Shader "BoneSquad/Vertical Sovereign Slash"
                     float ink=1-smoothstep(-feather,feather,distance);
                     float emission=exp(-abs(distance)/(0.052+0.026*(0.5+0.5*weathering)));
                     // Fade both light and ink to zero before the floor quad ends.
-                    float endDistance=min(z,10.0-z);
+                    float endDistance=min(z,10.0 + _ExtraTravel-z);
                     float endFade=smoothstep(0.02,1.15+0.27*weathering,endDistance);
                     float sideFade=smoothstep(0,0.16,1-abs(uv.x*2-1));
                     float dissolve=saturate(0.76+0.22*weathering-0.12*max(lag,0));

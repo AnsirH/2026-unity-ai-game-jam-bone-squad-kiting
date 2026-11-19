@@ -25,6 +25,21 @@ MonoBehaviour:
   RotationStepDegrees: 15
   RotationSpeed: 0
   SeatSize: 0.5
+  UnitDamage: 33
+  UnitAttackInterval: 0.76
+  UnitAttackIntervalRandom: 0.16
+  LeaderDamage: 33
+  LeaderAttackInterval: 1.35
+  LeaderAttackIntervalRandom: 0
+  StationaryRampEnabled: 1
+  SpeedGainPerHit: 0.05
+  MaxAttackSpeedMultiplier: 2
+  MovingSpeedDecayPerSecond: 0.1
+  AttackStreakGraceSeconds: 1
+  HitCounterHoldSeconds: 2
+  NearMissMargin: 1
+  NearMissDamageMultiplier: 1.2
+  NearMissBuffSeconds: 5
   ReviveSeconds: 3
   ReviveAppearRadius: 0.6
   CameraScrollSpeed: 14

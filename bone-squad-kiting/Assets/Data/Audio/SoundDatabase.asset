@@ -14,22 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Audio.SoundDatabaseSO
   Bgm:
   - Id: bgm.stage
-    Clip: {fileID: 8300000, guid: 43fde3f11e324be6a3bc65b70a6b5c0b, type: 3}
+    Clip: {fileID: 8300000, guid: d421faf4ead5c4d9c8efbfab242bff69, type: 3}
     Volume: 1
     Pitch: 1
     Loop: 1
   - Id: bgm.boss
-    Clip: {fileID: 8300000, guid: 2af71363746b4d5f900a611a9d13f286, type: 3}
+    Clip: {fileID: 8300000, guid: 37757c0bffcfe421f93ba4de60f8fa5b, type: 3}
     Volume: 1
     Pitch: 1
     Loop: 1
   - Id: bgm.stage2
-    Clip: {fileID: 8300000, guid: 59f5ce8168384023a1ade9245dfb14fa, type: 3}
+    Clip: {fileID: 8300000, guid: 2f4c185201189462bbaa09c1e436de52, type: 3}
     Volume: 1
     Pitch: 1
     Loop: 1
   - Id: bgm.stage3
-    Clip: {fileID: 8300000, guid: 2ad165df27964183a532171dab36511f, type: 3}
+    Clip: {fileID: 8300000, guid: f91a33e1793164804a336d276727e3a3, type: 3}
     Volume: 1
     Pitch: 1
     Loop: 1
@@ -128,72 +128,72 @@ MonoBehaviour:
     Clip: {fileID: 8300000, guid: 343acfd835f046dfb8b2d354dabda844, type: 3}
     Volume: 1
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.077
   - Id: boss.spinningblade.flight
     Clip: {fileID: 8300000, guid: 8799258e14ec45229b4955dc2045552e, type: 3}
     Volume: 1
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.047
   - Id: boss.greatsword.summon
     Clip: {fileID: 8300000, guid: 8b3b1f70dc4f429e9a22813e53f3de8e, type: 3}
     Volume: 1
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.029
   - Id: boss.greatsword.fall
     Clip: {fileID: 8300000, guid: e2e6ef6d9ca54d43982051a0a8da20f9, type: 3}
     Volume: 1
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.092
   - Id: boss.greatsword.impact
     Clip: {fileID: 8300000, guid: 1566a56564544f4c8ce8a3cad8387d2d, type: 3}
     Volume: 1
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.029
   - Id: boss.frostknight.wake
     Clip: {fileID: 8300000, guid: 8da5e09cb00ea4d4bb35b1df7d97dc0c, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.008
   - Id: boss.frostknight.stun
     Clip: {fileID: 8300000, guid: 74072ef4046366a479c607397133120d, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.008
   - Id: boss.frostknight.rise
     Clip: {fileID: 8300000, guid: 27d67465eab55ed4990d7f7661a8b2e4, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.008
   - Id: boss.frostknight.vanish
     Clip: {fileID: 8300000, guid: 2024c569ff15c2046ba6db9a159bf306, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.009
   - Id: boss.frostknight.appear
     Clip: {fileID: 8300000, guid: 3029c523711a2e141b55c7fa313e81b9, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.007
   - Id: boss.frostknight.groggy
     Clip: {fileID: 8300000, guid: 5bb10dc03b111894593e43924b7bf2f0, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.008
   - Id: boss.frostknight.death
     Clip: {fileID: 8300000, guid: 7d3278f19b4b81f49b6d405511f2c8a9, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.007
   - Id: boss.frostknight.lethal.warn
     Clip: {fileID: 8300000, guid: 0a4bd451ddb49cf4ea1c883d888c86e8, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.008
   - Id: boss.frostknight.lethal.hit
     Clip: {fileID: 8300000, guid: 5969a00a9bd83df419449285028965c3, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.008
   - Id: menu.handburst
     Clip: {fileID: 8300000, guid: 29c435a94e2fcd245bbb46d7ee452cad, type: 3}
     Volume: 0.9

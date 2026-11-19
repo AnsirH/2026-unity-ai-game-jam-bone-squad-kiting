@@ -390,8 +390,8 @@ Camera:
   m_GameObject: {fileID: 318079741}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -662,6 +662,8 @@ MonoBehaviour:
   StandUpLength: 2.96
   HitFlashColor: {r: 4, g: 2.5, b: 2, a: 1}
   CircleEffect: {fileID: 6647809229688299808, guid: c4e98c5328c9a4c94b12b57c9c9f6fd6, type: 3}
+  ParallelEffect: {fileID: 4408081742562068648, guid: d71b374703d6044c691a56dbe45124c1, type: 3}
+  ChargeEffect: {fileID: 1691126983758613950, guid: df4a5ad44ace74a8e88214c76d866ebe, type: 3}
   CircleEffectLead: 1.51
   CircleEffectScale: 1
   HitShake: 0.3
@@ -879,6 +881,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6764279492198106617, guid: 6d089e8447aad4f8d9eb81ca852cde8f, type: 3}
+      propertyPath: Lamps.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6834563302514901565, guid: 6d089e8447aad4f8d9eb81ca852cde8f, type: 3}
       propertyPath: m_Name
       value: BossStage
@@ -976,7 +982,7 @@ MonoBehaviour:
     UseSceneLight: 1
   - Map: {fileID: 5653229164141259420}
     Title: "\uC2A4\uD14C\uC774\uC9C0 2"
-    BgmId: bgm.stage
+    BgmId: bgm.stage2
     WavePlan: {fileID: 11400000, guid: 70b73692317644dbac65329d413d92ba, type: 2}
     ClearRule: 1
     CameraYaw: 0
@@ -984,12 +990,12 @@ MonoBehaviour:
     UseSceneLight: 1
   - Map: {fileID: 774998199}
     Title: "\uBCF4\uC2A4 \uC2A4\uD14C\uC774\uC9C0"
-    BgmId: bgm.stage
+    BgmId: bgm.boss
     WavePlan: {fileID: 0}
     ClearRule: 1
     CameraYaw: 0
     Volume: {fileID: 11400000, guid: 8a4e719be28054c17b8eb09aae618abc, type: 2}
-    UseSceneLight: 0
+    UseSceneLight: 1
   StartStage: 0
   NextScene: 
   FadeSeconds: 0.35
@@ -1692,12 +1698,13 @@ MonoBehaviour:
     SlamRecoverSeconds: 1.7
     ThroneAttackGap: 1.2
     HitDamage: 55
-    ParallelInner: 2
-    ParallelOuter: 6.5
-    ParallelHalfLength: 20
-    ParallelMaxAngle: 40
+    ParallelInner: 0.9
+    ParallelOuter: 3.3
+    ParallelHalfLength: 6
+    ParallelMaxAngle: 45
     CircleRadius: 3.1
     CircleScalesWithSquad: 1
+    CircleRingRatio: 0.9
     Mages:
     - {fileID: 11400000, guid: 6cb51b2f29645bf4b927c6ad2fa3b4c7, type: 2}
     MageDelay: 1.2
@@ -1706,11 +1713,11 @@ MonoBehaviour:
     AttackGap: 1.2
     ChargeAnimSpeed: 1.5
     ChargeRowWidth: 5
-    ChargeRowOffset: 5.5
+    ChargeGapPadding: 0.12
     ChargeShift: 3
     ChargeCanBeHit: 1
     LethalWarnSeconds: 2.4
-    LethalCenterShare: 0.33333334
+    LethalCenterShare: 0.5
     LethalKillsLeader: 1
     LethalHoldSeconds: 1
     VanishSeconds: 1.3

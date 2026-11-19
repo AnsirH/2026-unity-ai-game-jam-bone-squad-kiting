@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d68da17a738eb14992010ba70e4a951, type: 3}
   m_Name: ArtSet
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.ArtSet
+  AttackSpeedBuffPrefab: {fileID: 4471849615418652561, guid: 0bc7bc578567b48d09efd817cfae1179, type: 3}
+  ShowAttackSpeedBuff: 1
+  AttackSpeedBuffHeight: 0.02
+  AttackSpeedBuffScale: 0.69
   EnemyDeath:
     Clip: {fileID: -203655887218126122, guid: d65b870de756af14e917c741d87cd058, type: 3}
     MirroredClip: {fileID: 4061839508520268033, guid: d65b870de756af14e917c741d87cd058, type: 3}
@@ -50,6 +54,9 @@ MonoBehaviour:
     CrossFade: 0.1
   ModelYawOffset: 0
   TurnSpeed: 720
+  ReviveDust: {fileID: 8844080749097364051, guid: 21a0317efd762480eb1b0f80f79dec96, type: 3}
+  UnitRescueMaterial: {fileID: 2100000, guid: f86bc33701a264ecaad6c4f652eede45, type: 2}
+  LeaderRescueMaterial: {fileID: 2100000, guid: eda3b8930ef244dc0a4d38a68b3de8dd, type: 2}
   BrokenBone: {fileID: 9083058239018853882, guid: 105677d0d9c44446dbc900ba9d405dfa, type: 3}
   Vertebra: {fileID: 1499199010896837509, guid: 59a4cedf172084107ba57d9b5123a3df, type: 3}
   Scapula: {fileID: 8691304082095538948, guid: 25359886137df4b439c91988e62ed507, type: 3}
