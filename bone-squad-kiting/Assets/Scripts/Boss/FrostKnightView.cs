@@ -126,6 +126,7 @@ namespace BoneSquadKiting.Bosses
 
             Place(fight);
             if (_serial != fight.AnimSerial) PlayMotion(fight);
+            else if (fight.State == FrostKnightState.Charging && Animator != null) Animator.speed = fight.AnimSpeed;
             if (_collider != null) _collider.enabled = fight.Targetable;
             UpdateArmor(fight);
 
@@ -350,7 +351,7 @@ namespace BoneSquadKiting.Bosses
             {
                 bool contact = _fight.State == FrostKnightState.Groggy && _fight.StateTime >= GroggyDropSeconds;
                 // In ChargedSlash the foot touches down at 6.8 seconds, just before release at 7.
-                if (_fight.State == FrostKnightState.Charging && _fight.StateTime * _fight.AnimSpeed >= 6.8f)
+                if (_fight.State == FrostKnightState.Charging && (!_fight.Casting || _fight.StateTime * _fight.AnimSpeed >= 6.8f))
                     contact = true;
                 if (contact)
                 {

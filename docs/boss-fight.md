@@ -38,9 +38,9 @@
 | `Hit Damage` | 즉사가 아닌 공격의 피해 | 55 |
 | `Mages` / `Mage Delay` | 등장하는 마법사 목록, 기절 후 등장까지 시간 | 2마리 / 1.2초 |
 | `Attack Order` | 그로기 사이의 공격 순서. C = 차징, L = 즉사 | `CCLC` |
-| `Charge Anim Speed` | 차징 모션 속도. 1이면 7초 뒤에 검이 닿는다 | 1.5 (약 4.7초) |
+| `Charge Anim Speed` | 차징 모션 기본 속도. 검이 닿기 전 구간의 재생 시간은 70%이고, 이후에는 기본 속도로 재생한다 | 1.5 (약 3.27초 후 발사) |
 | `Charge Can Be Hit` | 차징 중 공중에서 검을 든 동안(모습을 드러낸 뒤부터 베기 전까지) 공격할 수 있음 | 켜짐 |
-| `Charge Row Width/Offset/Shift` | 한 줄의 폭, 두 줄 사이 중심선에서 줄 중심까지 거리, 매번 위아래로 옮기는 최대 거리 | 5 / 5.5 / 3 |
+| `Charge Row Width/Gap Padding/Shift` | 한 줄의 폭, 일자 진형 병사 간격에 더하는 여유, 위아래 이동 한계. 차징 세 줄 사이의 각 통로는 (병사 간격 + 여유)의 두 배 | 5 / 0.12 / 3 (기본 통로 폭 1.22m) |
 | `Lethal Warn Seconds` / `Lethal Center Share` | 즉사 경고 시간, 가운데 구역의 폭 비율 | 2.4초 / 50% |
 | `Lethal Kills Leader` | 분대장이 즉사 범위에 있으면 분대 전체가 쓰러짐 | 켜짐 |
 | `Groggy Seconds` | 그로기 시간 | 6초 |

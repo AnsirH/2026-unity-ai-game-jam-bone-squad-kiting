@@ -233,13 +233,15 @@ public class FrostKnightFightTests
         Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Charging));
         var cast = _fight.Telegraphs[0];
         Assert.IsTrue(cast.GrowLanesThroughCast);
+        float baseSpeed = _arena.Tuning.ChargeAnimSpeed;
+        Assert.That(cast.Pattern.Time, Is.EqualTo(.7f * FrostKnightFight.ChargeHitAt / baseSpeed).Within(.001f));
         Assert.That(Mathf.DeltaAngle(yaw + _arena.Yaw, cast.Angle), Is.EqualTo(0f).Within(.01f));
         var dir = Quaternion.Euler(0, cast.Angle, 0);
         var origin = new Vector3(cast.Cx, 0, cast.Cz);
         var start = origin - dir * Vector3.forward * cast.Shape.HalfZ;
         Assert.That(Vector2.Distance(_boss.Position, new Vector2(start.x, start.z)), Is.LessThan(.01f));
         Assert.That(cast.Shape.LaneSpacing - 2f * cast.Shape.LaneHalfWidth,
-            Is.EqualTo(_fc.Find("line").Spacing + _arena.Tuning.ChargeGapPadding).Within(.001f));
+            Is.EqualTo(2f * (_fc.Find("line").Spacing + _arena.Tuning.ChargeGapPadding)).Within(.001f));
         for (int i = 0; i < _fc.Units.Count; i++)
         {
             // The five samples alternate between the three lanes and the two gaps.
@@ -251,6 +253,7 @@ public class FrostKnightFightTests
         Run(cast.Remaining * .5f);
         for (int i = 0; i < hp.Count; i++) Assert.AreEqual(hp[i], _fc.Units[i].Hp);
         Assert.IsTrue(RunUntil(() => !_fight.Casting));
+        Assert.That(_fight.AnimSpeed, Is.EqualTo(baseSpeed).Within(.001f));
         for (int i = 0; i < _fc.Units.Count; i++)
             Assert.AreEqual((i + 1) % 5 % 2 == 0, _fc.Units[i].Hp < hp[i], "lane/gap sample " + i);
     }

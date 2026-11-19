@@ -44,11 +44,11 @@ namespace BoneSquadKiting.Bosses
         [Tooltip("Attacks between two groggy moments, in order. C = charge across, L = lethal slam.")]
         public string AttackOrder = "CCLC";
         public float AttackGap = 1.2f;
-        [Tooltip("How fast the charged slash plays. Its sword lands 7 seconds into the motion at speed 1.")]
+        [Tooltip("Base playback speed of the charged slash. Windup takes 70% of its normal duration; recovery plays at base speed.")]
         public float ChargeAnimSpeed = 1.5f;
         [Tooltip("Width of each of the three horizontal charge lanes.")]
         public float ChargeRowWidth = 5f;
-        [Tooltip("Extra clearance beyond the line formation's soldier spacing between adjacent lanes.")]
+        [Tooltip("Added to the line formation's soldier spacing before doubling the gap between charge lanes.")]
         [Min(0f)] public float ChargeGapPadding = .12f;
         [Tooltip("The pair of rows is moved up or down the room by up to this much, anew for every charge.")]
         public float ChargeShift = 3f;

@@ -33,6 +33,7 @@ namespace BoneSquadKiting.Bosses
     {
         // Lengths of the model's motions at speed 1, and when the sword lands in them.
         public const float ChargeHitAt = 7f, ChargeLength = 7.67f, PlantHitAt = 0.25f, DieLength = 9.58f;
+        const float ChargeWindupScale = .7f;
         const float PlantLead = 0.3f;          // the boss shows up this long before the plant motion starts
 
         public readonly Boss Boss;
@@ -164,8 +165,10 @@ namespace BoneSquadKiting.Bosses
                     break;
 
                 case FrostKnightState.Charging:
-                    if (!_casting) SetTargetable(false);
-                    if (!_casting && StateTime >= ChargeLength / Mathf.Max(0.1f, Tuning.ChargeAnimSpeed)) Hide();
+                    if (_casting) break;
+                    SetTargetable(false);
+                    AnimSpeed = Mathf.Max(0.1f, Tuning.ChargeAnimSpeed);
+                    if (StateTime >= _cast.Pattern.Time + (ChargeLength - ChargeHitAt) / AnimSpeed) Hide();
                     break;
 
                 case FrostKnightState.Slamming:
@@ -362,11 +365,12 @@ namespace BoneSquadKiting.Bosses
             float side = fromLeft ? -1f : 1f;
             Boss.Position = Point(side * (_size.x * 0.5f - 1f), shift);
             Boss.Facing = _yaw + (fromLeft ? 90f : -90f);                       // looks across the room
-            float speed = Mathf.Max(0.1f, Tuning.ChargeAnimSpeed);
+            float speed = Mathf.Max(0.1f, Tuning.ChargeAnimSpeed) / ChargeWindupScale;
             SetTargetable(Tuning.ChargeCanBeHit);
             Play("ChargedSlash", speed);
             var line = _squad.Find("line");
-            float gap = (line != null ? line.Spacing : .49f) + Tuning.ChargeGapPadding;
+            float soldierSpacing = line != null ? line.Spacing : .49f;
+            float gap = 2f * (soldierSpacing + Tuning.ChargeGapPadding);
             var shape = new DangerShape
             {
                 Type = DangerShapeType.ThreeLanes, LaneHalfWidth = Tuning.ChargeRowWidth * .5f,
