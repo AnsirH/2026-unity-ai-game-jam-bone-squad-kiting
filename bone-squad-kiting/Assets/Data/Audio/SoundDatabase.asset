@@ -239,43 +239,48 @@ MonoBehaviour:
     Volume: 0.6
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.1
+  - Id: squad.footstep.dirt.1
     Clip: {fileID: 8300000, guid: 98ec019822b2e754fb772f3a2fe3efcc, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.2
+  - Id: squad.footstep.dirt.2
     Clip: {fileID: 8300000, guid: 18978d4f7b0dc804884333ce4ea662e2, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.3
+  - Id: squad.footstep.dirt.3
     Clip: {fileID: 8300000, guid: 42328452af739e941bf3d06cf8205b89, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.4
-    Clip: {fileID: 8300000, guid: 919bce2023db541419badbb810f2bc31, type: 3}
+  - Id: squad.footstep.grass.1
+    Clip: {fileID: 8300000, guid: 79cbfa37712700d4aba17bf404593331, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.5
-    Clip: {fileID: 8300000, guid: d90e0cd2b7416fc4a87aa2c959eeaf9e, type: 3}
+  - Id: squad.footstep.grass.2
+    Clip: {fileID: 8300000, guid: cd2d672557631694395869bd8650f023, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.6
-    Clip: {fileID: 8300000, guid: 190bef6ee96c89941bd0a17443260245, type: 3}
+  - Id: squad.footstep.grass.3
+    Clip: {fileID: 8300000, guid: c8ca84b078694264b86a126890a4c09d, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.7
-    Clip: {fileID: 8300000, guid: 65ee9176a1790bb4ba61dfb3a6baff59, type: 3}
+  - Id: squad.footstep.brick.1
+    Clip: {fileID: 8300000, guid: d71b8b5cf887a9044bb99a1cb5e268db, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0
-  - Id: squad.footstep.8
-    Clip: {fileID: 8300000, guid: 97734435ebe987c47bda095bce74a151, type: 3}
+  - Id: squad.footstep.brick.2
+    Clip: {fileID: 8300000, guid: a7430a84cb034ad4bb1bbef195aa4d41, type: 3}
+    Volume: 0.3
+    Pitch: 1
+    StartOffset: 0
+  - Id: squad.footstep.brick.3
+    Clip: {fileID: 8300000, guid: 75feb91481c798a43940be17304c62c2, type: 3}
     Volume: 0.3
     Pitch: 1
     StartOffset: 0

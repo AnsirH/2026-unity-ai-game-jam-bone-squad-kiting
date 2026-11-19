@@ -496,7 +496,7 @@ namespace BoneSquadKiting.Game
 
             var anchorBefore = Squad.Anchor;
             Squad.Tick(dt);
-            _footsteps.Tick((Squad.Anchor - anchorBefore).magnitude, dt);
+            _footsteps.Tick((Squad.Anchor - anchorBefore).magnitude, dt, Squad.Anchor, Run?.CurrentEntry?.Footsteps ?? FootstepSurface.Dirt);
 
             if (Waves != null)
             {
