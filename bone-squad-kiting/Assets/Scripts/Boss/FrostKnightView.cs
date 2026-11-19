@@ -35,9 +35,9 @@ namespace BoneSquadKiting.Bosses
         public float ShakeSeconds = 0.35f;
 
         [Header("Sounds (ids in the sound database; an empty or unknown id plays nothing)")]
-        [Tooltip("The sword is summoned: a throne attack or a charge begins.")]
+        [Tooltip("The greatsword appears.")]
         public string CastSound = "boss.greatsword.summon";
-        [Tooltip("Any attack lands.")]
+        [Tooltip("The falling greatsword strikes the ground.")]
         public string HitSound = "boss.greatsword.impact";
         [Tooltip("The circle attack's sword starts to fall.")]
         public string CircleFallSound = "boss.greatsword.fall";
@@ -60,6 +60,7 @@ namespace BoneSquadKiting.Bosses
         FrostKnightFight _fight;
         int _serial = -1;
         bool _circleShown;
+        float _previousRemaining;
         Renderer _body;
         MaterialPropertyBlock _block;
         HitFlash _flash;
@@ -97,12 +98,14 @@ namespace BoneSquadKiting.Bosses
             if (_collider != null) _collider.enabled = fight.Targetable;
             if (_body != null) _flash.Apply(_body, _block, fight.Boss.Flash, HitFlashColor);
 
+            if (fight.Casting && fight.Telegraphs.Count > 0)
+                PlayCastSounds(fight.Attack, fight.Telegraphs[0].Remaining);
+
             // The falling sword has its own time to impact: start it that long before the circle goes off.
             if (!_circleShown && CircleEffect != null && fight.Casting && fight.Attack == FrostKnightAttack.Circle
                 && fight.Telegraphs.Count > 0 && fight.Telegraphs[0].Remaining <= CircleEffectLead)
             {
                 _circleShown = true;
-                Sfx(CircleFallSound);
                 var cast = fight.Telegraphs[0];
                 var at = new Vector3(cast.Cx, BoneSquadKiting.Stage.GroundHeight.Y(cast.Cx, cast.Cz), cast.Cz);
                 var fx = Instantiate(CircleEffect, at, Quaternion.identity);
@@ -114,15 +117,23 @@ namespace BoneSquadKiting.Bosses
         // A new match (or none): forget the old fight, sit on the throne with the head bowed.
         void Bind(FrostKnightFight fight)
         {
-            if (_fight != null) { _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; _fight.OnState -= OnState; }
+            if (_fight != null)
+            {
+                _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; _fight.OnState -= OnState;
+                if (_fight.Attack == FrostKnightAttack.Circle) SoundManager.Current?.StopSfx(CircleFallSound);
+            }
             _fight = fight;
             _serial = -1;
+            _circleShown = false;
+            _previousRemaining = float.PositiveInfinity;
             if (_ref != null) _ref.Enemy = fight?.Boss;
             if (fight == null) { Place(null); if (Animator != null && Animator.isActiveAndEnabled) { Animator.speed = 1f; Animator.Play("HeadBowed", 0, 0f); } return; }
             fight.OnCast += OnCast; fight.OnHit += OnHit; fight.OnState += OnState;
+            // The director ticks before this view, including on the first frame in the room.
+            if (fight.State == FrostKnightState.Throne && fight.StateTime == 0f) Sfx(WakeSound);
         }
 
-        void OnDestroy() { if (_fight != null) { _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; _fight.OnState -= OnState; } }
+        void OnDisable() { if (_fight != null) Bind(null); }
 
         static void Sfx(string id) { if (!string.IsNullOrEmpty(id)) SoundManager.Current?.PlaySfx(id); }
 
@@ -136,7 +147,10 @@ namespace BoneSquadKiting.Bosses
                 case FrostKnightState.Charging: Sfx(AppearSound); break;
                 case FrostKnightState.Groggy: Sfx(GroggySound); break;
                 case FrostKnightState.Vanishing: Sfx(VanishSound); break;
-                case FrostKnightState.Dying: Sfx(DeathSound); break;
+                case FrostKnightState.Dying:
+                    if (_fight.Attack == FrostKnightAttack.Circle) SoundManager.Current?.StopSfx(CircleFallSound);
+                    Sfx(DeathSound);
+                    break;
             }
         }
 
@@ -169,15 +183,40 @@ namespace BoneSquadKiting.Bosses
         void OnCast(FrostKnightAttack attack, BossAttackSystem.Active cast)
         {
             _circleShown = false;
-            Sfx(attack >= FrostKnightAttack.LethalLeft ? LethalWarnSound : CastSound);
+            _previousRemaining = float.PositiveInfinity;
+            if (attack >= FrostKnightAttack.LethalLeft) Sfx(LethalWarnSound);
+            else if (attack != FrostKnightAttack.Circle) Sfx(CastSound);
+            PlayCastSounds(attack, cast.Remaining);
+        }
+
+        void PlayCastSounds(FrostKnightAttack attack, float remaining)
+        {
+            // The plunge reveals its blade at 1.15 s, drops at 1.39 s and lands at 1.51 s.
+            if (attack == FrostKnightAttack.Circle)
+            {
+                if (Crossed(CircleEffectLead - 1.15f)) Sfx(CastSound);
+                if (Crossed(CircleEffectLead - 1.39f)) Sfx(CircleFallSound);
+            }
+            else if (attack == FrostKnightAttack.Charge)
+            {
+                // The blade accelerates at 6.75 s in ChargedSlash; the wave leaves at ChargeHitAt.
+                if (Crossed((FrostKnightFight.ChargeHitAt - 6.75f) / _fight.AnimSpeed)) Sfx(ChargeSwingSound);
+            }
+            _previousRemaining = remaining;
+
+            bool Crossed(float lead) => _previousRemaining > lead && remaining <= lead;
         }
 
         void OnHit(FrostKnightAttack attack, BossAttackSystem.Active cast, int hit, int lost)
         {
             bool lethal = attack >= FrostKnightAttack.LethalLeft;
-            Sfx(HitSound);
-            if (lethal) Sfx(LethalHitSound);
-            if (attack == FrostKnightAttack.Charge) { Sfx(ChargeSwingSound); Sfx(ChargeFlightSound); }
+            if (attack == FrostKnightAttack.Circle)
+            {
+                SoundManager.Current?.StopSfx(CircleFallSound);
+                Sfx(HitSound);
+            }
+            else if (lethal) Sfx(LethalHitSound);
+            else Sfx(ChargeFlightSound); // one release for the whole volley, even on a miss
             float shake = lethal ? LethalShake : HitShake;
             if (shake <= 0f) return;
             if (_cam == null) _cam = FindFirstObjectByType<BoneSquadKiting.Cameras.EdgeScrollCamera>();

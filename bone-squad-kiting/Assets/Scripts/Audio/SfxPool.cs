@@ -11,6 +11,13 @@ namespace BoneSquadKiting.Audio
         AudioSource[] voices;
         int nextVoice;
 
+        internal void Stop(AudioClip clip)
+        {
+            if (voices == null) return;
+            foreach (var voice in voices)
+                if (voice != null && voice.clip == clip && voice.isPlaying) voice.Stop();
+        }
+
         internal void Play(SfxEntry entry)
         {
             voices ??= new AudioSource[Mathf.Max(1, maxVoices)];
