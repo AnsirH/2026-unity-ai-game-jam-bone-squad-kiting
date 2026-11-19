@@ -194,3 +194,8 @@ MonoBehaviour:
     Volume: 0.85
     Pitch: 1
     StartOffset: 0
+  - Id: menu.handburst
+    Clip: {fileID: 8300000, guid: 29c435a94e2fcd245bbb46d7ee452cad, type: 3}
+    Volume: 0.9
+    Pitch: 1
+    StartOffset: 0

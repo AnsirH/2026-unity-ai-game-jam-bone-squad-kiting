@@ -22,6 +22,8 @@ namespace BoneSquadKiting.UI
         public CommanderHandBurst Burst;
         [Tooltip("Seconds the burst is shown before the game loads.")]
         public float BurstSeconds = 2f;
+        [Tooltip("Sound played as the hand bursts out of the ground (an id in the sound database).")]
+        public string BurstSound = "menu.handburst";
         [Tooltip("Seconds at the end of the burst over which the screen goes dark.")]
         public float FadeSeconds = 0.35f;
 
@@ -77,6 +79,7 @@ namespace BoneSquadKiting.UI
             if (Burst != null)
             {
                 Burst.PlayBurst();
+                if (!string.IsNullOrEmpty(BurstSound)) SoundManager.Current?.PlaySfx(BurstSound);
                 float fadeFrom = Mathf.Max(0f, BurstSeconds - FadeSeconds);
                 for (float t = 0f; t < BurstSeconds; t += Time.unscaledDeltaTime)
                 {
