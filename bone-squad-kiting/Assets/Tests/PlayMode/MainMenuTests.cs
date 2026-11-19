@@ -163,10 +163,25 @@ public class MainMenuTests
         var start = run.Stages[2].Map.GetComponentInChildren<StageStart>(true);
         Assert.That(Vector2.Distance(director.Squad.Anchor, Flat(start.transform.position)), Is.LessThan(1.5f), "from its start point");
 
-        // Clearing the last stage finishes the game: nothing is left to continue.
-        director.ClearRule = StageClearRule.ReachEnd;
+        // The boss stage is the Frost Knight's: it waits on its throne until the squad walks into the room.
+        var fight = director.Fight;
+        Assert.IsNotNull(fight, "the boss stage has a boss fight");
+        var arena = run.Stages[2].Map.GetComponentInChildren<BoneSquadKiting.Bosses.BossArena>();
+        var view = arena.GetComponentInChildren<BoneSquadKiting.Bosses.FrostKnightView>();
+        Assert.IsNotNull(view, "and the boss model");
+        yield return null; yield return null;
+        Assert.AreEqual(BoneSquadKiting.Bosses.FrostKnightState.Waiting, fight.State);
+        Assert.That(Vector3.Distance(view.transform.position, arena.Seat.position), Is.LessThan(0.1f), "seated on the throne");
         director.Squad.Anchor = Flat(start.EndPoint.position);
-        float until = Time.time + 3f;
+        yield return null; yield return null;
+        Assert.AreEqual(GamePhase.Play, director.Phase, "walking to the old end point no longer clears the stage");
+        Assert.AreEqual(BoneSquadKiting.Bosses.FrostKnightState.Throne, fight.State, "the fight starts when the squad is in the room");
+        Assert.IsTrue(fight.Targetable);
+
+        // Clearing the last stage (the boss dies) finishes the game: nothing is left to continue.
+        arena.Tuning.DieAnimSpeed = 20f;
+        fight.Kill();
+        float until = Time.time + 5f;
         while (director.Phase != GamePhase.Win && Time.time < until) yield return null;
         Assert.AreEqual(GamePhase.Win, director.Phase);
         Assert.IsFalse(GameProgress.HasSave, "the save is cleared");

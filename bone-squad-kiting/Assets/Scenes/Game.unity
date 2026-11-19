@@ -366,6 +366,165 @@ MonoBehaviour:
   IntroWhen: 0
   IntroEffectId: 
   IntroSeconds: 0
+--- !u!1001 &541485209
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1643104150}
+    m_Modifications:
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 4.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 4.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 4.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.72
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 14.98
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.00000004371139
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7907387980602922588, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_Name
+      value: FrostKnight
+      objectReference: {fileID: 0}
+    - target: {fileID: 7907387980602922588, guid: 217b04427545740618f65973c6717572, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7907387980602922588, guid: 217b04427545740618f65973c6717572, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 541485215}
+    - targetCorrespondingSourceObject: {fileID: 7907387980602922588, guid: 217b04427545740618f65973c6717572, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 541485214}
+    - targetCorrespondingSourceObject: {fileID: 7907387980602922588, guid: 217b04427545740618f65973c6717572, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 541485213}
+  m_SourcePrefab: {fileID: 100100000, guid: 217b04427545740618f65973c6717572, type: 3}
+--- !u!4 &541485210 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7419539467137420518, guid: 217b04427545740618f65973c6717572, type: 3}
+  m_PrefabInstance: {fileID: 541485209}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &541485211 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7907387980602922588, guid: 217b04427545740618f65973c6717572, type: 3}
+  m_PrefabInstance: {fileID: 541485209}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &541485212 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 3465329703031297692, guid: 217b04427545740618f65973c6717572, type: 3}
+  m_PrefabInstance: {fileID: 541485209}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &541485213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 541485211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36e04504d27e49c44a7d6ce5c48e0c6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Bosses.FrostKnightView
+  Director: {fileID: 0}
+  Arena: {fileID: 1643104151}
+  Animator: {fileID: 541485212}
+  Blend: 0.25
+  StandUpLength: 2.96
+  HitFlashColor: {r: 4, g: 2.5, b: 2, a: 1}
+  CircleEffect: {fileID: 6647809229688299808, guid: c4e98c5328c9a4c94b12b57c9c9f6fd6, type: 3}
+  CircleEffectLead: 1.51
+  CircleEffectScale: 1
+  HitShake: 0.3
+  LethalShake: 0.6
+  ShakeSeconds: 0.35
+  CastSound: boss.greatsword.summon
+  HitSound: boss.greatsword.impact
+  ChargeSound: boss.spinningblade.swing
+--- !u!136 &541485214
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 541485211}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.4
+  m_Height: 1.8
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.8, z: 0}
+--- !u!114 &541485215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 541485211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c48df12369062c644930cad16502da62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Combat.EnemyRef
 --- !u!1 &621570691
 GameObject:
   m_ObjectHideFlags: 0
@@ -415,6 +574,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Stage.WalkOutline
   Mode: 0
+--- !u!1 &644637448
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 644637449}
+  m_Layer: 0
+  m_Name: Mage Spawn 2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &644637449
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644637448}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 7, y: 0, z: 3.9500008}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1643104150}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &705805892
 GameObject:
   m_ObjectHideFlags: 0
@@ -508,12 +698,20 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 3500375999743066875, guid: 6d089e8447aad4f8d9eb81ca852cde8f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1643104150}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6d089e8447aad4f8d9eb81ca852cde8f, type: 3}
 --- !u!1 &774998199 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6834563302514901565, guid: 6d089e8447aad4f8d9eb81ca852cde8f, type: 3}
+  m_PrefabInstance: {fileID: 774998198}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &774998200 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3500375999743066875, guid: 6d089e8447aad4f8d9eb81ca852cde8f, type: 3}
   m_PrefabInstance: {fileID: 774998198}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &985156815
@@ -885,6 +1083,120 @@ Transform:
   m_Children: []
   m_Father: {fileID: 621570692}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1337151703
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1337151704}
+  m_Layer: 0
+  m_Name: Mage Spawn 1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1337151704
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1337151703}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -7, y: 0, z: 3.9500008}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1643104150}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1643104149
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1643104150}
+  - component: {fileID: 1643104151}
+  m_Layer: 0
+  m_Name: Boss Arena
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1643104150
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643104149}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 23.05}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1920887780}
+  - {fileID: 1337151704}
+  - {fileID: 644637449}
+  - {fileID: 541485210}
+  m_Father: {fileID: 774998200}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1643104151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643104149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc5df50fcb790824cb9844f508590951, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Bosses.BossArena
+  Size: {x: 24, y: 22.5}
+  Seat: {fileID: 1920887780}
+  MageSpawns:
+  - {fileID: 1337151704}
+  BossName: "\uC11C\uB9AC \uAE30\uC0AC"
+  Tuning:
+    MaxHp: 30000
+    PhaseOneEndsAt: 0.6
+    FirstAttackDelay: 2
+    SlamHitSeconds: 2.9
+    SlamRecoverSeconds: 1.7
+    ThroneAttackGap: 1.2
+    HitDamage: 55
+    ParallelInner: 2
+    ParallelOuter: 6.5
+    ParallelHalfLength: 20
+    ParallelMaxAngle: 40
+    CircleRadius: 6
+    Mages:
+    - {fileID: 11400000, guid: 6cb51b2f29645bf4b927c6ad2fa3b4c7, type: 2}
+    MageDelay: 1.2
+    StandUpSeconds: 4.2
+    AttackOrder: CCLC
+    AttackGap: 1.2
+    ChargeAnimSpeed: 1.5
+    ChargeRowWidth: 5
+    ChargeRowOffset: 5.5
+    ChargeShift: 3
+    LethalWarnSeconds: 2.4
+    LethalCenterShare: 0.33333334
+    LethalKillsLeader: 1
+    LethalHoldSeconds: 1
+    VanishSeconds: 1.3
+    GroggySeconds: 6
+    DieAnimSpeed: 1.6
 --- !u!1 &1864541073
 GameObject:
   m_ObjectHideFlags: 0
@@ -915,6 +1227,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 621570692}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1920887779
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1920887780}
+  m_Layer: 0
+  m_Name: Throne Seat
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1920887780
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1920887779}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: -0.00000004371139}
+  m_LocalPosition: {x: 0, y: 0.72, z: 14.98}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1643104150}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2120646726
 GameObject:

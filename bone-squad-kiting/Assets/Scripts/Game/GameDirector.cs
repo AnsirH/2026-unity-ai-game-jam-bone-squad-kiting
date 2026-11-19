@@ -69,6 +69,8 @@ namespace BoneSquadKiting.Game
         public ShotSystem Shots { get; private set; }
         public MobSystem Mobs { get; private set; }
         public EliteSystem Elites { get; private set; }
+        /// <summary>The Frost Knight fight, on a stage that has a BossArena; null on every other stage.</summary>
+        public FrostKnightFight Fight { get; private set; }
 
         /// <summary>Every pattern being cast right now: the boss's and each mini boss's.</summary>
         public readonly List<BossAttackSystem.Active> Telegraphs = new();
@@ -181,6 +183,7 @@ namespace BoneSquadKiting.Game
             TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1; Paused = false;
             NearMissBuffLeft = 0f;
             Squad.Init();
+            StartBossFight();
             if (Waves != null)
             {
                 Vector2? end = Stage != null && Stage.EndPoint != null
@@ -191,9 +194,29 @@ namespace BoneSquadKiting.Game
             ApplyTuning();
             Phase = GamePhase.Play;
             var sound = SoundManager.Current;
-            if (sound != null && !sound.PlayBgm(HasBoss ? "bgm.boss" : "bgm.stage"))
+            if (sound != null && !sound.PlayBgm(HasBoss || Fight != null ? "bgm.boss" : "bgm.stage"))
                 sound.StopBgm();
             FormationChanged?.Invoke(Squad.Formation);
+        }
+
+        // A stage with a BossArena is the Frost Knight's: the fight's own rules replace the pattern sequence,
+        // and the stage is cleared when the boss is dead, whatever its clear rule says.
+        void StartBossFight()
+        {
+            Fight = null;
+            BossArena arena = null;
+            foreach (var a in FindObjectsByType<BossArena>(FindObjectsSortMode.None))
+                if (a.isActiveAndEnabled && a.gameObject.scene == gameObject.scene) { arena = a; break; }
+            if (arena == null) return;
+            if (Boss == null) Boss = new Boss(); else Enemies.Unregister(Boss);     // the fight decides when it can be hit
+            Fight = new FrostKnightFight(arena, Boss, Squad, Enemies, Elites);
+            Fight.OnPatternStarted += p => PatternStarted?.Invoke(p);
+            Fight.OnNearMiss += OnNearMiss;
+            Fight.OnHit += (attack, cast, hit, lost) =>
+            {
+                if (lost > 0) Squad.Reform();
+                PatternResolved?.Invoke(hit, lost);
+            };
         }
 
         /// <summary>
@@ -396,6 +419,7 @@ namespace BoneSquadKiting.Game
         void OnMiniBossDied(Elite elite)
         {
             MiniBossDefeated?.Invoke(elite);
+            if (Fight != null) return;                                // the boss fight's mages: the fight goes on
             foreach (var m in _miniBosses) if (!m.Defeated) return;   // others remain (including ones yet to appear)
             Mobs.Clear(Enemies);
             Shots.Shots.Clear();
@@ -412,6 +436,7 @@ namespace BoneSquadKiting.Game
 
         bool StageCleared()
         {
+            if (Fight != null) return Fight.Won;
             bool reachedEnd = Stage != null && Stage.ReachedEnd;
             switch (ClearRule)
             {
@@ -457,7 +482,8 @@ namespace BoneSquadKiting.Game
             Shots.DamageMultiplier = DamageMultiplier;
             BossAttackSystem.NearMissMargin = NearMissMargin;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
-            if (Boss != null) Attacks.Tick(Squad, Boss, dt);
+            if (Fight != null) Fight.Tick(dt);
+            else if (Boss != null) Attacks.Tick(Squad, Boss, dt);
 
             // Deaths are processed before new arrivals, so a mini boss that waits for another one to die
             // appears on the same frame, and a newcomer does not act on the frame it appears.
@@ -467,7 +493,8 @@ namespace BoneSquadKiting.Game
             if (InCutscene) return;   // one just appeared with an intro: freeze from this frame on
 
             Telegraphs.Clear();
-            if (Attacks.Current.HasValue) Telegraphs.Add(Attacks.Current.Value);
+            if (Fight != null) Telegraphs.AddRange(Fight.Telegraphs);
+            else if (Attacks.Current.HasValue) Telegraphs.Add(Attacks.Current.Value);
             foreach (var e in Elites.Elites) if (e.Attacks.Current.HasValue) Telegraphs.Add(e.Attacks.Current.Value);
 
             _hits.RemoveAll(e => Elapsed - e.t >= GameConstants.DpsWindow);
@@ -475,7 +502,7 @@ namespace BoneSquadKiting.Game
             if (Boss != null)
             {
                 Boss.Flash = Mathf.Max(0, Boss.Flash - dt * 3f);
-                if (BossPhase == 1 && CombatMath.IsPhase2(Boss.HpFrac))
+                if (BossPhase == 1 && (Fight != null ? Fight.Phase == 2 : CombatMath.IsPhase2(Boss.HpFrac)))
                 {
                     BossPhase = 2; Boss.Phase = 2;
                     PhaseTwoStarted?.Invoke();
