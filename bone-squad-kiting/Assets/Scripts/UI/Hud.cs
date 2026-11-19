@@ -132,9 +132,16 @@ namespace BoneSquadKiting.UI
             // The bar shows the boss, or on a stage without one, the mini boss currently in play.
             Elite elite = Director.Elites != null && Director.Elites.Elites.Count > 0 ? Director.Elites.Elites[0] : null;
             bool hasBoss = Director.HasBoss || Director.Fight != null;
-            bool showBar = hasBoss || elite != null;
+            // A wall that blocks the way takes the bar over while the squad is at it.
+            var wall = hasBoss ? null : BoneSquadKiting.Stage.BreakableWall.Shown;
+            bool showBar = hasBoss || elite != null || wall != null;
             if (BossBar != null && BossBar.activeSelf != showBar) BossBar.SetActive(showBar);
-            if (elite != null && !hasBoss)
+            if (wall != null)
+            {
+                SetFill(BossFill, wall.HpFrac);
+                BossText.text = $"{wall.DisplayName}  {Mathf.CeilToInt(wall.HpFrac * 100)}%   {Mathf.CeilToInt(wall.Health)} / {wall.MaxHp:0}";
+            }
+            else if (elite != null && !hasBoss)
             {
                 SetFill(BossFill, elite.HpFrac);
                 BossText.text = $"{elite.Def.DisplayName}  {Mathf.CeilToInt(elite.HpFrac * 100)}%   {Mathf.CeilToInt(elite.Health)} / {elite.Def.MaxHp:0}";
