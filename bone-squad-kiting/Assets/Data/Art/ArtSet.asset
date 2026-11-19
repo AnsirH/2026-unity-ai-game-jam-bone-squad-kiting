@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.ArtSet
   EnemyDeath:
     Clip: {fileID: -203655887218126122, guid: d65b870de756af14e917c741d87cd058, type: 3}
+    MirroredClip: {fileID: 4061839508520268033, guid: d65b870de756af14e917c741d87cd058, type: 3}
     DissolveStart: 0.9
     DissolveSeconds: 0.9
     AshColor: {r: 0.16, g: 0.15, b: 0.14, a: 1}

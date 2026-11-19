@@ -39,6 +39,7 @@ namespace BoneSquadKiting.Data
         public class EnemyDeathLook
         {
             public AnimationClip Clip;                  // humanoid; empty = enemies vanish at once, as before
+            public AnimationClip MirroredClip;          // the same fall, left and right swapped; picked half the time when set
             public float DissolveStart = 0.9f;          // seconds into the clip the body reaches the ground
             public float DissolveSeconds = 0.9f;        // how long it takes to turn to ash and go
             public Color AshColor = new(0.16f, 0.15f, 0.14f, 1f);

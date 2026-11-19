@@ -65,7 +65,8 @@ namespace BoneSquadKiting.Visuals
             {
                 _graph = PlayableGraph.Create("Enemy death");
                 var output = AnimationPlayableOutput.Create(_graph, "death", animator);
-                var clip = AnimationClipPlayable.Create(_graph, look.Clip);
+                var motion = look.MirroredClip != null && Random.value < 0.5f ? look.MirroredClip : look.Clip;   // so they do not all fall the same way
+                var clip = AnimationClipPlayable.Create(_graph, motion);
                 clip.SetApplyFootIK(false);
                 output.SetSourcePlayable(clip);
                 _graph.Play();
