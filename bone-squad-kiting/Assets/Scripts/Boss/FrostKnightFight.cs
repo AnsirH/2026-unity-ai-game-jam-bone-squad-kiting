@@ -33,7 +33,7 @@ namespace BoneSquadKiting.Bosses
     {
         // Lengths of the model's motions at speed 1, and when the sword lands in them.
         public const float ChargeHitAt = 7f, ChargeLength = 7.67f, PlantHitAt = 0.25f, DieLength = 9.58f;
-        const float ChargeWindupScale = .7f;
+        const float ChargeWindupScale = .35f;
         const float PlantLead = 0.3f;          // the boss shows up this long before the plant motion starts
 
         public readonly Boss Boss;

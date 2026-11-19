@@ -234,7 +234,7 @@ public class FrostKnightFightTests
         var cast = _fight.Telegraphs[0];
         Assert.IsTrue(cast.GrowLanesThroughCast);
         float baseSpeed = _arena.Tuning.ChargeAnimSpeed;
-        Assert.That(cast.Pattern.Time, Is.EqualTo(.7f * FrostKnightFight.ChargeHitAt / baseSpeed).Within(.001f));
+        Assert.That(cast.Pattern.Time, Is.EqualTo(.35f * FrostKnightFight.ChargeHitAt / baseSpeed).Within(.001f));
         Assert.That(Mathf.DeltaAngle(yaw + _arena.Yaw, cast.Angle), Is.EqualTo(0f).Within(.01f));
         var dir = Quaternion.Euler(0, cast.Angle, 0);
         var origin = new Vector3(cast.Cx, 0, cast.Cz);
