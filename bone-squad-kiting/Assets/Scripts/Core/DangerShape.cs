@@ -2,7 +2,7 @@ namespace BoneSquadKiting.Core
 {
     public enum PatternId { Core, Gate, Quadrant, Shell, TripleSlash }
 
-    public enum DangerShapeType { Disc, Annulus, CrossBandsX, QuadrantBoxes, ThreeLanes }
+    public enum DangerShapeType { Disc, Annulus, CrossBandsX, QuadrantBoxes, ThreeLanes, Rectangle }
 
     /// <summary>
     /// Danger zone geometry as data. Evaluated by <see cref="DangerShapeEval"/>.
@@ -30,6 +30,7 @@ namespace BoneSquadKiting.Core
         public static DangerShape Disc(float r) => new() { Type = DangerShapeType.Disc, RMax = r };
         public static DangerShape Annulus(float rMin, float rOut) => new() { Type = DangerShapeType.Annulus, RMin = rMin, ROut = rOut };
         public static DangerShape BandsX(float inner, float outer, float halfZ) => new() { Type = DangerShapeType.CrossBandsX, Inner = inner, Outer = outer, HalfZ = halfZ };
+        public static DangerShape Rectangle(float halfWidth, float halfDepth) => new() { Type = DangerShapeType.Rectangle, Outer = halfWidth, HalfZ = halfDepth };
         public static DangerShape Quadrants(float inner, float outer) => new() { Type = DangerShapeType.QuadrantBoxes, Inner = inner, Outer = outer };
     }
 }

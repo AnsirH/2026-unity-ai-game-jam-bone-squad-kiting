@@ -168,6 +168,28 @@ namespace BoneSquadKiting.Visuals
             Apply(state, restart: false);
         }
 
+        // Gameplay time controls both actors, including when simulation is paused or stepped.
+        public void SampleRescue(int stateHash, float progress)
+        {
+            CancelAttack();
+            _current = VisualState.Revive;
+            Animator.speed = 0f;
+            Animator.Play(stateHash, 0, progress);
+            Animator.Update(0f);
+        }
+
+        public void LeaveRescue()
+        {
+            Animator.speed = 1f;
+            _current = (VisualState)(-1);
+            int idle = Animator.StringToHash(States.Idle);
+            if (Animator.HasState(0, idle))
+            {
+                Animator.Play(idle, 0, _loopPhase);
+                Animator.Update(0f);
+            }
+        }
+
         int FindStateLayer(string name)
         {
             if (Animator == null || string.IsNullOrEmpty(name)) return -1;

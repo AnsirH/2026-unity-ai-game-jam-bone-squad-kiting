@@ -24,6 +24,11 @@ namespace BoneSquadKiting.Data
     [CreateAssetMenu(menuName = "BoneSquadKiting/Art Set")]
     public class ArtSet : ScriptableObject
     {
+        [Header("Maximum attack speed aura")]
+        public GameObject AttackSpeedBuffPrefab;
+        public bool ShowAttackSpeedBuff = true;
+        public float AttackSpeedBuffHeight = 0.05f;
+        [Min(0.001f)] public float AttackSpeedBuffScale = 0.12f;
         [System.Serializable]
         public class EnemyProjectile
         {
@@ -69,6 +74,10 @@ namespace BoneSquadKiting.Data
         public float ModelYawOffset = 0f;
         public float TurnSpeed = 720f;        // degrees per second a unit turns to face where it walks or shoots
 
+        [Header("Revive")]
+        public ParticleSystem ReviveDust;
+        public Material UnitRescueMaterial;
+        public Material LeaderRescueMaterial;
         [Header("Revive fragments")]
         public GameObject BrokenBone;
         public GameObject Vertebra;

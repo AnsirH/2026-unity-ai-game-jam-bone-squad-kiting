@@ -17,6 +17,7 @@ namespace BoneSquadKiting.Core
             {
                 case DangerShapeType.Disc: Ring(0f, s.RMax, spacing, into); break;
                 case DangerShapeType.Annulus: Ring(s.RMin, s.ROut, spacing, into); break;
+                case DangerShapeType.Rectangle: Box(-s.Outer, s.Outer, -s.HalfZ, s.HalfZ, spacing, into); break;
                 case DangerShapeType.CrossBandsX:
                     Box(s.Inner, s.Outer, -s.HalfZ, s.HalfZ, spacing, into);
                     Box(-s.Outer, -s.Inner, -s.HalfZ, s.HalfZ, spacing, into);

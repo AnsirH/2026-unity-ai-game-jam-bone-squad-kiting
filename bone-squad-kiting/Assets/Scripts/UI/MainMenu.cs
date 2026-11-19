@@ -22,26 +22,55 @@ namespace BoneSquadKiting.UI
         public CommanderHandBurst Burst;
         [Tooltip("Seconds the burst is shown before the game loads.")]
         public float BurstSeconds = 2f;
+        [Tooltip("Sound played as the hand bursts out of the ground (an id in the sound database).")]
+        public string BurstSound = "menu.handburst";
         [Tooltip("Seconds at the end of the burst over which the screen goes dark.")]
         public float FadeSeconds = 0.35f;
 
         /// <summary>True from the click until the game scene loads.</summary>
         public bool Starting { get; private set; }
-        Image _fade;
-        GameObject _widgets;
+        [SerializeField] Image _fade;
+        [SerializeField] GameObject _widgets;
 
-        public GameObject Root { get; private set; }
-        public Button NewGameButton { get; private set; }
-        public Button ContinueButton { get; private set; }
-        public Button QuitButton { get; private set; }
-        public Text ContinueLabel { get; private set; }
+        [field: SerializeField] public GameObject Root { get; private set; }
+        [field: SerializeField] public Button NewGameButton { get; private set; }
+        [field: SerializeField] public Button ContinueButton { get; private set; }
+        [field: SerializeField] public Button QuitButton { get; private set; }
+        [field: SerializeField] public Text ContinueLabel { get; private set; }
 
         void Start()
         {
             Time.timeScale = 1f;
             SoundManager.Current?.PlayBgm("bgm.stage3");
-            Build();
+            CreateEditableCanvas();
+            _widgets.SetActive(true);
+            SetFade(0f);
+            Bind(NewGameButton, NewGame);
+            Bind(ContinueButton, Continue);
+            Bind(QuitButton, Quit);
+            foreach (var button in new[] { NewGameButton, ContinueButton, QuitButton })
+                if (button != null) button.onClick.AddListener(() => SoundManager.Current?.PlaySfx("ui.click"));
             Refresh();
+        }
+
+        // Persistent Inspector callbacks are preserved; old/generated scenes get runtime bindings.
+        void Bind(Button button, UnityEngine.Events.UnityAction action)
+        {
+            button.onClick.RemoveListener(action);
+            for (int i = 0; i < button.onClick.GetPersistentEventCount(); i++)
+                if (button.onClick.GetPersistentTarget(i) == this &&
+                    button.onClick.GetPersistentMethodName(i) == action.Method.Name &&
+                    button.onClick.GetPersistentListenerState(i) != UnityEngine.Events.UnityEventCallState.Off)
+                    return;
+            button.onClick.AddListener(action);
+        }
+
+        /// <summary>Create only when absent; authored layout, text and artwork survive Play.</summary>
+        [ContextMenu("Create Editable Canvas")]
+        public void CreateEditableCanvas()
+        {
+            if (Root != null) return;
+            Build();
         }
 
         /// <summary>Enable "continue" only when there is a save.</summary>
@@ -77,6 +106,7 @@ namespace BoneSquadKiting.UI
             if (Burst != null)
             {
                 Burst.PlayBurst();
+                if (!string.IsNullOrEmpty(BurstSound)) SoundManager.Current?.PlaySfx(BurstSound);
                 float fadeFrom = Mathf.Max(0f, BurstSeconds - FadeSeconds);
                 for (float t = 0f; t < BurstSeconds; t += Time.unscaledDeltaTime)
                 {
@@ -133,7 +163,7 @@ namespace BoneSquadKiting.UI
                 foreach (var button in new[] { NewGameButton, ContinueButton, QuitButton })
                 {
                     button.image.sprite = art.StartButton;
-                    button.image.color = Color.white;
+                    button.image.color = art.ArtworkTint;
                     ((RectTransform)button.transform).sizeDelta = new Vector2(650f, 160f);
                     var colors = button.colors;
                     colors.highlightedColor = new Color(1f, .92f, .75f);
@@ -145,11 +175,6 @@ namespace BoneSquadKiting.UI
             _fade.raycastTarget = false;
             _fade.rectTransform.anchorMin = Vector2.zero; _fade.rectTransform.anchorMax = Vector2.one;
             _fade.rectTransform.offsetMin = _fade.rectTransform.offsetMax = Vector2.zero;
-            foreach (var button in new[] { NewGameButton, ContinueButton, QuitButton })
-                button.onClick.AddListener(() => BoneSquadKiting.Audio.SoundManager.Current?.PlaySfx("ui.click"));
-            NewGameButton.onClick.AddListener(NewGame);
-            ContinueButton.onClick.AddListener(Continue);
-            QuitButton.onClick.AddListener(Quit);
         }
 
         Button MakeButton(string name, Font font, string text, float y, out Text label)

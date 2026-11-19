@@ -10,15 +10,15 @@ namespace BoneSquadKiting.Fx
     public sealed class ReviveBoneFx : MonoBehaviour
     {
         const int BoneCount = 3;
-        const float LaunchInterval = 0.25f;
-        const float FlightDuration = 0.13f;
+        internal const float LaunchInterval = 0.25f;
+        internal const float FlightDuration = 0.13f;
         const float WindupStart = 0.75f;
         const float SettleTime = 0.99f;
         const float WideOrbitRadius = 3.2f;
         const float LineOrbitRadius = 1.8f;
         const float RadiusChangeSpeed = 5f;
-        const float OrbitHeight = 0.95f;
-        const float BoneScale = 0.72f;
+        internal const float OrbitHeight = 0.95f;
+        internal const float BoneScale = 0.72f;
         const float CancelSeconds = 0.18f;
         static readonly int FresnelIntensity = Shader.PropertyToID("_FresnelIntensity");
         static readonly int Opacity = Shader.PropertyToID("_Opacity");
@@ -118,7 +118,7 @@ namespace BoneSquadKiting.Fx
             }
         }
 
-        static Vector3 ScreenEdge(Camera camera, Vector3 orbitCenter, float angle)
+        internal static Vector3 ScreenEdge(Camera camera, Vector3 orbitCenter, float angle)
         {
             var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
             var edge = Vector2.one * 0.5f + 0.60f * dir / Mathf.Max(Mathf.Abs(dir.x), Mathf.Abs(dir.y));
@@ -130,7 +130,8 @@ namespace BoneSquadKiting.Fx
 
         static Vector3 GroundPoint(Vector2 point) => new(point.x, GroundHeight.Y(point.x, point.y), point.y);
 
-        float FormationRadius => _director.Squad.Formation == "line" ? LineOrbitRadius : WideOrbitRadius;
+        internal static float RadiusFor(string formation) => formation == "line" ? LineOrbitRadius : WideOrbitRadius;
+        float FormationRadius => RadiusFor(_director.Squad.Formation);
 
         void Pose(Orbit orbit, Vector3 center, float progress)
         {
