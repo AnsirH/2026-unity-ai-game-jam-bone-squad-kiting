@@ -3477,7 +3477,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 39d6aacb6faa44f7eb1a2863f445634d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 64cf2be391d754500a098d4f89feb23b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3507,7 +3507,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &108407917
@@ -6564,7 +6564,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 106}
+  m_AnchoredPosition: {x: 0, y: 82}
   m_SizeDelta: {x: 520, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &206203099
@@ -6580,7 +6580,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
   m_Material: {fileID: 0}
-  m_Color: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_Color: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6859,7 +6859,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &215890419
@@ -10238,7 +10238,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9653bd210ab494ef9ad86dfccb533933, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 90e33104a1e834a9c8c7ff162e3c720b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10288,7 +10288,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &318616930
@@ -11647,8 +11647,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -72, y: 60}
-  m_SizeDelta: {x: 166, y: 82}
+  m_AnchoredPosition: {x: -77, y: 60}
+  m_SizeDelta: {x: 144, y: 54}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &365958294
 MonoBehaviour:
@@ -11670,7 +11670,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 1a068fd2e881d4b3ca53988022aaf734, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f4b6be48085894c53a82cee6e7b7900c, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -11744,7 +11744,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &366313449
@@ -18240,7 +18240,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
   m_Material: {fileID: 0}
-  m_Color: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_Color: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -21343,8 +21343,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 216, y: 60}
-  m_SizeDelta: {x: 166, y: 82}
+  m_AnchoredPosition: {x: 231, y: 60}
+  m_SizeDelta: {x: 144, y: 54}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &526286988
 MonoBehaviour:
@@ -21366,7 +21366,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: a110a68775a8b4ddf9f768870ef39a02, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 201783c9128194be3b3764b97d9d3ae5, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -21440,7 +21440,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &526480776
@@ -39377,8 +39377,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -216, y: 60}
-  m_SizeDelta: {x: 166, y: 82}
+  m_AnchoredPosition: {x: -231, y: 60}
+  m_SizeDelta: {x: 144, y: 54}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1127700581
 MonoBehaviour:
@@ -39400,7 +39400,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: b68a7484d57fa4fe5bd7f755fbd6a997, type: 3}
+  m_Sprite: {fileID: 21300000, guid: cf598f83527b24b8ea64623735849c16, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -39474,7 +39474,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &1128426100
@@ -40155,8 +40155,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 24, y: 0}
-  m_SizeDelta: {x: 84, y: 32}
+  m_AnchoredPosition: {x: 21, y: 0}
+  m_SizeDelta: {x: 80, y: 32}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1147073735
 GameObject:
@@ -44465,8 +44465,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 72, y: 60}
-  m_SizeDelta: {x: 166, y: 82}
+  m_AnchoredPosition: {x: 77, y: 60}
+  m_SizeDelta: {x: 144, y: 54}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1307517214
 MonoBehaviour:
@@ -44488,7 +44488,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 473a2ba10baf04e01b1e8fbf8f72e686, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f0a4c6ceb8ab240ea99fd6a9db2a6007, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -44562,7 +44562,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &1308284772
@@ -45938,7 +45938,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!114 &1351500371
@@ -45961,7 +45961,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: e7bc953c19c804542a8748ae5ae0797c, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 8094e707fa1984ab2a2946d2847a3b1f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -48394,7 +48394,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9dea296eaff024abea9e2164a66756b4, type: 3}
+  m_Sprite: {fileID: 21300000, guid: e4eb733edbcdb425aa7f1ef10e9c660e, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -50396,7 +50396,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
-  m_EffectColor: {r: 0.61, g: 0.49, b: 0.3, a: 0.85}
+  m_EffectColor: {r: 0.66, g: 0.59, b: 0.46, a: 0.85}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!1 &1507197023
@@ -50816,6 +50816,8 @@ MonoBehaviour:
   LiveColor: {r: 1, g: 0.55, b: 0.1, a: 0.8}
   Height: 0.03
   GroundStep: 1
+  TrackingOpacity: 0.55
+  LiveFillBoost: 1.6
 --- !u!4 &1519707549
 Transform:
   m_ObjectHideFlags: 0
@@ -63979,8 +63981,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 24, y: 0}
-  m_SizeDelta: {x: 84, y: 32}
+  m_AnchoredPosition: {x: 21, y: 0}
+  m_SizeDelta: {x: 80, y: 32}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1927612019
 GameObject:
@@ -66154,8 +66156,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 24, y: 0}
-  m_SizeDelta: {x: 84, y: 32}
+  m_AnchoredPosition: {x: 21, y: 0}
+  m_SizeDelta: {x: 80, y: 32}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2004534613
 GameObject:
@@ -69992,8 +69994,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 24, y: 0}
-  m_SizeDelta: {x: 84, y: 32}
+  m_AnchoredPosition: {x: 21, y: 0}
+  m_SizeDelta: {x: 80, y: 32}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2128961718
 GameObject:

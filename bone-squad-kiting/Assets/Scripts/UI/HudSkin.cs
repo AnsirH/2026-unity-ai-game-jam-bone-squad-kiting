@@ -6,7 +6,7 @@ namespace BoneSquadKiting.UI
     public static class HudSkin
     {
         static readonly Color Ink = new(0.035f, 0.043f, 0.052f, 0.96f);
-        static readonly Color Gold = new(0.61f, 0.49f, 0.30f, 0.85f);
+        static readonly Color Gold = new(0.66f, 0.59f, 0.46f, 0.85f);
         static readonly Color Paper = new(0.91f, 0.87f, 0.77f);
 
         static void Place(RectTransform r, Vector2 anchor, Vector2 position, Vector2 size)
@@ -142,6 +142,7 @@ namespace BoneSquadKiting.UI
             if (art.TitleFont != null && IsLatin(title.text)) title.font = art.TitleFont;
             var eyebrow = panel.Find("Eyebrow").GetComponent<Text>();
             eyebrow.text = "— BONE SQUAD —";
+            Place(eyebrow.rectTransform, new Vector2(.5f,.5f), new Vector2(0,82), new Vector2(520,25));
             if (art.TitleFont != null) eyebrow.font = art.TitleFont;
             var hint = panel.Find("Hint").GetComponent<Text>();
             if (art.TitleFont != null) hint.font = art.TitleFont;
@@ -161,9 +162,9 @@ namespace BoneSquadKiting.UI
             {
                 var button=hud.FormationButtons[i];
                 if (i < art.Formations.Length) Art(button.image, art.Formations[i]);
-                Place((RectTransform)button.transform,new Vector2(.5f,0),new Vector2((i-(hud.FormationButtons.Length-1)*.5f)*144,60),new Vector2(166,82));
+                Place((RectTransform)button.transform,new Vector2(.5f,0),new Vector2((i-(hud.FormationButtons.Length-1)*.5f)*154,60),new Vector2(144,54));
                 if (i >= hud.FormationLabels.Length) continue;
-                Place(hud.FormationLabels[i].rectTransform,new Vector2(.5f,.5f),new Vector2(24,0),new Vector2(84,32));
+                Place(hud.FormationLabels[i].rectTransform,new Vector2(.5f,.5f),new Vector2(21,0),new Vector2(80,32));
                 hud.FormationLabels[i].fontSize=15;
             }
         }
