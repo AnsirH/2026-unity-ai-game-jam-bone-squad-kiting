@@ -36,7 +36,18 @@ namespace BoneSquadKiting.Squad
             public int ShotsSeen;
             public int Index;
             public GameObject SpeedBuff;
+            public Transform Weapon;
+            public SkinnedMeshRenderer Body;
+            public Material OriginalBodyMaterial;
+            public AnimatorCullingMode PreviousCulling;
+            public RescueBoneOrbit Orbit;
+            public ReviveSystem.Revive Emerged;
+            public float EmergedAt;
+            public bool InRescue, HideWeapon, SampledThisFrame;
         }
+
+        static readonly int HelperState = Animator.StringToHash("Base Layer.ReviveHelper");
+        static readonly int ClimberState = Animator.StringToHash("Base Layer.ReviveClimber");
 
         readonly List<View> _views = new();
         GameDirector _director;
@@ -54,10 +65,10 @@ namespace BoneSquadKiting.Squad
         {
             if (!Application.isPlaying || Art == null) return;
             _director = FindSquadDirector();
-            if (_director == null) return;
-            var reviveFx = GetComponent<ReviveBoneFx>();
-            if (reviveFx == null) reviveFx = gameObject.AddComponent<ReviveBoneFx>();
-            reviveFx.Bind(_director, Art);
+            // Legacy bone orbit, superseded by the two-person rescue.
+            // var reviveFx = GetComponent<BoneSquadKiting.Fx.ReviveBoneFx>();
+            // if (reviveFx == null) reviveFx = gameObject.AddComponent<BoneSquadKiting.Fx.ReviveBoneFx>();
+            // reviveFx.Bind(_director, Art);
         }
 
         GameDirector FindSquadDirector()
@@ -75,13 +86,28 @@ namespace BoneSquadKiting.Squad
             if (Squad == null) return;
             while (_views.Count < Squad.Units.Count)
             {
-                var go = BuildUnit(_views.Count, Art, UnitScale, LeaderScale, UnitMaterial);
+                var go = BuildUnit(_views.Count, Art, UnitScale, LeaderScale, UnitMaterial, Squad.HasLeader);
                 go.transform.SetParent(transform, false);
                 _views.Add(Wrap(go.transform, _views.Count));
             }
+            foreach (var view in _views) view.SampledThisFrame = false;
+            if (_director != null && _director.Revives != null)
+                foreach (var rescue in _director.Revives.Active) DrawRescue(rescue);
+
             for (int i = 0; i < _views.Count; i++)
             {
                 var v = _views[i];
+                if (v.SampledThisFrame) continue;
+                if (v.InRescue)
+                {
+                    v.InRescue = false;
+                    v.Orbit?.Hide();
+                    v.Emerged = null;
+                    RestoreBodyMaterial(v);
+                    if (v.HideWeapon) v.Weapon.gameObject.SetActive(true);
+                    v.Visual.LeaveRescue();
+                    v.Visual.Animator.cullingMode = v.PreviousCulling;
+                }
                 bool alive = i < Squad.Units.Count && !Squad.Units[i].Dead;
                 if (v.Root.gameObject.activeSelf != alive) v.Root.gameObject.SetActive(alive);
                 if (!alive) continue;
@@ -90,6 +116,118 @@ namespace BoneSquadKiting.Squad
                 if (v.Visual != null) DriveModel(v, u);
                 else DriveCapsule(v, u);
             }
+        }
+
+        void DrawRescue(ReviveSystem.Revive rescue)
+        {
+            var helper = _views[rescue.Reviver.Id];
+            var climber = _views[rescue.Target.Id];
+            if (helper.Visual == null || climber.Visual == null) return;
+            // A dead unit's Animator is unbound until its model has been reactivated.
+            if (!climber.Root.gameObject.activeSelf) climber.Root.gameObject.SetActive(true);
+            if (!CanSample(helper, HelperState) || !CanSample(climber, ClimberState)) return;
+
+            float progress = Mathf.Clamp01(rescue.Elapsed / _director.Revives.Duration);
+            var ground = new Vector3(rescue.Reviver.X, Stage.GroundHeight.Y(rescue.Reviver.X, rescue.Reviver.Z), rescue.Reviver.Z);
+            var facing = Quaternion.LookRotation(new Vector3(rescue.Facing.x, 0f, rescue.Facing.y))
+                * Quaternion.Euler(0f, Art.ModelYawOffset, 0f);
+            // Give the orbit a full turn during the reach, then catch up before the hands release.
+            float catchUp = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.28f, 0.70f, progress));
+            float poseTime = progress * Mathf.Lerp(0.60f, 1f, catchUp);
+            Sample(helper, rescue.Reviver, HelperState, ground, facing, poseTime);
+            Sample(climber, rescue.Target, ClimberState, ground, facing, poseTime);
+
+            // The clips are authored at one shared origin. Center the pair on the actual helper.
+            var shift = HorizontalOffset(helper, ground);
+            helper.Root.position += shift;
+            climber.Root.position += shift;
+
+            DrawEmergence(climber, rescue, poseTime);
+
+            // Once the hands release, settle over the point where simulation will restore the target.
+            float released = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.70f, 1f, progress));
+            if (released > 0f)
+            {
+                var spot = rescue.RecoverySpot;
+                var end = new Vector3(spot.x, Stage.GroundHeight.Y(spot.x, spot.y), spot.y);
+                climber.Root.position += released * (HorizontalOffset(climber, end) + Vector3.up * (end.y - ground.y));
+            }
+        }
+
+        static void RestoreBodyMaterial(View view)
+        {
+            if (view.OriginalBodyMaterial == null || view.Body == null) return;
+            view.Body.sharedMaterial = view.OriginalBodyMaterial;
+            view.OriginalBodyMaterial = null;
+        }
+
+        void OnDisable()
+        {
+            foreach (var view in _views) RestoreBodyMaterial(view);
+        }
+
+        void DrawEmergence(View climber, ReviveSystem.Revive rescue, float poseTime)
+        {
+            if (climber.Emerged == rescue)
+            {
+                if (rescue.Elapsed > climber.EmergedAt) climber.Orbit?.Hide();
+                return;
+            }
+
+            var head = climber.Visual.Animator.GetBoneTransform(HumanBodyBones.Head).position;
+            float surface = Stage.GroundHeight.Y(head.x, head.z);
+            var center = new Vector3(head.x, surface + 0.04f, head.z);
+            climber.Orbit ??= new RescueBoneOrbit(transform, Art);
+            var anchor = Squad.Anchor;
+            var squadCenter = new Vector3(anchor.x, Stage.GroundHeight.Y(anchor.x, anchor.y), anchor.y);
+            climber.Orbit.Pose(rescue, squadCenter, center, Squad.Formation, poseTime, surface - head.y);
+            if (head.y < surface) return;
+
+            climber.Emerged = rescue;
+            climber.EmergedAt = rescue.Elapsed;
+            if (Art.ReviveDust != null)
+                Instantiate(Art.ReviveDust, center, Art.ReviveDust.transform.rotation, transform);
+        }
+
+        static bool CanSample(View view, int state)
+        {
+            var animator = view.Visual != null ? view.Visual.Animator : null;
+            return animator != null && animator.runtimeAnimatorController != null && animator.isHuman
+                && animator.HasState(0, state);
+        }
+
+        static Vector3 HorizontalOffset(View view, Vector3 point)
+        {
+            var hips = view.Visual.Animator.GetBoneTransform(HumanBodyBones.Hips);
+            return Vector3.ProjectOnPlane(point - hips.position, Vector3.up);
+        }
+
+        void Sample(View view, SquadUnit unit, int state, Vector3 ground, Quaternion facing, float progress)
+        {
+            if (!view.Root.gameObject.activeSelf) view.Root.gameObject.SetActive(true);
+            if (!view.InRescue)
+            {
+                view.InRescue = true;
+                view.PreviousCulling = view.Visual.Animator.cullingMode;
+                view.Visual.Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                view.HideWeapon = view.Weapon != null && view.Weapon.gameObject.activeSelf;
+                if (view.HideWeapon) view.Weapon.gameObject.SetActive(false);
+            }
+            view.SampledThisFrame = true;
+            if (view.Body != null && view.OriginalBodyMaterial == null)
+            {
+                var highlight = unit.IsLeader && Art.LeaderPrefab != null ? Art.LeaderRescueMaterial : Art.UnitRescueMaterial;
+                if (highlight != null)
+                {
+                    view.OriginalBodyMaterial = view.Body.sharedMaterial;
+                    view.Body.sharedMaterial = highlight;
+                }
+            }
+            view.ShotsSeen = unit.ShotCount;
+            view.Root.SetPositionAndRotation(ground, facing);
+            view.Root.localScale = ModelScale(Art, unit.IsLeader);
+            view.Visual.SetHitFlash(unit.Flash, _block);
+            view.Visual.SampleRescue(state, progress);
         }
 
         // A model: feet on the ground, turned to face where it walks or shoots, animation by state.
@@ -191,7 +329,9 @@ namespace BoneSquadKiting.Squad
             if (prefab != null && root.GetComponent<MeshFilter>() == null)   // a placed model, not a primitive capsule
             {
                 view.Visual = root.GetComponent<UnitVisual>();
+                view.Body = root.GetComponentInChildren<SkinnedMeshRenderer>(true);
                 view.SpawnPoint = FindChild(root, "SpawnPoint");
+                view.Weapon = FindChild(root, leader ? "Commander_Spear" : "Soldier_Crossbow");
                 if (view.Visual == null)
                 {
                     view.Visual = root.gameObject.AddComponent<UnitVisual>();

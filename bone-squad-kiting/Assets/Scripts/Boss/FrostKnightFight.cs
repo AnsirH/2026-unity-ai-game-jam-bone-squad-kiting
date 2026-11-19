@@ -58,7 +58,7 @@ namespace BoneSquadKiting.Bosses
         /// <summary>Start the motion at its very end (used to fade out: the stand-up motion's end pose dissolves).</summary>
         public bool AnimAtEnd { get; private set; }
 
-        /// <summary>The zone being warned about, for the telegraph view and the HUD (none or one).</summary>
+        // Only the first warning resolves damage. Extra throne strikes share its timing.
         public readonly List<BossAttackSystem.Active> Telegraphs = new();
         public readonly List<Elite> Mages = new();
 
@@ -102,8 +102,8 @@ namespace BoneSquadKiting.Bosses
             Boss.HpFloor = Tuning.MaxHp * Tuning.PhaseOneEndsAt;
             Boss.Position = _seat; Boss.Facing = _seatFacing;
             _patterns[(int)FrostKnightAttack.Parallel] = Pattern("평행 참격", "두 줄 사이나 바깥으로", "두 줄을 따라 벱니다. 줄을 피하세요!", "line", false);
-            _patterns[(int)FrostKnightAttack.Circle] = Pattern("대검 낙하", "원 밖으로", "대검이 떨어집니다. 원 밖으로 나가세요!", "", false);
-            _patterns[(int)FrostKnightAttack.Charge] = Pattern("가로 차징", "두 줄을 피해서", "방을 가로질러 두 줄을 벱니다!", "line", false);
+            _patterns[(int)FrostKnightAttack.Circle] = Pattern("대검 낙하", "E · 원형", "대검이 떨어집니다. 원형으로 벌리세요!", "ring", false);
+            _patterns[(int)FrostKnightAttack.Charge] = Pattern("가로 차징", "세 줄 사이로", "검기가 방을 가로지릅니다!", "line", false);
             _patterns[(int)FrostKnightAttack.LethalLeft] = Pattern("즉사 내려찍기", "오른쪽으로", "왼쪽 전체가 즉사 범위입니다!", "", true);
             _patterns[(int)FrostKnightAttack.LethalRight] = Pattern("즉사 내려찍기", "왼쪽으로", "오른쪽 전체가 즉사 범위입니다!", "", true);
             _patterns[(int)FrostKnightAttack.LethalCenter] = Pattern("즉사 내려찍기", "양옆으로", "가운데가 즉사 범위입니다!", "", true);
@@ -164,6 +164,7 @@ namespace BoneSquadKiting.Bosses
                     break;
 
                 case FrostKnightState.Charging:
+                    if (!_casting) SetTargetable(false);
                     if (!_casting && StateTime >= ChargeLength / Mathf.Max(0.1f, Tuning.ChargeAnimSpeed)) Hide();
                     break;
 
@@ -200,12 +201,112 @@ namespace BoneSquadKiting.Bosses
             Play("RaiseHands");            // the model goes on to the slam and back to idle by itself
             if (_random() < 0.5f)
             {
-                float angle = _yaw + Mathf.Lerp(-Tuning.ParallelMaxAngle, Tuning.ParallelMaxAngle, _random());
+                float maxAngle = Mathf.Clamp(Tuning.ParallelMaxAngle, 0f, 45f);
+                float angle = _yaw + Mathf.Lerp(-maxAngle, maxAngle, _random());
                 Cast(FrostKnightAttack.Parallel, DangerShape.BandsX(Tuning.ParallelInner, Tuning.ParallelOuter, Tuning.ParallelHalfLength),
-                    _center, angle, Tuning.SlamHitSeconds, false);
+                    _squad.Anchor, angle, Tuning.SlamHitSeconds, false);
             }
-            else Cast(FrostKnightAttack.Circle, DangerShape.Disc(Tuning.CircleRadius), _squad.Anchor, 0f, Tuning.SlamHitSeconds, false);
+            else
+            {
+                // Dodged by the ring formation, so it shrinks with the squad the way the ring does.
+                var ring = _squad.Formations.Find(f => f != null && f.Mode == FormationMode.Ring);
+                float radius = Tuning.CircleRadius;
+                if (Tuning.CircleScalesWithSquad)
+                    radius = ring != null ? FormationSlots.RingRadius(ring.Radius, _squad.AliveCount) * Tuning.CircleRingRatio
+                        : Tuning.CircleRadius * FormationSlots.SquadFraction(_squad.AliveCount);
+                Cast(FrostKnightAttack.Circle, DangerShape.Disc(radius), _squad.Anchor, _yaw, Tuning.SlamHitSeconds, false);
+            }
             _wait = Tuning.SlamRecoverSeconds + Tuning.ThroneAttackGap;
+        }
+
+        void AddThroneStrikes()
+        {
+            float limit = Mathf.Clamp(Tuning.ParallelMaxAngle, 0f, 45f);
+            float offset = Mathf.DeltaAngle(_yaw, _cast.Angle);
+            // Drop the closest of left diagonal, straight and right diagonal. At the authored
+            // 45 degree limit the remaining headings differ from the main strike by at least 22.5.
+            float firstAngle = offset < -.5f * limit ? _yaw : _yaw - limit;
+            float secondAngle = offset > .5f * limit ? _yaw : _yaw + limit;
+            var first = EmptyStrikeCandidates(firstAngle);
+            var second = EmptyStrikeCandidates(secondAngle);
+            BossAttackSystem.Active? bestFirst = null, bestSecond = null;
+            float bestClearance = float.NegativeInfinity;
+            foreach (var a in first)
+            {
+                float clearance = StrikeSeparation(_cast, a);
+                foreach (var b in second)
+                {
+                    float score = Mathf.Min(clearance, Mathf.Min(StrikeSeparation(_cast, b), StrikeSeparation(a, b)));
+                    if (score <= bestClearance || (a.Cx == b.Cx && a.Cz == b.Cz)) continue;
+                    bestClearance = score;
+                    bestFirst = a;
+                    bestSecond = b;
+                }
+            }
+            if (bestFirst.HasValue)
+            {
+                Telegraphs.Add(bestFirst.Value);
+                Telegraphs.Add(bestSecond.Value);
+                return;
+            }
+            // A smaller room or scattered soldiers may leave room for only one copy.
+            foreach (var candidate in first) KeepFurthest(candidate);
+            foreach (var candidate in second) KeepFurthest(candidate);
+            if (bestFirst.HasValue) Telegraphs.Add(bestFirst.Value);
+
+            void KeepFurthest(BossAttackSystem.Active candidate)
+            {
+                float score = StrikeSeparation(_cast, candidate);
+                if (score <= bestClearance) return;
+                bestClearance = score;
+                bestFirst = candidate;
+            }
+        }
+
+        List<BossAttackSystem.Active> EmptyStrikeCandidates(float angle)
+        {
+            var shape = _cast.Shape;
+            bool circle = shape.Type == DangerShapeType.Disc;
+            float radians = (angle - _yaw) * Mathf.Deg2Rad;
+            float cos = Mathf.Abs(Mathf.Cos(radians)), sin = Mathf.Abs(Mathf.Sin(radians));
+            float insetX = circle ? shape.RMax : shape.Outer * cos + shape.HalfZ * sin;
+            float insetZ = circle ? shape.RMax : shape.Outer * sin + shape.HalfZ * cos;
+            var range = _size * .5f - new Vector2(insetX, insetZ);
+            var candidates = new List<BossAttackSystem.Active>(9);
+            if (range.x < 0f || range.y < 0f) return candidates;
+            var footprint = circle ? DangerShape.Disc(shape.RMax + .5f) : DangerShape.Rectangle(shape.Outer + .5f, shape.HalfZ + .5f);
+            int start = Mathf.FloorToInt(_random() * 9f);
+            for (int i = 0; i < 9; i++)
+            {
+                int cell = (start + i) % 9;
+                var at = Point((cell % 3 - 1) * range.x, (cell / 3 - 1) * range.y);
+                if (DangerShapeEval.InDanger(footprint, at.x, at.y, _cast.Cx, _cast.Cz, angle)) continue;
+                if (_squad.Units.Exists(u => !u.Dead && DangerShapeEval.InDanger(footprint, at.x, at.y, u.X, u.Z, angle))) continue;
+                var copy = _cast;
+                copy.Cx = at.x;
+                copy.Cz = at.y;
+                copy.Angle = Mathf.Repeat(angle, 360f);
+                candidates.Add(copy);
+            }
+            return candidates;
+        }
+
+        // Positive when the two footprints are apart; negative when distant tips must cross.
+        static float StrikeSeparation(BossAttackSystem.Active a, BossAttackSystem.Active b)
+        {
+            var delta = new Vector2(b.Cx - a.Cx, b.Cz - a.Cz);
+            if (a.Shape.Type == DangerShapeType.Disc) return delta.magnitude - 2f * a.Shape.RMax;
+            float radians = (a.Angle - b.Angle) * Mathf.Deg2Rad;
+            float cos = Mathf.Abs(Mathf.Cos(radians)), sin = Mathf.Abs(Mathf.Sin(radians));
+            float xReach = a.Shape.Outer * (1f + cos) + a.Shape.HalfZ * sin;
+            float zReach = a.Shape.HalfZ * (1f + cos) + a.Shape.Outer * sin;
+            return Mathf.Max(GapOnAxes(a.Angle), GapOnAxes(b.Angle));
+
+            float GapOnAxes(float angle)
+            {
+                var p = Quaternion.Euler(0f, -angle, 0f) * new Vector3(delta.x, 0f, delta.y);
+                return Mathf.Max(Mathf.Abs(p.x) - xReach, Mathf.Abs(p.z) - zReach);
+            }
         }
 
         void Stun()
@@ -262,11 +363,16 @@ namespace BoneSquadKiting.Bosses
             Boss.Position = Point(side * (_size.x * 0.5f - 1f), shift);
             Boss.Facing = _yaw + (fromLeft ? 90f : -90f);                       // looks across the room
             float speed = Mathf.Max(0.1f, Tuning.ChargeAnimSpeed);
+            SetTargetable(Tuning.ChargeCanBeHit);
             Play("ChargedSlash", speed);
-            // Two rows across the whole room: the two bands, turned a quarter.
-            float half = Tuning.ChargeRowWidth * 0.5f;
-            var shape = DangerShape.BandsX(Mathf.Max(-0.001f, Tuning.ChargeRowOffset - half), Tuning.ChargeRowOffset + half, _size.x * 0.5f);
-            Cast(FrostKnightAttack.Charge, shape, Point(0f, shift), _yaw + 90f, ChargeHitAt / speed, false);
+            var line = _squad.Find("line");
+            float gap = (line != null ? line.Spacing : .49f) + Tuning.ChargeGapPadding;
+            var shape = new DangerShape
+            {
+                Type = DangerShapeType.ThreeLanes, LaneHalfWidth = Tuning.ChargeRowWidth * .5f,
+                LaneSpacing = Tuning.ChargeRowWidth + gap, HalfZ = _size.x * .5f - 1f
+            };
+            Cast(FrostKnightAttack.Charge, shape, Point(0f, shift), Boss.Facing, ChargeHitAt / speed, false);
         }
 
         void StartLethal()
@@ -282,8 +388,7 @@ namespace BoneSquadKiting.Bosses
             Boss.Facing = _yaw + 180f;                          // faces the entrance, like on the throne
             _plantStarted = false; _afterHit = 0f;
             var attack = zone == 0 ? FrostKnightAttack.LethalLeft : zone == 1 ? FrostKnightAttack.LethalRight : FrostKnightAttack.LethalCenter;
-            // One box: the two bands with no gap between them (a hair of overlap, so the seam is in it too).
-            Cast(attack, DangerShape.BandsX(-0.001f, halfWidth, _size.y * 0.5f + 1f), Point(x, 0f), _yaw, Tuning.LethalWarnSeconds, true);
+            Cast(attack, DangerShape.Rectangle(halfWidth, _size.y * 0.5f), Point(x, 0f), _yaw, Tuning.LethalWarnSeconds, true);
         }
 
         void StartGroggy()
@@ -328,8 +433,13 @@ namespace BoneSquadKiting.Bosses
             {
                 Pattern = p, Shape = shape, ShapeScale = 1f, Cx = at.x, Cz = at.y, Angle = Mathf.Repeat(angle, 360f),
                 Elapsed = 0f, Remaining = seconds, Tracks = false,
+                GrowLanesThroughCast = attack == FrostKnightAttack.Charge,
+                WarningFadeSeconds = attack == FrostKnightAttack.Circle || attack == FrostKnightAttack.Parallel ? .4f : 0f,
+                WarningEndLead = attack == FrostKnightAttack.Circle ? .36f : 0f, // blade descent after the disc fades
             };
-            Telegraphs.Clear(); Telegraphs.Add(_cast);
+            Telegraphs.Clear();
+            Telegraphs.Add(_cast);
+            if (attack == FrostKnightAttack.Parallel || attack == FrostKnightAttack.Circle) AddThroneStrikes();
             OnPatternStarted?.Invoke(p);
             OnCast?.Invoke(attack, _cast);
         }
@@ -340,9 +450,17 @@ namespace BoneSquadKiting.Bosses
             _cast.Elapsed += dt;
             _cast.Remaining = Mathf.Max(0f, _cast.Pattern.Time - _cast.Elapsed);
             Telegraphs[0] = _cast;
+            for (int i = 1; i < Telegraphs.Count; i++)
+            {
+                var copy = Telegraphs[i];
+                copy.Elapsed = _cast.Elapsed;
+                copy.Remaining = _cast.Remaining;
+                Telegraphs[i] = copy;
+            }
             if (_cast.Remaining > 0f) return;
-            _casting = false; Telegraphs.Clear();
-            Resolve();
+            _casting = false;
+            Resolve(); // The view uses the exact warned poses at impact.
+            Telegraphs.Clear();
         }
 
         void Resolve()

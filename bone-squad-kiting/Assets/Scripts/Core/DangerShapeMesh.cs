@@ -17,7 +17,7 @@ namespace BoneSquadKiting.Core
         /// <paramref name="maxStep"/> above 0 cuts the area into pieces no longer than that along each side,
         /// so the mesh has points inside it that can be lifted onto uneven ground. 0 = as few triangles as possible.
         /// </summary>
-        public static Mesh Build(DangerShape s, float maxStep = 0f)
+        public static Mesh Build(DangerShape s, float maxStep = 0f, bool separateLanes = false)
         {
             var v = new List<Vector3>();
             var t = new List<int>();
@@ -27,11 +27,21 @@ namespace BoneSquadKiting.Core
             {
                 case DangerShapeType.Disc: Ring(v, t, uv, size, 0f, s.RMax, maxStep); break;
                 case DangerShapeType.Annulus: Ring(v, t, uv, size, s.RMin, s.ROut, maxStep); break;
+                case DangerShapeType.Rectangle: Box(v, t, uv, size, -s.Outer, s.Outer, -s.HalfZ, s.HalfZ, maxStep); break;
                 case DangerShapeType.CrossBandsX:
                     Box(v, t, uv, size, s.Inner, s.Outer, -s.HalfZ, s.HalfZ, maxStep);
                     Box(v, t, uv, size, -s.Outer, -s.Inner, -s.HalfZ, s.HalfZ, maxStep);
                     break;
                 case DangerShapeType.ThreeLanes:
+                    if (separateLanes)
+                    {
+                        for (int lane = -1; lane <= 1; lane++)
+                        {
+                            float x = lane * s.LaneSpacing;
+                            Box(v, t, uv, size, x - s.LaneHalfWidth, x + s.LaneHalfWidth, -s.HalfZ, s.HalfZ, maxStep, true);
+                        }
+                        break;
+                    }
                     Box(v, t, uv, size, -s.ThreeLaneHalfSpan, s.ThreeLaneHalfSpan, -s.HalfZ, s.HalfZ, maxStep);
                     break;
                 case DangerShapeType.QuadrantBoxes:
@@ -80,12 +90,12 @@ namespace BoneSquadKiting.Core
         }
 
         // A box grows away from the center: along x when it sits to one side of it in x, along z otherwise.
-        static void Box(List<Vector3> v, List<int> t, List<Vector2> uv, List<Vector2> size, float x0, float x1, float z0, float z1, float maxStep)
+        static void Box(List<Vector3> v, List<int> t, List<Vector2> uv, List<Vector2> size, float x0, float x1, float z0, float z1, float maxStep, bool forward = false)
         {
             int nx = Steps(x1 - x0, maxStep), nz = Steps(z1 - z0, maxStep), row = nz + 1;
             int b = v.Count;
-            bool alongX = x0 * x1 >= 0f;
-            bool outwardIsUp = alongX ? x0 + x1 >= 0f : z0 + z1 >= 0f;
+            bool alongX = !forward && x0 * x1 >= 0f;
+            bool outwardIsUp = forward || (alongX ? x0 + x1 >= 0f : z0 + z1 >= 0f);
             var extent = alongX ? new Vector2(Mathf.Abs(z1 - z0), Mathf.Abs(x1 - x0)) : new Vector2(Mathf.Abs(x1 - x0), Mathf.Abs(z1 - z0));
             for (int i = 0; i <= nx; i++)
                 for (int k = 0; k <= nz; k++)

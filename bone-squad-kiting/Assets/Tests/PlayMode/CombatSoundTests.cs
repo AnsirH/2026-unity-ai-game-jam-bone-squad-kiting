@@ -51,13 +51,72 @@ public class CombatSoundTests
     {
         var db = AssetDatabase.LoadAssetAtPath<SoundDatabaseSO>("Assets/Data/Audio/SoundDatabase.asset");
         var pool = SoundManager.Current.GetComponent<SfxPool>();
-        foreach (var entry in db.Sfx.Where(e => e.Clip != null && !e.Id.StartsWith("boss.")))
+        foreach (var entry in db.Sfx.Where(e => e.Clip != null))
         {
             Assert.IsTrue(SoundManager.Current.PlaySfx(entry.Id));
             var voice = pool.GetComponents<AudioSource>().Single(s => s.isPlaying && s.clip == entry.Clip);
             int firstSample = Mathf.RoundToInt(entry.StartOffset * entry.Clip.frequency);
             Assert.GreaterOrEqual(voice.timeSamples, firstSample - 1, entry.Id);
         }
+    }
+
+    [UnityTest]
+    public IEnumerator FrostKnightSoundsFollowTheBladeAndStopWhenItLands()
+    {
+        var room = new GameObject("Boss room");
+        room.transform.SetParent(squad.transform);
+        var arena = room.AddComponent<BossArena>();
+        var model = new GameObject("Frost Knight");
+        model.transform.SetParent(room.transform);
+        var view = model.AddComponent<FrostKnightView>();
+        view.Director = director;
+        director.Restart();
+        var fight = director.Fight;
+        squad.Anchor = arena.Center;
+        yield return null;
+        yield return null;
+        fight.Tick(0f);
+        Assert.IsTrue(Playing(view.WakeSound));
+
+        var random = Random.state;
+        try
+        {
+            Random.InitState(1); // select the circular throne attack
+            fight.Tick(arena.Tuning.FirstAttackDelay + .01f);
+        }
+        finally { Random.state = random; }
+        Assert.AreEqual(FrostKnightAttack.Circle, fight.Attack);
+        Assert.IsFalse(Playing(view.CastSound));
+        fight.Tick(fight.Telegraphs[0].Remaining - .34f);
+        yield return null;
+        Assert.IsTrue(Playing(view.CastSound));
+        Assert.IsFalse(Playing(view.CircleFallSound));
+        fight.Tick(.24f);
+        yield return null;
+        Assert.IsTrue(Playing(view.CircleFallSound));
+        Assert.IsFalse(Playing(view.HitSound));
+        fight.Tick(.11f);
+        Assert.IsFalse(Playing(view.CircleFallSound));
+        Assert.IsTrue(Playing(view.HitSound));
+
+        fight.Boss.ApplyDamage(fight.Boss.MaxHp);
+        fight.Tick(0f);
+        Assert.IsTrue(Playing(view.StunSound));
+        fight.Tick(arena.Tuning.MageDelay);
+        fight.Tick(0f); // the test arena has no mages
+        Assert.IsTrue(Playing(view.RiseSound));
+        fight.Tick(arena.Tuning.StandUpSeconds);
+        fight.Tick(arena.Tuning.AttackGap);
+        Assert.AreEqual(FrostKnightAttack.Charge, fight.Attack);
+        Assert.IsFalse(Playing(view.ChargeSwingSound));
+        fight.Tick(fight.Telegraphs[0].Remaining - .1f);
+        yield return null;
+        Assert.IsTrue(Playing(view.ChargeSwingSound));
+        Assert.IsFalse(Playing(view.ChargeFlightSound));
+        fight.Tick(.11f);
+        Assert.IsTrue(Playing(view.ChargeFlightSound));
+        fight.Kill();
+        Assert.IsTrue(Playing(view.DeathSound));
     }
 
     [Test]

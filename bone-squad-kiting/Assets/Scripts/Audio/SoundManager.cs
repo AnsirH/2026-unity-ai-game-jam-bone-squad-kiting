@@ -60,5 +60,11 @@ namespace BoneSquadKiting.Audio
             effects.Play(entry);
             return true;
         }
+
+        internal void StopSfx(string id)
+        {
+            var clip = database.FindSfx(id)?.Clip;
+            if (clip != null) effects.Stop(clip);
+        }
     }
 }

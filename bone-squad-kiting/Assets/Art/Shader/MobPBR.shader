@@ -24,6 +24,8 @@ Shader "Bone Squad/Mob PBR"
         _HitFlashIntensity("Hit Flash Intensity", Range(0, 10)) = 3
         [HideInInspector] _HitFlashAmount("Hit Flash Amount", Range(0, 1)) = 0
 
+        [HideInInspector] _BodyHitTint("Body Hit Tint", Color) = (0,0,0,0)
+
         [Header(Fresnel)]
         [HDR] _FresnelColor("Fresnel Color", Color) = (1, 1, 1, 1)
         _FresnelIntensity("Fresnel Intensity", Range(0, 5)) = 0.5
@@ -55,7 +57,7 @@ Shader "Bone Squad/Mob PBR"
             float4 _BaseMap_ST;
             half4 _BaseColor, _EmissionColor, _FresnelColor, _DissolveEdgeColor;
             half _Metallic, _Smoothness, _BumpScale, _Opacity;
-            half4 _HitFlashColor;
+            half4 _HitFlashColor, _BodyHitTint;
             half _HitFlashIntensity, _HitFlashAmount;
             half _FresnelIntensity, _FresnelPower;
             float _DissolveAmount, _DissolveScale, _DissolveEdgeWidth;
@@ -166,9 +168,10 @@ Shader "Bone Squad/Mob PBR"
                 InitializeInputData(input, surface.normalTS, lighting);
                 InitializeBakedGIData(input, lighting);
                 half facing = saturate(abs(dot(lighting.normalWS, lighting.viewDirectionWS)));
-                surface.emission += _FresnelColor.rgb * (_FresnelIntensity * pow(1.0h - facing, _FresnelPower));
+                surface.emission += _FresnelColor.rgb * (_FresnelColor.a * _FresnelIntensity * pow(1.0h - facing, _FresnelPower));
                 surface.emission += _DissolveEdgeColor.rgb * edge;
                 color = UniversalFragmentPBR(lighting, surface);
+                color.rgb = lerp(color.rgb, _BodyHitTint.rgb, _BodyHitTint.a);
                 color.rgb = MixFog(color.rgb, lighting.fogCoord);
                 color.a = 1.0h;
             #ifdef _WRITE_RENDERING_LAYERS

@@ -32,6 +32,7 @@ public class StageRunTests
         var sound = SoundManager.Current;
         Assert.AreEqual("bgm.stage3", sound.CurrentBgmId);
 
+        StageRun.RequestedStage = 0;
         yield return SceneManager.LoadSceneAsync("Game");
         yield return null;
         Assert.AreSame(sound, SoundManager.Current);

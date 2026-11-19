@@ -6,8 +6,8 @@ namespace BoneSquadKiting.Squad
 {
     /// <summary>
     /// The revive action. Each use pairs one living unit (the reviver) with one dead unit; after
-    /// <see cref="Duration"/> seconds the dead unit comes back at full health near the formation center.
-    /// Several revives can run side by side. The reviver keeps its place in the formation and cannot
+    /// <see cref="Duration"/> seconds the dead unit comes back at full health beside the reviver.
+    /// Several revives can run side by side. The reviver stays at its starting position and cannot
     /// fire while reviving; if it dies, that revive is cancelled.
     /// </summary>
     public class ReviveSystem
@@ -17,13 +17,14 @@ namespace BoneSquadKiting.Squad
         public class Revive
         {
             public SquadUnit Reviver, Target;
-            public Vector2 AppearOffset;
+            public Vector2 Facing, AppearOffset;
+            public Vector2 RecoverySpot => new Vector2(Reviver.X, Reviver.Z) + AppearOffset;
             public float Elapsed;
             public bool Assembling;
         }
 
         public float Duration = 3f;
-        public float AppearRadius = 0.6f;   // revived units appear this far from the anchor (the center itself is kept free)
+        public float AppearRadius = 0.6f;   // revived units appear this far beside the reviver
 
         public readonly List<Revive> Active = new();
 
@@ -55,11 +56,15 @@ namespace BoneSquadKiting.Squad
             if (reviver == null) return false;
 
             reviver.Reviving = true;
+            reviver.Moving = false;
+            target.Moving = false;
+            var facing = reviver.Facing.sqrMagnitude > 0.0001f ? reviver.Facing.normalized : Vector2.up;
             Active.Add(new Revive
             {
                 Reviver = reviver,
                 Target = target,
-                AppearOffset = Random.insideUnitCircle.normalized * AppearRadius
+                Facing = facing,
+                AppearOffset = new Vector2(-facing.y, facing.x) * AppearRadius
             });
             OnStarted?.Invoke(reviver, target);
             return true;
@@ -111,7 +116,8 @@ namespace BoneSquadKiting.Squad
                 if (r.Elapsed < Duration) continue;
 
                 r.Reviver.Reviving = false;
-                var spot = anchor + r.AppearOffset;
+                var spot = r.RecoverySpot;
+                r.Target.Facing = r.Facing;
                 r.Target.Dead = false;
                 r.Target.Hp = GameConstants.UnitMax;
                 r.Target.X = spot.x; r.Target.Z = spot.y;

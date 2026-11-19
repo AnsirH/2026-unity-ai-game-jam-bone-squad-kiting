@@ -22,8 +22,10 @@ namespace BoneSquadKiting.Bosses
             public PatternDefinition Pattern;
             public DangerShape Shape;   // the pattern's shape as cast (already scaled to the squad if it scales)
             public float Cx, Cz, Elapsed, Remaining;
+            public bool GrowLanesThroughCast;
             public bool Tracks;         // whether the zone follows the squad until the lock time
             public float ShapeScale;
+            public float WarningFadeSeconds, WarningEndLead; // presentation timing before impact
             public float Angle;         // degrees the zone has turned, clockwise seen from above
             public bool Sustaining;     // telegraph is over and a sustained pattern is dealing damage
             public float SustainRemaining, TickIn;

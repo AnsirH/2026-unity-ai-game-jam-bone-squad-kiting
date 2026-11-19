@@ -5,6 +5,8 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
         _TrailTime ("Tip Trail Duration (s)", Float) = 0.135
         _Windup ("Telegraph Before Strike (s)", Float) = 1.15
         _StrikeDuration ("Strike Duration (s)", Float) = 0.4
+        _GroundMarkLift ("Ground mark lift (world metres)", Float) = 0
+        _ExtraTravel ("Added travel (local metres)", Float) = 0
         _Elapsed ("Strike Time Override (s, -1 = Loop)", Float) = -1
     }
     SubShader
@@ -21,7 +23,7 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                float _TrailTime, _Windup, _StrikeDuration, _Elapsed;
+                float _TrailTime, _Windup, _StrikeDuration, _Elapsed, _GroundMarkLift, _ExtraTravel;
             CBUFFER_END
 
             struct Input { float3 position : POSITION; float2 uv : TEXCOORD0; float2 tip : TEXCOORD1; };
@@ -51,12 +53,17 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
                 return lerp(a,b,frac(z)) * 2 - 1;
             }
 
+            float TravelProgress(float age)
+            {
+                return 1 - pow(1 - saturate((age - .095) / .59), 1.45);
+            }
+
             float3 TipPosition(float2 uv, float side, float elapsed)
             {
                 float tail = uv.y;
                 float sampleTime = clamp(elapsed - tail * _TrailTime, 0, .275);
                 float age = sampleTime / .4;
-                float head = (1 - pow(1 - saturate((age - .095) / .59), 1.45)) * 8.47 + .34;
+                float head = TravelProgress(age) * 8.47 + TravelProgress(elapsed / .4) * _ExtraTravel + .34;
                 float opened = smoothstep(0, .17, age);
                 float u = side > 0 ? .035 : .965;
                 float arch = pow(sin(3.14159 * u), .8);
@@ -83,6 +90,7 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
                 o.uv = v.uv;
                 o.tip = abs(v.tip.x);
                 float3 p = o.tip > .5 ? TipPosition(v.uv, v.tip.x, o.elapsed) : v.position;
+                if (o.tip < .5) p.z *= (10 + _ExtraTravel) / 10;
                 float3 x = TransformObjectToWorldDir(float3(1,0,0), false);
                 float3 y = TransformObjectToWorldDir(float3(0,1,0), false);
                 float3 z = TransformObjectToWorldDir(float3(0,0,1), false);
@@ -92,6 +100,7 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
                 float3 forward = SafeNormalize(flat);
                 float3 world = TransformObjectToWorld(float3(0,0,0))
                              + cross(up,forward) * (p.x * length(x)) + up * (p.y * length(y)) + forward * (p.z * length(z));
+                if (o.tip < .5) world.y += _GroundMarkLift;
                 o.position = TransformWorldToHClip(world);
                 return o;
             }
@@ -110,11 +119,11 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
                     return float4(strength * (core * float3(.055,.60,1.60) + halo * float3(.016,.114,.48)), strength * halo * .32);
                 }
 
-                float z = i.uv.y * 10;
+                float z = i.uv.y * (10 + _ExtraTravel);
                 float x = (i.uv.x - .5) * 3;
                 float across = abs(x) / 1.5;
                 float bow = 1.45 * pow(saturate(1 - across * across),.80);
-                float crossing = .4 * (.095 + .59 * (1 - pow(1 - saturate((z - .34 - bow) / 8.47),1 / 1.45)));
+                float crossing = .4 * (.095 + .59 * (1 - pow(1 - saturate((z - .34 - bow) / (8.47 + _ExtraTravel)),1 / 1.45)));
                 float since = i.elapsed - crossing;
                 float sweep = x + .13 * sin(z * .85 + x) + .085 * Jag(z * 1.6);
                 float bristle = .75 * Brush(float2(sweep * 3.5,z * .91)) + .25 * Brush(float2(sweep * 17,z * 2.8));
@@ -122,7 +131,7 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
                 float drift = x + .12 * sin(z * .8 + x);
                 float haze = .66 * Brush(float2(drift * 2.4,z * .72)) + .34 * Brush(float2(drift * 4.1 + .7,z * .43));
                 float veil = 1 - smoothstep(.50 + .14 * haze,1,across);
-                float ends = smoothstep(0,1.1 + .35 * haze,z) * (1 - smoothstep(7.90 + bow,min(10.,8.96 + bow),z));
+                float ends = smoothstep(0,1.1 + .35 * haze,z) * (1 - smoothstep(7.90 + bow,min(10.,8.96 + bow),z - _ExtraTravel));
                 float settled = smoothstep(.02,.11,since) * veil * ends;
                 float pigment = settled * fade * (.29 + .32 * haze);
                 float tint = settled * (1 - smoothstep(.11,.65,since)) * (.048 + .17 * haze * haze);
@@ -135,7 +144,7 @@ Shader "BoneSquad/Vertical Sovereign Slash Wake"
                 float splinter=1-smoothstep(.016,.031+edgeBlur,abs(center+.17+.06*Jag(z*2.4)));
                 splinter*=smoothstep(.20,.76,Brush(float2(z*1.6,4.7)));
                 float mark=smoothstep(.005,.062,age)*(1-smoothstep(.16+.18*grain,1.02+.18*grain,age));
-                mark*=smoothstep(0,.65+.28*grain,z)*(1-smoothstep(9.08,9.94,z));
+                mark*=smoothstep(0,.65+.28*grain,z)*(1-smoothstep(9.08,9.94,z - _ExtraTravel));
                 float ink=mark*(.89*groove+.34*splinter)*(1-.38*wear);
                 float lip=exp(-abs(center-.09)/(.027+edgeBlur))*(.60+.4*grain);
                 float light=mark*lip*(1-smoothstep(.03,.72,age));

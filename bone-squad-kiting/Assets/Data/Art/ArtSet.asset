@@ -16,6 +16,18 @@ MonoBehaviour:
   ShowAttackSpeedBuff: 1
   AttackSpeedBuffHeight: 0.02
   AttackSpeedBuffScale: 0.69
+  EnemyDeath:
+    Clip: {fileID: -203655887218126122, guid: d65b870de756af14e917c741d87cd058, type: 3}
+    MirroredClip: {fileID: 4061839508520268033, guid: d65b870de756af14e917c741d87cd058, type: 3}
+    SpeedJitter: 0.07
+    YawJitter: 22
+    DissolveStart: 0.9
+    DissolveSeconds: 0.9
+    AshColor: {r: 0.16, g: 0.15, b: 0.14, a: 1}
+    EdgeColor: {r: 1.5, g: 0.75, b: 0.35, a: 1}
+    EdgeWidth: 0.08
+    DissolveShader: {fileID: 4800000, guid: 8511642e59053479b9aa60feccdaad57, type: 3}
+    MaxAtOnce: 40
   EnemyProjectiles:
   - Enemy: {fileID: 11400000, guid: e4174749d27ce4b0a9f84007d2c7a4bb, type: 2}
     Prefab: {fileID: 280308009859959783, guid: 991af6a8465264b639448824cf66dfe7, type: 3}
@@ -42,6 +54,9 @@ MonoBehaviour:
     CrossFade: 0.1
   ModelYawOffset: 0
   TurnSpeed: 720
+  ReviveDust: {fileID: 8844080749097364051, guid: 21a0317efd762480eb1b0f80f79dec96, type: 3}
+  UnitRescueMaterial: {fileID: 2100000, guid: f86bc33701a264ecaad6c4f652eede45, type: 2}
+  LeaderRescueMaterial: {fileID: 2100000, guid: eda3b8930ef244dc0a4d38a68b3de8dd, type: 2}
   BrokenBone: {fileID: 9083058239018853882, guid: 105677d0d9c44446dbc900ba9d405dfa, type: 3}
   Vertebra: {fileID: 1499199010896837509, guid: 59a4cedf172084107ba57d9b5123a3df, type: 3}
   Scapula: {fileID: 8691304082095538948, guid: 25359886137df4b439c91988e62ed507, type: 3}

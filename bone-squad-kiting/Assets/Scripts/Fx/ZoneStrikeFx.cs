@@ -72,6 +72,7 @@ namespace BoneSquadKiting.Fx
             float mid = (s.Inner + s.Outer) * 0.5f, side = s.Outer - s.Inner;
             switch (s.Type)
             {
+                case DangerShapeType.Rectangle: into.Add(new Vector3(0f, 2f * Mathf.Max(s.Outer, s.HalfZ), 0f)); break;
                 case DangerShapeType.CrossBandsX:
                     float longSide = Mathf.Max(side, 2f * s.HalfZ);
                     into.Add(new Vector3(mid, longSide, 0f)); into.Add(new Vector3(-mid, longSide, 0f));

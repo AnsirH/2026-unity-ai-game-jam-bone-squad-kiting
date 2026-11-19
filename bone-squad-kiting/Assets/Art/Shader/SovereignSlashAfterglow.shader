@@ -5,6 +5,7 @@ Shader "BoneSquad/Sovereign Slash Afterglow"
         _TrailTime ("Tip Trail Duration (s)", Float) = 0.135
         _Windup ("Telegraph Before Strike (s)", Float) = 1.15
         _StrikeDuration ("Strike Duration (s)", Float) = 0.4
+        _GroundMarkLift ("Ground mark lift (world metres)", Float) = 0
         _Elapsed ("Strike Time Override (s, -1 = Loop)", Float) = -1
     }
     SubShader
@@ -21,7 +22,7 @@ Shader "BoneSquad/Sovereign Slash Afterglow"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                float _TrailTime, _Windup, _StrikeDuration, _Elapsed;
+                float _TrailTime, _Windup, _StrikeDuration, _Elapsed, _GroundMarkLift;
             CBUFFER_END
 
             struct Input { float3 position : POSITION; float2 uv : TEXCOORD0; float2 tip : TEXCOORD1; };
@@ -89,6 +90,7 @@ Shader "BoneSquad/Sovereign Slash Afterglow"
                 float3 forward = SafeNormalize(flat);
                 float3 world = TransformObjectToWorld(float3(0,0,0))
                              + cross(up,forward) * (p.x * length(x)) + up * (p.y * length(y)) + forward * (p.z * length(z));
+                if (o.tip < .5) world.y += _GroundMarkLift;
                 o.position = TransformWorldToHClip(world);
                 return o;
             }

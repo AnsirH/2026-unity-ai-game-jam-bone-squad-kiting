@@ -16,7 +16,7 @@ MonoBehaviour:
   Armored: 1
   CastSound: 2
   MaxHp: 4000
-  Speed: 2
+  Speed: 0
   Radius: 0.8
   StopDistance: 3
   Patterns:
@@ -25,10 +25,22 @@ MonoBehaviour:
   AttackGap: 4.5
   AttackGapRandom: 0
   ZoneRotationSpeed: 0
-  AttackRange: 16
+  AttackRange: 32.8
   IntroDuration: 2
   DeathDuration: 1.5
   IntroFx: {fileID: 0}
   DeathFx: {fileID: 0}
+  Prefab: {fileID: 7652423654242403680, guid: e4f8b5ef4bd15412fa11049ec225be2b, type: 3}
   HealthBarPrefab: {fileID: 6218836204645062609, guid: 854e94014f6744ce38ab12dcf4bb4799, type: 3}
   HealthBarHeight: 2.65
+  ModelScale: 1
+  ModelYawOffset: 0
+  ModelGroundOffset: 0
+  States:
+    Idle: 
+    Run: 
+    Attack: Attack
+    Die: 
+    Revive: 
+    CrossFade: 0.1
+  CastAnimSeconds: 1.5

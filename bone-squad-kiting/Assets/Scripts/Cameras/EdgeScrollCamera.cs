@@ -37,6 +37,7 @@ namespace BoneSquadKiting.Cameras
         public Vector3 ShakeOffset { get; private set; }
 
         internal float CombatShakeStrength { get; set; }
+        internal float BossDeathRumble { get; set; }
         readonly List<(float strength, float duration, float remaining)> _presentationShakes = new();
 
         /// <summary>Lines the view may not be scrolled past while their mini bosses live. Set by StageSetup.</summary>
@@ -169,6 +170,7 @@ namespace BoneSquadKiting.Cameras
         public void ClearPresentationShake()
         {
             _presentationShakes.Clear();
+            BossDeathRumble = 0f;
             if (CombatShakeStrength <= 0f && ShakeOffset.sqrMagnitude > 0f)
             {
                 ShakeOffset = Vector3.zero;
@@ -178,7 +180,7 @@ namespace BoneSquadKiting.Cameras
 
         public float TickShake(float dt)
         {
-            float strongest = CombatShakeStrength;
+            float strongest = Mathf.Max(CombatShakeStrength, BossDeathRumble);
             for (int i = _presentationShakes.Count - 1; i >= 0; i--)
             {
                 var shake = _presentationShakes[i];

@@ -16,6 +16,7 @@ namespace BoneSquadKiting.Bosses
     public class EliteView : MonoBehaviour
     {
         public GameDirector Director;
+        public ArtSet Art;                 // found from the squad view when left empty
         public Material EliteMaterial;
         public int EnemyLayer;
         public float Height = 1.6f;
@@ -73,11 +74,35 @@ namespace BoneSquadKiting.Bosses
                 var v = _live[e];
                 _live.Remove(e);
                 if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
-                v.Root.SetActive(false);
                 v.Ref.Enemy = null;
-                if (!_free.TryGetValue(e.Def, out var stack)) _free[e.Def] = stack = new Stack<View>();
-                stack.Push(v);
+                if (Art == null)
+                {
+                    var squad = FindAnyObjectByType<BoneSquadKiting.Squad.SquadView>();
+                    if (squad != null) Art = squad.Art;
+                }
+                var look = Art != null ? Art.EnemyDeath : null;
+                // Killed (not just cleared away with the stage): it falls and turns to ash before its view is free again.
+                if (!e.Alive && v.Visual != null && look != null && look.Clip != null)
+                {
+                    if (!v.Model.TryGetComponent<DeathFade>(out var fade)) fade = v.Model.gameObject.AddComponent<DeathFade>();
+                    var def = e.Def;
+                    v.Pick.enabled = false;          // a body on the ground is not a target
+                    DyingCount++;
+                    fade.Play(v.Visual.Animator, look, () => { DyingCount--; v.Pick.enabled = true; Release(def, v); });
+                    continue;
+                }
+                Release(e.Def, v);
             }
+        }
+
+        /// <summary>How many dead mini bosses are still falling or dissolving.</summary>
+        public int DyingCount { get; private set; }
+
+        void Release(EliteDefinition def, View v)
+        {
+            v.Root.SetActive(false);
+            if (!_free.TryGetValue(def, out var stack)) _free[def] = stack = new Stack<View>();
+            stack.Push(v);
         }
 
         void Draw(Elite e, View v, Camera camera)
