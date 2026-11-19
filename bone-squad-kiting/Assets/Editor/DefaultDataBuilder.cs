@@ -53,7 +53,7 @@ namespace BoneSquadKiting.EditorTools
             // The telekinetic mage is meant to cast rotating zones, which do not exist yet: it uses the plain
             // gate pattern for now.
             Elite("Catapult", "투석병", seq.Patterns[0], cannon: true);
-            Elite("DarkFlameMage", "검정불꽃마법사", seq.Patterns[3]);
+            Elite("DarkFlameMage", "검정불꽃마법사", seq.Patterns[3], second: seq.Patterns[2]);   // shell, then quadrants (the cross-shaped safe area)
             Elite("SpearThrower", "창투척병", seq.Patterns[1]);
             Elite("ShadowSwordsman", "그림자검사", seq.Patterns[2]);
             // The telekinetic mage's zones turn (ZoneRotationSpeed on the mini boss). Three variants so every
@@ -103,10 +103,11 @@ namespace BoneSquadKiting.EditorTools
             to.Recommend = from.Recommend; to.Time = from.Time; to.Shape = from.Shape; to.ScaleWithSquad = from.ScaleWithSquad;
         }
 
-        static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false, float rotation = 0f)
+        static void Elite(string file, string name, PatternDefinition pattern, bool cannon = false, float rotation = 0f, PatternDefinition second = null)
         {
             var e = Upsert<EliteDefinition>($"{Root}/Elites/{file}.asset");
             e.DisplayName = name; e.Patterns = new List<PatternDefinition> { pattern };
+            if (second != null) e.Patterns.Add(second);
             e.ZoneRotationSpeed = rotation;
             if (cannon)
             {
