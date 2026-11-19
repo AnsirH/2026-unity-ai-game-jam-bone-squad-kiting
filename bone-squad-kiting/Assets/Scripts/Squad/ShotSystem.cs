@@ -148,7 +148,7 @@ namespace BoneSquadKiting.Squad
             var target = u.PendingTarget;
             if (target == null) return;
             u.PendingTarget = null;
-            if (u.Dead || target is not { Alive: true }) { ReleaseReserve(target, u.PendingReserve); return; }
+            if (u.Dead || u.Reviving || target is not { Alive: true }) { ReleaseReserve(target, u.PendingReserve); return; }
             var dir = (target.Pos - new Vector2(u.X, u.Z)).normalized;
             bool hasMuzzle = _muzzlePositions.TryGetValue(u.Id, out var muzzle);
             var start = hasMuzzle

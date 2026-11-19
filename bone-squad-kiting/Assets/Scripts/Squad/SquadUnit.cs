@@ -44,7 +44,7 @@ namespace BoneSquadKiting.Squad
             if (Dead) return;
             float ux = target.x - X, uz = target.y - Z;
             float dist = Mathf.Sqrt(ux * ux + uz * uz);
-            Moving = dist > Arrive;
+            Moving = !Reviving && dist > Arrive;
             if (Moving)
             {
                 float speed = BaseSpeed + Mathf.Min(SpeedDistCap, dist * SpeedDistGain);

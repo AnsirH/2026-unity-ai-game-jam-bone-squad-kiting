@@ -59,14 +59,15 @@ public class ReviveTests
     }
 
     [Test]
-    public void RevivedUnit_AppearsNearTheCenter_NotOnIt_ThenWalksToAFreeSlot()
+    public void RevivedUnit_AppearsBesideItsHelper_ThenWalksToAFreeSlot()
     {
         Kill(20);
         _dir.TryRevive();
-        Vector2 seen = default; _dir.ReviveCompleted += (reviver, revived) => seen = new Vector2(revived.X, revived.Z);
+        float distance = -1f;
+        _dir.ReviveCompleted += (helper, revived) =>
+            distance = Vector2.Distance(new Vector2(helper.X, helper.Z), new Vector2(revived.X, revived.Z));
         Run(3.05f);
-        float fromCenter = (seen - _fc.Anchor).magnitude;
-        Assert.That(fromCenter, Is.EqualTo(_dir.Revives.AppearRadius).Within(0.05f), "close to the center, but not the center itself");
+        Assert.That(distance, Is.EqualTo(_dir.Revives.AppearRadius).Within(0.001f));
 
         Run(2f);
         var u = _fc.Units[20];
@@ -135,12 +136,21 @@ public class ReviveTests
         _dir.ReviveCompleted += (reviver, target) =>
         {
             Assert.That(Vector2.Distance(startAnchor, _fc.Anchor), Is.GreaterThan(0.1f));
-            completedOffset = new Vector2(target.X, target.Z) - _fc.Anchor;
+            completedOffset = new Vector2(target.X - reviver.X, target.Z - reviver.Z);
         };
         Assert.IsTrue(_dir.TryRevive());
         Assert.That(startOffset.magnitude, Is.EqualTo(_dir.Revives.AppearRadius).Within(0.001f));
+        var pair = _dir.Revives.Active.Single();
+        var helperStart = new Vector2(pair.Reviver.X, pair.Reviver.Z);
+        var other = _fc.Units.First(u => !u.Dead && u != pair.Reviver);
+        var otherStart = new Vector2(other.X, other.Z);
         _dir.IssueOrder(SquadOrder.Move(startAnchor + new Vector2(6f, 0)));
-        Run(3.1f);
+        Run(2.5f);
+        Assert.AreEqual(helperStart, new Vector2(pair.Reviver.X, pair.Reviver.Z));
+        Assert.IsFalse(pair.Reviver.Moving);
+        Assert.Greater(Vector2.Distance(otherStart, new Vector2(other.X, other.Z)), 0.1f);
+        Run(0.7f);
+        Assert.Greater(Vector2.Distance(helperStart, new Vector2(pair.Reviver.X, pair.Reviver.Z)), 0.01f);
         Assert.AreEqual(0, _dir.DeadCount);
         Assert.IsTrue(completedOffset.HasValue);
         Assert.That(Vector2.Distance(completedOffset.Value, startOffset), Is.LessThan(0.001f));
@@ -216,6 +226,78 @@ public class ReviveTests
         Assert.AreEqual(0, _dir.Revives.Active.Count);
         Assert.AreEqual(0, _dir.DeadCount);
         foreach (var u in _fc.Units) Assert.IsFalse(u.Reviving);
+    }
+
+    [UnityTest]
+    public IEnumerator RescueUsesTheSelectedModelsAndOnlyRestoresTheTargetAfterItStands()
+    {
+        var root = new GameObject("Squad models");
+        root.transform.SetParent(_fc.transform);
+        var view = root.AddComponent<SquadView>();
+        view.Squad = _fc;
+        view.Art = AssetDatabase.LoadAssetAtPath<ArtSet>("Assets/Data/Art/ArtSet.asset");
+        Kill(7);
+        yield return null;
+        yield return null;
+        var target = root.transform.GetChild(7);
+        var body = target.GetComponentInChildren<SkinnedMeshRenderer>(true);
+        var originalMaterial = body.sharedMaterial;
+        Assert.IsFalse(target.gameObject.activeSelf);
+        Assert.IsNull(root.GetComponent<ReviveBoneFx>());
+
+        Assert.IsTrue(_dir.TryRevive());
+        var pair = _dir.Revives.Active.Single();
+        var helper = root.transform.GetChild(pair.Reviver.Id).GetComponentInChildren<Animator>();
+        var helperBody = helper.GetComponentInChildren<SkinnedMeshRenderer>();
+        var originalHelperMaterial = helperBody.sharedMaterial;
+        var climber = target.GetComponentInChildren<Animator>(true);
+        yield return null;
+        yield return null;
+        Assert.IsTrue(target.gameObject.activeSelf);
+        Assert.IsTrue(helper.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.ReviveHelper"));
+        Assert.IsTrue(climber.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.ReviveClimber"));
+        Assert.AreSame(view.Art.UnitRescueMaterial, body.sharedMaterial);
+        Assert.AreSame(pair.Reviver.IsLeader ? view.Art.LeaderRescueMaterial : view.Art.UnitRescueMaterial, helperBody.sharedMaterial);
+        Assert.AreEqual(0.1f, helperBody.sharedMaterial.GetColor("_FresnelColor").a);
+        Assert.AreEqual(0.1f, body.sharedMaterial.GetColor("_FresnelColor").a);
+        var hips = climber.GetBoneTransform(HumanBodyBones.Hips);
+        Assert.Less(hips.position.y, target.position.y);
+        Assert.IsEmpty(root.GetComponentsInChildren<ParticleSystem>().Where(p => p.name == "ReviveDust(Clone)"));
+        var orbit = root.transform.Find("Rescue bone orbit");
+        Assert.AreEqual(3, orbit.childCount);
+        var bone = orbit.GetChild(0);
+        var initialOffset = bone.localPosition;
+        Run(0.24f);
+        yield return null;
+        yield return null;
+        Assert.Greater(Vector3.Distance(initialOffset, bone.localPosition), 0.2f);
+        Assert.That(Vector2.Distance(_fc.Anchor, new Vector2(bone.position.x, bone.position.z)),
+            Is.EqualTo(3.2f).Within(0.03f), "the bone reaches the full squad orbit before converging");
+        Run(1.26f);
+        yield return null;
+        yield return null;
+        var dust = root.GetComponentsInChildren<ParticleSystem>().Single(p => p.name == "ReviveDust(Clone)");
+        foreach (Transform fragment in orbit)
+            Assert.Less(Vector3.Distance(fragment.position, dust.transform.position), 0.001f);
+        var head = climber.GetBoneTransform(HumanBodyBones.Head).position;
+        Assert.That(Vector2.Distance(new Vector2(head.x, head.z),
+            new Vector2(dust.transform.position.x, dust.transform.position.z)), Is.LessThan(0.05f));
+        Assert.That(dust.transform.position.y, Is.EqualTo(BoneSquadKiting.Stage.GroundHeight.Y(head.x, head.z) + 0.04f).Within(0.01f));
+        Run(1.4f);
+        yield return null;
+        yield return null;
+        Assert.Greater(hips.position.y, target.position.y);
+        Assert.IsFalse(orbit.gameObject.activeSelf);
+        Assert.IsTrue(pair.Target.Dead);
+        Run(0.12f);
+        yield return null;
+        yield return null;
+        Assert.IsFalse(pair.Target.Dead);
+        Assert.AreEqual(GameConstants.UnitMax, pair.Target.Hp);
+        Assert.IsTrue(target.gameObject.activeSelf);
+        Assert.IsFalse(climber.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.ReviveClimber"));
+        Assert.AreSame(originalMaterial, body.sharedMaterial);
+        Assert.AreSame(originalHelperMaterial, helperBody.sharedMaterial);
     }
 
     ReviveBoneFx BindBoneFx()

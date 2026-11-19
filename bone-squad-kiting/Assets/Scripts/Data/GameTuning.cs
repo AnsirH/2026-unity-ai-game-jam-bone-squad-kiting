@@ -47,7 +47,7 @@ namespace BoneSquadKiting.Data
 
         [Header("Revive")]
         [Min(0.1f)] public float ReviveSeconds = 3f;
-        [Min(0f)] public float ReviveAppearRadius = 0.6f; // revived units appear this far from the formation's center
+        [Min(0f)] public float ReviveAppearRadius = 0.6f; // revived units appear this far from the reviver
 
         [Header("Camera")]
         [Min(0f)] public float CameraScrollSpeed = 14f;   // world units per second at a screen edge

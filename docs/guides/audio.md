@@ -8,7 +8,7 @@ Project 창에서 `Assets/Data/Audio/SoundDatabase.asset`을 열고 재생할 �
 | Bgm | `bgm.stage` | 1스테이지 진입 |
 | Bgm | `bgm.stage2` | 2스테이지 진입 |
 | Bgm | `bgm.boss` | 보스 스테이지 진입 |
-| Sfx | `squad.revive` | 부활 중 뼈가 한곳으로 모이기 시작할 때 |
+| Sfx | `squad.revive` | 구조 동작 막바지에 동료가 일어설 때 |
 | Sfx | `stage.clear` | 스테이지 승리 |
 | Sfx | `squad.defeat` | 분대 전멸 |
 
@@ -36,7 +36,7 @@ SoundManager.Current.StopBgm();
 | 석궁 발사 | `squad.crossbow.fire` | 병사의 상체 사격 클립 8프레임(30fps)에 `AttackRelease`가 대기 중인 화살을 발사할 때. 분대장의 창은 제외한다. |
 | 화살 명중 | `squad.arrow.hit.armor`, `squad.arrow.hit.humanoid` | 화살이 살아 있는 잡몹이나 미니 보스에 닿을 때 한 종류를 고른다. **Armored**를 켠 적(투석기·투창병)은 금속음, 나머지는 둔탁한 명중음이다. |
 | 진형·피격 | `squad.formation.command`, `squad.hit.bones` | 유효한 진형 명령을 받으면 기합이 난다. 피해를 받아 병사가 쓰러지는 순간에는 뼈가 흩어지는 소리가 난다. |
-| 부활 | `squad.revive.magic`, `squad.revive` | 부활을 시작하면 시전자의 마력음이 난다. 진행률 84%에서 궤도를 돌던 뼈들이 한곳으로 모이기 시작하면 조립음이 난다. 그 전에 시전자가 쓰러지면 조립음은 생략한다. |
+| 부활 | `squad.revive.magic`, `squad.revive` | 부활을 시작하면 시전자의 마력음이 난다. 진행률 84%에서 두 병사가 일어서는 동작에 맞춰 두 번째 효과음이 난다. 그 전에 시전자가 쓰러지면 두 번째 효과음은 생략한다. |
 | 불마법사 | `enemy.firemage.scorch`, `enemy.firemage.eruption` | 장판이 보이기 시작할 때 그을림, 장판이 발동할 때 분출. 병사가 피했어도 들린다. |
 | 투창 | `enemy.javelin.shout`, `enemy.javelin.flight` | 일반 투창병은 투척 클립의 8프레임(30fps)에 기합·비행음·투사체가 함께 나간다. 모델이 없는 창투척 미니 보스는 W 양옆 띠 장판의 시전 시작을 기준으로 삼는다. |
 | 투창 분열·착지 | `enemy.javelin.split`, `enemy.javelin.impact` | 창투척 미니 보스 W의 마지막 경고 구간에 분열음, 양쪽 띠의 피해 판정에 착지음이 난다. 일반 투창병의 직선 투사체에는 분열음이 없다. |

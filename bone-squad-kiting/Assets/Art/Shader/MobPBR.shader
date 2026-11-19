@@ -166,7 +166,7 @@ Shader "Bone Squad/Mob PBR"
                 InitializeInputData(input, surface.normalTS, lighting);
                 InitializeBakedGIData(input, lighting);
                 half facing = saturate(abs(dot(lighting.normalWS, lighting.viewDirectionWS)));
-                surface.emission += _FresnelColor.rgb * (_FresnelIntensity * pow(1.0h - facing, _FresnelPower));
+                surface.emission += _FresnelColor.rgb * (_FresnelColor.a * _FresnelIntensity * pow(1.0h - facing, _FresnelPower));
                 surface.emission += _DissolveEdgeColor.rgb * edge;
                 color = UniversalFragmentPBR(lighting, surface);
                 color.rgb = MixFog(color.rgb, lighting.fogCoord);
