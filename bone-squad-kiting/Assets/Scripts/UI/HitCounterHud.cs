@@ -56,7 +56,7 @@ namespace BoneSquadKiting.UI
             if (_group == null || _hud == null) return;
             var director = _hud.Director;
             var shots = director != null ? director.Shots : null;
-            if (shots == null || director.Phase != GamePhase.Play)
+            if (shots == null || director.Phase != GamePhase.Play || director.Paused)
             { _group.alpha = 0f; return; }
             if (_source != shots) { _source = shots; _serial = -1; _pulse = 0f; }
             if (_serial != shots.HitSerial)

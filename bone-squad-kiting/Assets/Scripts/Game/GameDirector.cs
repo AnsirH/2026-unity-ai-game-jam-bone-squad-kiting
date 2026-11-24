@@ -59,7 +59,9 @@ namespace BoneSquadKiting.Game
 
         [Header("State")]
         public GamePhase Phase = GamePhase.Menu;
-        public bool Paused;
+        public bool Paused { get; private set; }
+        float _timeScaleBeforePause;
+        bool _audioPausedBeforePause;
         public float Elapsed, LastDps, TotalDamage;
         public int BossPhase = 1;
 
@@ -92,6 +94,7 @@ namespace BoneSquadKiting.Game
         /// </summary>
         public bool InCutscene => _cutsceneRemaining > 0f;
         float _cutsceneRemaining;
+        Vector2? _lastPursuitPosition;
         float _bossBodyHeight;
         Transform _bossTorso;
         int _aliveLastStep;
@@ -135,6 +138,7 @@ namespace BoneSquadKiting.Game
 
         public void Restart()
         {
+            SetPaused(false);
             Boss = HasBoss ? new Boss() : null;
             Enemies = new EnemyRegistry();
             if (Boss != null) Enemies.Register(Boss);
@@ -159,6 +163,7 @@ namespace BoneSquadKiting.Game
             _miniBosses = found.ToArray();
             foreach (var m in _miniBosses) m.ResetSpawn();
             _cutsceneRemaining = 0f;
+            _lastPursuitPosition = null;
             _aliveLastStep = GameConstants.SquadSize;
             Telegraphs.Clear();
             Revives = new ReviveSystem();
@@ -198,7 +203,7 @@ namespace BoneSquadKiting.Game
             Shots.OnHit += d => { _hits.Add((Elapsed, d)); TotalDamage += d; };
 
             _hits.Clear();
-            TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1; Paused = false;
+            TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1;
             NearMissBuffLeft = 0f;
             Squad.Init();
             StartBossFight();
@@ -215,10 +220,10 @@ namespace BoneSquadKiting.Game
             FormationChanged?.Invoke(Squad.Formation);
         }
 
-        void PlayStageMusic()
+        void PlayStageMusic(StageRun.Entry entry = null)
         {
             var sound = SoundManager.Current;
-            string id = Run?.CurrentEntry?.BgmId ?? (HasBoss || Fight != null ? "bgm.boss" : "bgm.stage");
+            string id = (entry ?? Run?.CurrentEntry)?.BgmId ?? (HasBoss || Fight != null ? "bgm.boss" : "bgm.stage");
             if (sound != null && !sound.PlayBgm(id))
                 sound.StopBgm();
         }
@@ -303,7 +308,30 @@ namespace BoneSquadKiting.Game
             NearMissed?.Invoke(unitsNear);
         }
 
-        public void TogglePause() { if (Phase == GamePhase.Play && !InCutscene) Paused = !Paused; }
+        public void TogglePause()
+        {
+            if (Phase == GamePhase.Play && !Frozen) SetPaused(!Paused);
+        }
+
+        void SetPaused(bool paused)
+        {
+            if (Paused == paused) return;
+            Paused = paused;
+            if (paused)
+            {
+                _timeScaleBeforePause = Time.timeScale;
+                _audioPausedBeforePause = AudioListener.pause;
+                Time.timeScale = 0f;
+                AudioListener.pause = true;
+            }
+            else
+            {
+                Time.timeScale = _timeScaleBeforePause;
+                AudioListener.pause = _audioPausedBeforePause;
+            }
+        }
+
+        void OnDisable() => SetPaused(false);
 
         public void ChangeFormation(string id)
         {
@@ -331,6 +359,7 @@ namespace BoneSquadKiting.Game
             if (Phase != GamePhase.Play || Paused || InCutscene) return;
             Squad.Halt();
             Squad.Order = SquadOrder.Move(Squad.Anchor);
+            _lastPursuitPosition = null;
         }
 
         /// <summary>Turn the formation by mouse-wheel notches. Positive = clockwise seen from above.</summary>
@@ -350,34 +379,37 @@ namespace BoneSquadKiting.Game
         {
             if (Phase != GamePhase.Play || Paused || InCutscene || Frozen) return false;
             Squad.Order = o;
+            _lastPursuitPosition = null;
             // Only a plain move turns a ring to put its leader in front. An attack order leaves the ring as it
             // stands (and stops a turn in progress): turning units cannot fire, and the point of the order is to.
             if (o.Kind == OrderKind.Move) Squad.FaceToward(o.Point);
             else Squad.HoldFacing();
-            if (o.Kind == OrderKind.AttackTarget && o.Target != null)
+            if (o.Kind == OrderKind.AttackTarget)
             {
-                bool inRange = (o.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
-                Squad.SetDestination(inRange ? Squad.Anchor : o.Target.Pos);
+                FollowAttackTarget(o.Target);
+                if (Squad.Order.Kind == OrderKind.AttackTarget)
+                    Shots.FocusPendingShots(Squad.Units, o.Target, UnitFireRange);
             }
             else Squad.SetDestination(o.Point);
             return true;
         }
 
-        /// <summary>
-        /// Squad range is measured from the formation anchor. An attack-move squad stops for any enemy
-        /// inside it; an attack-target squad stops for its ordered enemy.
-        /// </summary>
-        bool EnemyWithinSquadRange(SquadOrder order)
+        void FollowAttackTarget(IEnemy target)
         {
-            switch (order.Kind)
+            if (!Enemies.CanTarget(target)) { StopSquad(); return; }
+            var point = target.Pos;
+            if ((point - Squad.Anchor).sqrMagnitude <= SquadEngageRange * SquadEngageRange)
             {
-                case OrderKind.AttackMove:
-                    return Enemies.NearestInRange(Squad.Anchor, SquadEngageRange) != null;
-                case OrderKind.AttackTarget:
-                    return order.Target is { Alive: true }
-                           && (order.Target.Pos - Squad.Anchor).magnitude < SquadEngageRange;
-                default: return false;
+                Squad.Halt();
+                _lastPursuitPosition = null;
+                return;
             }
+
+            // SetDestination rebuilds the navigation field. Refresh it when the target moves a cell.
+            float cellSize = Squad.Grid?.CellSize ?? 0.5f;
+            if (_lastPursuitPosition is Vector2 last && (point - last).sqrMagnitude < cellSize * cellSize) return;
+            Squad.SetDestination(point);
+            _lastPursuitPosition = point;
         }
 
         /// <summary>
@@ -427,6 +459,15 @@ namespace BoneSquadKiting.Game
             else if (Run != null) PlayStageMusic();
         }
 
+        /// <summary>The exit is open: clear the remaining wave and retire encounters not reached in this run.</summary>
+        public void EndStageReinforcements()
+        {
+            if (Waves != null) Waves.Stopped = true;
+            Mobs?.Clear(Enemies);
+            foreach (var marker in _miniBosses)
+                if (!marker.Triggered) marker.MarkTriggered(null);
+        }
+
         // A mini boss appears, with its intro, when the squad's anchor comes within its trigger radius.
         void TriggerMiniBosses()
         {
@@ -453,6 +494,9 @@ namespace BoneSquadKiting.Game
             var route = m.PresentFromStart ? null : m.RoutePoints();
             if (route != null) route[route.Count - 1] = pos;
             var elite = Elites.Spawn(m.Definition, pos, Enemies, route, m.EntrySpeed);
+            if (m.PatternCycle != null && m.PatternCycle.Length > 0) elite.Attacks.Patterns = m.PatternCycle;
+            if (m.OpeningDelay >= 0f) elite.Attacks.NextAttack = m.OpeningDelay;
+            if (m.PresentFromStart) elite.HealthBarApproachRadius = Mathf.Max(0f, m.TriggerRadius);
             m.MarkTriggered(elite);
             MiniBossAppeared?.Invoke(elite);
             if (!m.PresentFromStart) SoundManager.Current?.PlaySfx("enemy.miniboss.appear");
@@ -479,10 +523,15 @@ namespace BoneSquadKiting.Game
         // the waves keep coming.
         void OnMiniBossDied(Elite elite)
         {
+            foreach (var marker in _miniBosses)
+                if (marker.Elite == elite && marker.DefeatGuide != null) marker.DefeatGuide.SetActive(true);
             MiniBossDefeated?.Invoke(elite);
             SoundManager.Current?.PlaySfx("enemy.miniboss.death");
             if (Fight != null) return;                                // the boss fight's mages: the fight goes on
             foreach (var m in _miniBosses) if (!m.Defeated) return;   // others remain (including ones yet to appear)
+            // A guard can fall before its gate. Keep the siege going until the gate itself breaks.
+            foreach (var target in Enemies.Enemies)
+                if (target is BreakableWall { EndsReinforcements: true, Alive: true }) return;
             Mobs.Clear(Enemies);
             Shots.Shots.Clear();
             if (Waves != null) Waves.Stopped = true;
@@ -523,7 +572,10 @@ namespace BoneSquadKiting.Game
             }
             Elapsed += dt;
 
-            if (Squad.IsMoving && EnemyWithinSquadRange(Squad.Order)) Squad.Halt();
+            var order = Squad.Order;
+            if (order.Kind == OrderKind.AttackTarget) FollowAttackTarget(order.Target);
+            else if (order.Kind == OrderKind.AttackMove && Squad.IsMoving &&
+                     Enemies.NearestInRange(Squad.Anchor, SquadEngageRange) != null) Squad.Halt();
 
             Squad.Tick(dt);
 
@@ -580,12 +632,19 @@ namespace BoneSquadKiting.Game
             if (aliveNow < _aliveLastStep) Squad.Reform();
             _aliveLastStep = aliveNow;
 
-            if (AliveCount == 0) Phase = GamePhase.Lose;
-            else if (StageCleared()) Phase = GamePhase.Win;
-            if (Phase == GamePhase.Win) SaveProgress();
-            if (Phase == GamePhase.Lose) SoundManager.Current?.StopBgm();
-            if (Phase == GamePhase.Win || Phase == GamePhase.Lose)
-                SoundManager.Current?.PlaySfx(Phase == GamePhase.Win ? "stage.clear" : "squad.defeat");
+            if (AliveCount == 0)
+            {
+                Phase = GamePhase.Lose;
+                SoundManager.Current?.StopBgm();
+                SoundManager.Current?.PlaySfx("squad.defeat");
+            }
+            else if (StageCleared())
+            {
+                Phase = GamePhase.Win;
+                SaveProgress();
+                if (Run != null && !Run.IsLast) PlayStageMusic(Run.Stages[Run.Current + 1]);
+                else if (IsFinalStage) SoundManager.Current?.PlaySfx("stage.clear");
+            }
         }
     }
 }

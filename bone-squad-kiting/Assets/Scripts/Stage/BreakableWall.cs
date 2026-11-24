@@ -3,6 +3,7 @@ using UnityEngine;
 using BoneSquadKiting.Audio;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Core;
+using BoneSquadKiting.Data;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Visuals;
 
@@ -22,8 +23,8 @@ namespace BoneSquadKiting.Stage
         public float MaxHp = 8000f;
         [Tooltip("Shots that come this close to this object's position hit it.")]
         public float HitRadius = 4f;
-        [Tooltip("The bar at the top shows this wall once the squad is this close (or as soon as it has been hit).")]
-        public float ShowBarDistance = 26f;
+        [Tooltip("The bar at the top shows this wall once the squad is this close.")]
+        [Min(0f)] public float ShowBarDistance = 12f;
 
         [Header("Looks")]
         [Tooltip("These flash when the wall is hit. They need a Mob PBR material (the enemy outline look).")]
@@ -45,6 +46,13 @@ namespace BoneSquadKiting.Stage
         [Header("Way through")]
         [Tooltip("An Exclude outline over the ground the wall stands on. That ground cannot be walked on until the wall breaks.")]
         public WalkOutline Blocker;
+        [Tooltip("This is the last gate of the stage. Breaking it ends reinforcements.")]
+        public bool EndsReinforcements;
+        [Tooltip("Troops that approach from behind when the gate is first hit and when it reaches half health.")]
+        public MobDefinition RearGuard;
+        [Min(1)] public int RearGuardCount = 6;
+        [Tooltip("World-space directions shown after this gate opens.")]
+        public GameObject ExitGuide;
 
         /// <summary>The wall the top bar should show right now, if any.</summary>
         public static BreakableWall Shown { get; private set; }
@@ -72,6 +80,8 @@ namespace BoneSquadKiting.Stage
             _block = new MaterialPropertyBlock();
             _flashes = new HitFlash[Renderers.Length];
             Health = MaxHp;
+            foreach (var part in BreakObjects)
+                if (part != null) EnemyRef.AddBodyPick(part)?.Bind(this);
         }
 
         void OnDisable()
@@ -83,10 +93,28 @@ namespace BoneSquadKiting.Stage
 
         public void ApplyDamage(float amount)
         {
-            if (!Alive) return;
+            if (!Alive || amount <= 0f) return;
+            float prior = Health;
             Health = Mathf.Max(0f, Health - amount);
             Flash = 0.8f;
             if (Health <= 0f) Break();
+            else if (prior >= MaxHp || (prior > MaxHp * .5f && Health <= MaxHp * .5f)) CallRearGuard();
+        }
+
+        void CallRearGuard()
+        {
+            if (RearGuard == null || Director == null || Director.Mobs == null || Director.Stage == null ||
+                Director.Stage.EndPoint == null || Director.Squad.Grid == null) return;
+            var exit = Director.Stage.EndPoint.position;
+            var forward = (new Vector2(exit.x, exit.z) - Pos).normalized;
+            var right = new Vector2(forward.y, -forward.x);
+            var rear = Director.Squad.Anchor - forward * 7.5f;
+            for (int i = 0; i < RearGuardCount; i++)
+            {
+                var spot = rear + right * ((i % 3 - 1) * 1.1f) - forward * (i / 3);
+                var ground = Director.Squad.Grid.NearestWalkable(spot);
+                if (Director.Mobs.Spawn(RearGuard, ground, Director.Enemies) == null) break;
+            }
         }
 
         void Update()
@@ -99,8 +127,8 @@ namespace BoneSquadKiting.Stage
             for (int i = 0; i < Renderers.Length; i++)
                 if (Renderers[i] != null) _flashes[i].Apply(Renderers[i], _block, Flash, HitFlashColor);
 
-            bool near = Director.Squad != null && (Director.Squad.Anchor - Pos).magnitude <= ShowBarDistance;
-            bool show = Alive && Director.Phase == GamePhase.Play && _registry != null && (near || Health < MaxHp);
+            bool near = Director.Squad != null && (Director.Squad.Anchor - Pos).sqrMagnitude <= ShowBarDistance * ShowBarDistance;
+            bool show = Alive && Director.Phase == GamePhase.Play && _registry != null && near;
             if (show) Shown = this; else if (Shown == this) Shown = null;
         }
 
@@ -108,6 +136,7 @@ namespace BoneSquadKiting.Stage
         {
             _registry?.Unregister(this);
             _registry = registry;
+            if (ExitGuide != null) ExitGuide.SetActive(false);
             Broken = false; Health = MaxHp; Flash = 0f; Reserved = 0f;
             foreach (var go in BreakObjects) if (go != null) go.SetActive(true);
             SetGround(false);
@@ -117,9 +146,12 @@ namespace BoneSquadKiting.Stage
         void Break()
         {
             Broken = true; Health = 0f;
+            if (Shown == this) Shown = null;
             _registry?.Unregister(this);
             foreach (var go in BreakObjects) if (go != null) go.SetActive(false);
             SetGround(true);
+            if (EndsReinforcements && Director != null) Director.EndStageReinforcements();
+            if (ExitGuide != null) ExitGuide.SetActive(true);
             // Whoever stood on the wall falls with it.
             if (KillMiniBossesWithin > 0f && Director != null && Director.Elites != null)
                 foreach (var e in Director.Elites.Elites.ToArray())

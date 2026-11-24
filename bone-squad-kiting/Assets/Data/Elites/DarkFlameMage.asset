@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 49529fdac290a2f4ab5a3cfb79b12d9f, type: 3}
   m_Name: DarkFlameMage
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.EliteDefinition
-  DisplayName: "\uAC80\uC815\uBD88\uAF43\uB9C8\uBC95\uC0AC"
+  DisplayName: "\uC794\uD654\uC758 \uC0AC\uC81C"
   Armored: 0
   CastSound: 1
   MaxHp: 4000
@@ -38,8 +38,8 @@ MonoBehaviour:
   ModelYawOffset: 0
   ModelGroundOffset: 0
   States:
-    Idle: 
-    Run: 
+    Idle: Idle
+    Run: Walk
     Attack: SpellCast02
     Die: 
     Revive: 

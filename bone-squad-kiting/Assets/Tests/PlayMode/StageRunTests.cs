@@ -3,6 +3,11 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+using BoneSquadKiting.Combat;
+using BoneSquadKiting.Data;
+using BoneSquadKiting.Mobs;
 using UnityEngine.TestTools;
 using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
@@ -23,6 +28,76 @@ public class StageRunTests
     }
 
     static Vector2 Flat(Vector3 v) => new(v.x, v.z);
+
+    [UnityTest]
+    public IEnumerator RightClickOnMobFocusesFireAndItsEmptyGroundMoves()
+    {
+        StageRun.RequestedStage = 0;
+        yield return SceneManager.LoadSceneAsync("Game");
+        var run = Object.FindFirstObjectByType<StageRun>();
+        run.Enter(0);
+        var director = run.Kit.Director;
+        director.enabled = false; // Keep both enemies still while the real input and model views update.
+        var anchor = director.Squad.Anchor;
+        var grunt = UnityEditor.AssetDatabase.LoadAssetAtPath<MobDefinition>("Assets/Data/Mobs/Grunt.asset");
+        var caster = UnityEditor.AssetDatabase.LoadAssetAtPath<MobDefinition>("Assets/Data/Mobs/Caster.asset");
+        var nearby = director.Mobs.Spawn(grunt, anchor + Vector2.left * 1.5f, director.Enemies);
+        var target = director.Mobs.Spawn(caster, anchor + Vector2.right * 3.5f, director.Enemies);
+        target.Health = 10000f; // Keep the whole volley on this enemy without overkill.
+
+        var rig = run.Kit.Cam;
+        rig.LookAt = target.Pos;
+        rig.Apply();
+        rig.enabled = false;
+        yield return null;
+        yield return null;
+        var view = Object.FindFirstObjectByType<MobView>();
+        var model = view.transform.Cast<Transform>().Single(child => child.name == caster.name);
+        var body = model.GetComponentInChildren<SkinnedMeshRenderer>();
+        var camera = rig.GetComponent<Camera>();
+        var cursor = (Vector2)camera.WorldToScreenPoint(body.bounds.center);
+
+        var previousMouse = Mouse.current;
+        var mouse = InputSystem.AddDevice<Mouse>();
+        try
+        {
+            yield return RightClick(mouse, cursor);
+            Assert.AreEqual(OrderKind.AttackTarget, director.Squad.Order.Kind, "Clicking the visible body must resolve before the ground");
+            Assert.AreSame(target, director.Squad.Order.Target);
+            Assert.IsFalse(director.Squad.IsMoving, "The ordered caster is already in range");
+            for (int i = 0; i < 100; i++)
+            {
+                director.Squad.Tick(.02f);
+                director.Shots.Tick(director.Squad.Units, director.Enemies, director.Squad.Order, .02f);
+            }
+            Assert.Less(target.Health, 10000f, "The selected caster took the shots");
+            Assert.AreEqual(grunt.Hp, nearby.Health, "The closer grunt did not draw the volley");
+
+            target.ApplyDamage(float.MaxValue);
+            yield return null;
+            yield return RightClick(mouse, cursor);
+            Assert.AreEqual(OrderKind.Move, director.Squad.Order.Kind, "A defeated mob must let the click through to the ground");
+            var ray = camera.ScreenPointToRay(cursor);
+            Assert.IsTrue(new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float distance));
+            Assert.That(Vector2.Distance(Flat(ray.GetPoint(distance)), director.Squad.Order.Point), Is.LessThan(.02f));
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+            if (previousMouse != null && previousMouse.added) previousMouse.MakeCurrent();
+        }
+    }
+
+    static IEnumerator RightClick(Mouse mouse, Vector2 screenPoint)
+    {
+        var released = new MouseState { position = screenPoint };
+        InputSystem.QueueStateEvent(mouse, released);
+        yield return null;
+        InputSystem.QueueStateEvent(mouse, released.WithButton(MouseButton.Right));
+        yield return null;
+        InputSystem.QueueStateEvent(mouse, released);
+        yield return null;
+    }
 
     [UnityTest]
     public IEnumerator MusicFollowsTheMenuAndMapsWithOnePersistentPlayer()

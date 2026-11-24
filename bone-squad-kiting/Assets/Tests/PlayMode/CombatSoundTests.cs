@@ -66,6 +66,7 @@ public class CombatSoundTests
         var room = new GameObject("Boss room");
         room.transform.SetParent(squad.transform);
         var arena = room.AddComponent<BossArena>();
+        arena.Tuning.AttackOrder = "CL";
         var model = new GameObject("Frost Knight");
         model.transform.SetParent(room.transform);
         var view = model.AddComponent<FrostKnightView>();
@@ -108,13 +109,29 @@ public class CombatSoundTests
         fight.Tick(arena.Tuning.StandUpSeconds);
         fight.Tick(arena.Tuning.AttackGap);
         Assert.AreEqual(FrostKnightAttack.Charge, fight.Attack);
-        Assert.IsFalse(Playing(view.ChargeSwingSound));
+        yield return null; // the view enters ChargedSlash
+        Assert.IsTrue(Playing(view.PhaseTwoWindupSound));
+        Assert.IsFalse(Playing(view.ChargeReleaseSound));
         fight.Tick(fight.Telegraphs[0].Remaining - .1f);
         yield return null;
-        Assert.IsTrue(Playing(view.ChargeSwingSound));
-        Assert.IsFalse(Playing(view.ChargeFlightSound));
+        Assert.IsFalse(Playing(view.ChargeReleaseSound));
         fight.Tick(.11f);
-        Assert.IsTrue(Playing(view.ChargeFlightSound));
+        Assert.IsTrue(Playing(view.ChargeReleaseSound));
+        Assert.IsFalse(Playing(view.PhaseTwoWindupSound));
+        Assert.IsFalse(Playing(view.ParallelFlightSound));
+
+        fight.Tick(1f); // finish the slash and hide
+        fight.Tick(arena.Tuning.AttackGap);
+        Assert.AreEqual(FrostKnightState.Slamming, fight.State);
+        Assert.IsFalse(Playing(view.PhaseTwoWindupSound), "only the floor warning is visible");
+        fight.Tick(fight.Telegraphs[0].Remaining - .5f);
+        yield return null; // the boss reappears and raises the sword
+        Assert.AreEqual("SwordPlant", fight.Anim);
+        Assert.IsTrue(Playing(view.PhaseTwoWindupSound));
+        Assert.IsFalse(Playing(view.LethalHitSound));
+        fight.Tick(.51f);
+        Assert.IsTrue(Playing(view.LethalHitSound));
+        Assert.IsFalse(Playing(view.PhaseTwoWindupSound));
         fight.Kill();
         Assert.IsTrue(Playing(view.DeathSound));
     }

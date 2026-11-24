@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using BoneSquadKiting.Audio;
 using BoneSquadKiting.Core;
@@ -121,10 +122,16 @@ namespace BoneSquadKiting.UI
 
         void SetFade(float a) { var c = _fade.color; c.a = Mathf.Clamp01(a); _fade.color = c; }
 
-        public void Quit()
+        public void Quit() => QuitGame();
+
+        public static void QuitGame()
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+            // The host owns the tab. End this run at the title screen.
+            if (SceneManager.GetActiveScene().buildIndex != 0)
+                SceneManager.LoadScene(0);
 #else
             Application.Quit();
 #endif

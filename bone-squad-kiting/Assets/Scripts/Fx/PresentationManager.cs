@@ -127,7 +127,7 @@ namespace BoneSquadKiting.Fx
             _moodVolume.weight = _moodTo == null ? 0f : Mathf.Lerp(startWeight, 1f, t);
         }
 
-        void Update() => Tick(Time.unscaledDeltaTime);
+        void Update() { if (Time.deltaTime > 0f) Tick(Time.deltaTime); }
 
         public void Tick(float dt)
         {

@@ -53,7 +53,7 @@ namespace BoneSquadKiting.EditorTools
             // The telekinetic mage is meant to cast rotating zones, which do not exist yet: it uses the plain
             // gate pattern for now.
             Elite("Catapult", "투석병", seq.Patterns[0], cannon: true);
-            Elite("DarkFlameMage", "검정불꽃마법사", seq.Patterns[3], second: seq.Patterns[2]);   // shell, then quadrants (the cross-shaped safe area)
+            Elite("DarkFlameMage", "잔화의 사제", seq.Patterns[3], second: seq.Patterns[2]);   // throne: shell (Q), then quadrants (R)
             Elite("SpearThrower", "창투척병", seq.Patterns[1]);
             Elite("ShadowSwordsman", "그림자검사", seq.Patterns[2]);
             // The telekinetic mage's zones turn (ZoneRotationSpeed on the mini boss). Three variants so every

@@ -33,12 +33,15 @@ namespace BoneSquadKiting.Bosses
     {
         // Lengths of the model's motions at speed 1, and when the sword lands in them.
         public const float ChargeHitAt = 7f, ChargeLength = 7.67f, PlantHitAt = 0.25f, DieLength = 9.58f;
+        const float ThroneMotionHitAt = 2.9f;
         const float ChargeWindupScale = .35f;
-        const float PlantLead = 0.3f;          // the boss shows up this long before the plant motion starts
+        const float PlantLead = 0.8f;          // extra anticipation before the clip's normal ground contact
+        const float PlantRaisedPose = 0.05f;   // clip seconds reserved for the raised sword
+        const float PlantDropSeconds = PlantHitAt - PlantRaisedPose;
 
         public readonly Boss Boss;
         public readonly FrostKnightTuning Tuning;
-        public string BossName = "서리 기사";
+        public string BossName = "마력의 주인";
 
         public FrostKnightState State { get; private set; } = FrostKnightState.Waiting;
         public float StateTime { get; private set; }
@@ -174,10 +177,17 @@ namespace BoneSquadKiting.Bosses
                 case FrostKnightState.Slamming:
                     if (_casting)
                     {
-                        if (!_plantStarted && _cast.Remaining <= PlantHitAt + PlantLead) { _plantStarted = true; Play("SwordPlant"); }
+                        if (!_plantStarted && _cast.Remaining <= PlantHitAt + PlantLead)
+                        {
+                            _plantStarted = true;
+                            float windup = Mathf.Max(PlantRaisedPose, _cast.Remaining - PlantDropSeconds);
+                            Play("SwordPlant", PlantRaisedPose / windup);
+                        }
+                        if (_plantStarted && _cast.Remaining <= PlantDropSeconds) AnimSpeed = 1f;
                     }
                     else
                     {
+                        AnimSpeed = 1f;
                         _afterHit += dt;
                         if (_afterHit >= Tuning.LethalHoldSeconds) Vanish();
                     }
@@ -201,9 +211,9 @@ namespace BoneSquadKiting.Bosses
 
         void StartThroneAttack()
         {
-            Play("RaiseHands");            // the model goes on to the slam and back to idle by itself
             if (_random() < 0.5f)
             {
+                Play("RaiseHands");
                 float maxAngle = Mathf.Clamp(Tuning.ParallelMaxAngle, 0f, 45f);
                 float angle = _yaw + Mathf.Lerp(-maxAngle, maxAngle, _random());
                 Cast(FrostKnightAttack.Parallel, DangerShape.BandsX(Tuning.ParallelInner, Tuning.ParallelOuter, Tuning.ParallelHalfLength),
@@ -211,13 +221,15 @@ namespace BoneSquadKiting.Bosses
             }
             else
             {
+                float warn = Mathf.Max(.1f, Tuning.CircleHitSeconds);
+                Play("RaiseHands", ThroneMotionHitAt / warn);
                 // Dodged by the ring formation, so it shrinks with the squad the way the ring does.
                 var ring = _squad.Formations.Find(f => f != null && f.Mode == FormationMode.Ring);
                 float radius = Tuning.CircleRadius;
                 if (Tuning.CircleScalesWithSquad)
                     radius = ring != null ? FormationSlots.RingRadius(ring.Radius, _squad.AliveCount) * Tuning.CircleRingRatio
                         : Tuning.CircleRadius * FormationSlots.SquadFraction(_squad.AliveCount);
-                Cast(FrostKnightAttack.Circle, DangerShape.Disc(radius), _squad.Anchor, _yaw, Tuning.SlamHitSeconds, false);
+                Cast(FrostKnightAttack.Circle, DangerShape.Disc(radius), _squad.Anchor, _yaw, warn, false);
             }
             _wait = Tuning.SlamRecoverSeconds + Tuning.ThroneAttackGap;
         }
@@ -463,6 +475,7 @@ namespace BoneSquadKiting.Bosses
             }
             if (_cast.Remaining > 0f) return;
             _casting = false;
+            if (Attack == FrostKnightAttack.Circle) AnimSpeed = 1f;
             Resolve(); // The view uses the exact warned poses at impact.
             Telegraphs.Clear();
         }

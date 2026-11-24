@@ -1,11 +1,11 @@
-# 서리 기사 보스 연출 조립 가이드
+# 마력의 주인 보스 연출 조립 가이드
 
 ## 작업을 시작할 씬
 
 | 목적 | 씬 | 확인할 곳 |
 | --- | --- | --- |
 | 왕좌에서 보스와 검기 배치 확인 | [BackgroundTest.unity](../../bone-squad-kiting/Assets/Scenes/BackgroundTest.unity) | Hierarchy에서 `BossStage`, `FrostKnight`, `SovereignSlash`를 찾습니다. `TwinSwordSlash`도 배치돼 있으며, 미리 보려면 이 오브젝트를 활성화합니다. |
-| 실제 게임에 연출 반영 | [Game.unity](../../bone-squad-kiting/Assets/Scenes/Game.unity) | `Stage Run → Stages`의 세 번째 항목이 보스 스테이지입니다. 2026-11-19 확인 기준으로 이 씬에는 `BossStage` 배경이 연결돼 있고, 서리 기사 본체와 검기 프리팹은 별도로 연결해야 합니다. |
+| 실제 게임에 연출 반영 | [Game.unity](../../bone-squad-kiting/Assets/Scenes/Game.unity) | `Stage Run → Stages`의 세 번째 항목이 보스 스테이지입니다. 2026-11-19 확인 기준으로 이 씬에는 `BossStage` 배경이 연결돼 있고, 마력의 주인 본체와 검기 프리팹은 별도로 연결해야 합니다. |
 
 ## 왕좌와 보스 본체
 
@@ -48,7 +48,9 @@
 
 | 재생 시점 | 사운드 ID |
 | --- | --- |
-| 회전검기를 휘두를 때 / 검기가 날아갈 때 | `boss.spinningblade.swing` / `boss.spinningblade.flight` |
+| 1페이즈 왕좌에서 평행 검기를 방출할 때 | `boss.spinningblade.flight` |
+| 2페이즈 검기·전멸기의 준비자세 | `boss.frostknight.windup` |
+| 2페이즈 검기가 나갈 때 / 전멸기가 지면에 닿을 때 | `boss.frostknight.charge.release` / `boss.frostknight.lethal.hit` |
 | 대검이 나타날 때 / 떨어질 때 / 바닥에 닿을 때 | `boss.greatsword.summon` / `boss.greatsword.fall` / `boss.greatsword.impact` |
 | 보스 스테이지 배경음 | `bgm.boss` |
 

@@ -58,9 +58,6 @@ namespace BoneSquadKiting.EditorTools
             hud.WarningFill = hud.WarningFillImage.rectTransform;
 
             hud.Toast = Label(root, "Toast", 28, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 120), new Vector2(800, 44), bold: true);
-            var pause = Label(root, "Pause Label", 28, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(600, 44), bold: true);
-            pause.text = "일시정지 (P)";
-            hud.PauseLabel = pause.gameObject;
 
             // Formation buttons, bottom center. One per formation, in FormationController order.
             int count = director.Squad.Formations.Count;
@@ -81,6 +78,7 @@ namespace BoneSquadKiting.EditorTools
             hud.OverlayTitle = Label(overlay.rectTransform, "Title", 44, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 70), new Vector2(900, 60), bold: true);
             hud.OverlayButton = MakeButton(overlay.rectTransform, "Start Button", new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(240, 48), out hud.OverlayButtonText);
 
+            HudSkin.EnsurePauseButton(hud);
             return hud;
         }
 

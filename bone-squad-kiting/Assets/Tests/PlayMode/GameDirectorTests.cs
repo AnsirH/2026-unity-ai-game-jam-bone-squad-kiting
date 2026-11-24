@@ -71,7 +71,11 @@ public class GameDirectorTests
         _dir.Restart();
         Run(0.5f);
         float elapsed = _dir.Elapsed;
+        float beforeScale = Time.timeScale;
+        bool beforeAudio = AudioListener.pause;
         _dir.TogglePause();
+        Assert.AreEqual(0f, Time.timeScale);
+        Assert.IsTrue(AudioListener.pause);
         Run(0.5f);
         Assert.AreEqual(elapsed, _dir.Elapsed);
 
@@ -80,6 +84,8 @@ public class GameDirectorTests
         Assert.AreEqual(before, _fc.Destination);
 
         _dir.TogglePause();
+        Assert.AreEqual(beforeScale, Time.timeScale);
+        Assert.AreEqual(beforeAudio, AudioListener.pause);
         Run(0.1f);
         Assert.That(_dir.Elapsed, Is.GreaterThan(elapsed));
     }
@@ -191,6 +197,35 @@ public class GameDirectorTests
         float dist = (far.Pos - _fc.Anchor).magnitude;
         Assert.That(dist, Is.LessThan(GameConstants.SquadEngageRange));
         Assert.That(dist, Is.GreaterThan(GameConstants.SquadEngageRange - 0.5f), "stops as soon as it is in range");
+    }
+
+    [Test]
+    public void AttackTarget_FollowsItsMovingEnemyUntilANewOrderOrLossOfTarget()
+    {
+        _dir.Restart();
+        _dir.SquadEngageRange = 2f;
+        var start = _fc.Anchor;
+        var target = new FarEnemy { Pos = start + Vector2.right };
+        _dir.Enemies.Register(target);
+        _dir.IssueOrder(SquadOrder.Attack(target));
+        Assert.IsFalse(_fc.IsMoving);
+
+        target.Pos = start + new Vector2(4f, 0f);
+        _dir.Step(.01f);
+        Assert.IsTrue(_fc.IsMoving, "Resume following when the enemy leaves engagement range");
+        target.Pos = start + new Vector2(2.5f, 0f);
+        _dir.Step(.01f);
+        Assert.AreEqual(target.Pos, _fc.Destination);
+        _dir.Enemies.Unregister(target);
+        _dir.Step(.01f);
+        Assert.AreEqual(OrderKind.Move, _fc.Order.Kind);
+        Assert.IsFalse(_fc.IsMoving);
+
+        _dir.Enemies.Register(target);
+        _dir.IssueOrder(SquadOrder.Attack(target));
+        _dir.IssueOrder(SquadOrder.Move(start));
+        _dir.Step(.01f);
+        Assert.AreEqual(start, _fc.Destination, "A ground order cancels pursuit");
     }
 
     [Test]

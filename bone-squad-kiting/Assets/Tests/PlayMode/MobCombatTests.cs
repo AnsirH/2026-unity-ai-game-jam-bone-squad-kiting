@@ -124,6 +124,24 @@ public class MobCombatTests
     }
 
     [Test]
+    public void AFocusOrderRedirectsWindupsButPreservesShotsAlreadyInFlight()
+    {
+        var near = Tough(_fc.Anchor + Vector2.right * 2f);
+        var clicked = Tough(_fc.Anchor + Vector2.left * 4f);
+        foreach (var u in _fc.Units) u.AttackWindup = 0.5f;
+        _shots.Tick(_fc.Units, _reg, SquadOrder.Attack(near), .001f);
+        _shots.ReleasePending(_fc.Units[0]);
+        float launched = _shots.Shots[0].Reserve;
+        float total = near.Reserved;
+        _shots.FocusPendingShots(_fc.Units, clicked, _shots.FireRange);
+        Assert.AreSame(near, _shots.Shots[0].Target);
+        Assert.AreEqual(launched, near.Reserved, .01f);
+        Assert.AreEqual(total - launched, clicked.Reserved, .01f);
+        _shots.ReleasePending(_fc.Units[1]);
+        Assert.AreSame(clicked, _shots.Shots[1].Target);
+    }
+
+    [Test]
     public void HomingShots_HitAMobThatMovesSideways()
     {
         var mob = Tough(_fc.Anchor + new Vector2(-3f, -3.5f));

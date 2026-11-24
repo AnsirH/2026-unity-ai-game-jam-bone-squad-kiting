@@ -168,9 +168,21 @@ public class ArenaSceneSmokeTests
         hud.OverlayButton.onClick.Invoke();
         yield return null;
         yield return null;
-        // No boss here, but the fixed catapults are on the stage from the start: the bar shows one of them.
-        Assert.IsTrue(hud.BossBar.activeSelf);
-        StringAssert.Contains("투석병", hud.BossText.text);
+        Assert.IsFalse(hud.BossBar.activeSelf, "the pre-placed catapults are too far from the entrance");
+        // Move the HUD anchor within range without advancing the simulation.
+        var catapults = director.Elites.Elites;
+        foreach (var catapult in catapults)
+        {
+            catapult.ApplyDamage(100f + catapults.IndexOf(catapult) * 100f);
+            director.Squad.Anchor = catapult.Pos;
+            hud.Refresh();
+            Assert.IsTrue(hud.BossBar.activeSelf);
+            StringAssert.Contains(catapult.Def.DisplayName, hud.BossText.text);
+            Assert.AreEqual(catapult.HpFrac, hud.BossFill.anchorMax.x, .001f, "the bar shows the nearest catapult's health");
+        }
+        director.Squad.Anchor = anchor;
+        hud.Refresh();
+        Assert.IsFalse(hud.BossBar.activeSelf, "distant damaged catapults stay off the HUD");
         Assert.AreEqual(3, director.Elites.Elites.Count, "three catapults present from the start");
         Assert.IsNotNull(Object.FindFirstObjectByType<BoneSquadKiting.Stage.CameraGate>(), "camera gate placed");
         Assert.IsTrue(Object.FindFirstObjectByType<BoneSquadKiting.Stage.CameraGate>().Closed);
@@ -185,6 +197,18 @@ public class ArenaSceneSmokeTests
         yield return new WaitForSeconds(7f);
         Capture("stage-1.png");
         Assert.AreEqual(GamePhase.Play, director.Phase);
+
+        var priestMarker = System.Array.Find(Object.FindObjectsByType<BoneSquadKiting.Stage.MiniBossSpawn>(FindObjectsSortMode.None),
+            marker => !marker.PresentFromStart);
+        director.Squad.Anchor = catapults[0].Pos;
+        var priest = director.SpawnMiniBoss(priestMarker);
+        Assert.IsNotNull(priest);
+        hud.Refresh();
+        Assert.IsTrue(hud.BossBar.activeSelf);
+        StringAssert.Contains(priest.Def.DisplayName, hud.BossText.text, "the distant priest's entrance takes over immediately");
+        priest.ApplyDamage(priest.Health);
+        hud.Refresh();
+        StringAssert.Contains(catapults[0].Def.DisplayName, hud.BossText.text);
     }
 
     // Test scenes are not in the build list, so they are loaded by path.

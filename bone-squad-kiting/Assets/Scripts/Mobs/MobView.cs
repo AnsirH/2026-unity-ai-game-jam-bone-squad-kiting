@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using BoneSquadKiting.Data;
+using BoneSquadKiting.Combat;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Stage;
 using BoneSquadKiting.Visuals;
@@ -10,7 +11,7 @@ namespace BoneSquadKiting.Mobs
     /// <summary>
     /// Draws the swarm. A mob whose definition has a prefab is that model (this view only moves and turns
     /// its root and tells it what the mob is doing); the others are placeholder spheres. Views are pooled
-    /// per kind. No colliders, no rigidbodies.
+    /// per kind. A trigger on the body lets the mouse select the mob.
     /// </summary>
     public class MobView : MonoBehaviour
     {
@@ -27,6 +28,7 @@ namespace BoneSquadKiting.Mobs
             public HitFlash Flash;
             public EnemyHealthBar HealthBar;
             public Transform Root;
+            public EnemyRef Pick;
             public Renderer Sphere;        // placeholder only
             public UnitVisual Visual;      // model only
             public Vector2 LastPos;
@@ -120,6 +122,7 @@ namespace BoneSquadKiting.Mobs
             {
                 var v = _live[m];
                 _live.Remove(m);
+                v.Pick?.Bind(null);
                 if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 var look = Art != null ? Art.EnemyDeath : null;
                 // Killed (not just cleared away with the stage): it falls and turns to ash before its view is free again.
@@ -290,6 +293,7 @@ namespace BoneSquadKiting.Mobs
                 if (m.Def.HealthBarPrefab != null)
                     v.HealthBar = Instantiate(m.Def.HealthBarPrefab, transform);
             }
+            v.Pick?.Bind(m);
             v.LastPos = m.Pos; v.LastCd = m.AttackCd;
             if (v.Visual != null)
             {
@@ -320,7 +324,8 @@ namespace BoneSquadKiting.Mobs
             {
                 var model = Instantiate(def.Prefab, transform);
                 model.name = def.name;
-                foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);   // the game does not use colliders for mobs
+                foreach (var c in model.GetComponentsInChildren<Collider>()) { c.enabled = false; Destroy(c); }
+                v.Pick = EnemyRef.AddBodyPick(model);
                 v.Root = model.transform;
                 v.Visual = model.GetComponent<UnitVisual>();
                 if (v.Visual == null)
@@ -332,7 +337,9 @@ namespace BoneSquadKiting.Mobs
             }
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "Mob";
-            Destroy(go.GetComponent<Collider>());
+            go.layer = LayerMask.NameToLayer("Enemy");
+            go.GetComponent<Collider>().isTrigger = true;
+            v.Pick = go.AddComponent<EnemyRef>();
             go.transform.SetParent(transform, false);
             v.Root = go.transform;
             v.Sphere = go.GetComponent<Renderer>();

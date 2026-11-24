@@ -65,10 +65,10 @@ MonoBehaviour:
     Pitch: 1
     StartOffset: 0.026
   - Id: squad.formation.command
-    Clip: {fileID: 8300000, guid: bb568613650c4d7aa3018c6542757057, type: 3}
+    Clip: {fileID: 8300000, guid: a89d847e0f671450db985e4a413f98d0, type: 3}
     Volume: 1
     Pitch: 1
-    StartOffset: 0.042
+    StartOffset: 0.035
   - Id: squad.revive.magic
     Clip: {fileID: 8300000, guid: c49839d454054f56a6463226638e2ec2, type: 3}
     Volume: 1
@@ -124,11 +124,11 @@ MonoBehaviour:
     Volume: 1
     Pitch: 1
     StartOffset: 0.061
-  - Id: boss.spinningblade.swing
-    Clip: {fileID: 8300000, guid: 343acfd835f046dfb8b2d354dabda844, type: 3}
-    Volume: 1
+  - Id: boss.frostknight.charge.release
+    Clip: {fileID: 8300000, guid: fb51d03a2746f4cdd9cbbadea4b90832, type: 3}
+    Volume: 0.85
     Pitch: 1
-    StartOffset: 0.077
+    StartOffset: 0.062
   - Id: boss.spinningblade.flight
     Clip: {fileID: 8300000, guid: 8799258e14ec45229b4955dc2045552e, type: 3}
     Volume: 1
@@ -169,11 +169,6 @@ MonoBehaviour:
     Volume: 0.85
     Pitch: 1
     StartOffset: 0.009
-  - Id: boss.frostknight.appear
-    Clip: {fileID: 8300000, guid: 3029c523711a2e141b55c7fa313e81b9, type: 3}
-    Volume: 0.85
-    Pitch: 1
-    StartOffset: 0.007
   - Id: boss.frostknight.groggy
     Clip: {fileID: 8300000, guid: 5bb10dc03b111894593e43924b7bf2f0, type: 3}
     Volume: 0.85
@@ -184,16 +179,16 @@ MonoBehaviour:
     Volume: 0.85
     Pitch: 1
     StartOffset: 0.007
-  - Id: boss.frostknight.lethal.warn
-    Clip: {fileID: 8300000, guid: 0a4bd451ddb49cf4ea1c883d888c86e8, type: 3}
+  - Id: boss.frostknight.windup
+    Clip: {fileID: 8300000, guid: 8a3eff8f8892f40caa79da6830449165, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0.008
+    StartOffset: 0.062
   - Id: boss.frostknight.lethal.hit
-    Clip: {fileID: 8300000, guid: 5969a00a9bd83df419449285028965c3, type: 3}
+    Clip: {fileID: 8300000, guid: d191b80359c004f0085675159dc00425, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0.008
+    StartOffset: 0.055
   - Id: menu.handburst
     Clip: {fileID: 8300000, guid: 29c435a94e2fcd245bbb46d7ee452cad, type: 3}
     Volume: 0.9

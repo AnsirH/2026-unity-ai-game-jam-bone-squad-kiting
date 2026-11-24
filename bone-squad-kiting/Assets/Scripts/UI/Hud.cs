@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using BoneSquadKiting.Bosses;
 using BoneSquadKiting.Core;
 using BoneSquadKiting.Game;
+using BoneSquadKiting.Stage;
 
 namespace BoneSquadKiting.UI
 {
@@ -21,7 +23,7 @@ namespace BoneSquadKiting.UI
         public GameDirector Director;
 
         [Header("Top")]
-        public GameObject BossBar;          // hidden on stages without a boss
+        public GameObject BossBar;          // shared by the current encounter
         public RectTransform BossFill;
         public Text BossText, AliveText, DpsText;
 
@@ -40,11 +42,17 @@ namespace BoneSquadKiting.UI
         public GameObject PauseLabel;
         public float ToastSeconds = 1.6f;
 
-        [Header("Start / result overlay")]
+        [Header("Start / pause / result overlay")]
         public GameObject Overlay;
         public Text OverlayTitle, OverlayButtonText;
-        public Button OverlayButton;
+        public Button OverlayButton, PauseQuitButton;
 
+        Text _overlayHint;
+        Vector2 _resultButtonPosition, _resultButtonSize;
+        Navigation _resultNavigation;
+        ColorBlock _resultButtonColors;
+        int _resultFontSize;
+        bool _pauseLayout;
         float _toastUntil;
         bool _wasPlaying;
 
@@ -52,6 +60,17 @@ namespace BoneSquadKiting.UI
         {
             if (GetComponent<HitCounterHud>() == null) gameObject.AddComponent<HitCounterHud>();
             HudSkin.Apply(this);
+            if (PauseLabel != null) PauseLabel.SetActive(false);   // older HUDs have a standalone pause label
+            if (OverlayButton != null)
+            {
+                var rect = (RectTransform)OverlayButton.transform;
+                _resultButtonPosition = rect.anchoredPosition;
+                _resultButtonSize = rect.sizeDelta;
+                _resultNavigation = OverlayButton.navigation;
+                _resultButtonColors = OverlayButton.colors;
+                _resultFontSize = OverlayButtonText.fontSize;
+                _overlayHint = Overlay.transform.Find("Result Card/Hint")?.GetComponent<Text>();
+            }
             if (Director == null) return;
             var formations = Director.Squad.Formations;
             for (int i = 0; i < FormationButtons.Length && i < formations.Count; i++)
@@ -61,6 +80,7 @@ namespace BoneSquadKiting.UI
                 if (i < FormationLabels.Length) FormationLabels[i].text = $"{formations[i].HotKey}  {formations[i].DisplayName}";
             }
             if (OverlayButton != null) OverlayButton.onClick.AddListener(OnOverlayButton);
+            if (PauseQuitButton != null) PauseQuitButton.onClick.AddListener(OnQuitButton);
             Director.PatternResolved += OnResolved;
             Director.PhaseTwoStarted += OnPhaseTwo;
             Director.NearMissed += OnNearMiss;
@@ -89,10 +109,62 @@ namespace BoneSquadKiting.UI
         }
         void OnOverlayButton()
         {
-            BoneSquadKiting.Audio.SoundManager.Current?.PlaySfx("ui.click");
-            if (Director.Phase == GamePhase.Win) Director.Proceed();
+            bool advancingStage = Director.Phase == GamePhase.Win && !Director.IsFinalStage;
+            if (Director.Phase == GamePhase.Play)
+            {
+                if (!Director.Paused) return;
+                Director.TogglePause();
+            }
+            else if (Director.Phase == GamePhase.Win) Director.Proceed();
             else Director.Restart();
+            if (!advancingStage) BoneSquadKiting.Audio.SoundManager.Current?.PlaySfx("ui.click");
         }
+
+        void OnQuitButton()
+        {
+            if (Director.Phase == GamePhase.Play && Director.Paused) MainMenu.QuitGame();
+        }
+
+        void SetPauseLayout(bool paused)
+        {
+            if (_pauseLayout == paused) return;
+            _pauseLayout = paused;
+            var primary = (RectTransform)OverlayButton.transform;
+            PauseQuitButton.gameObject.SetActive(paused);
+            var events = EventSystem.current;
+            if (paused)
+            {
+                Overlay.transform.SetAsLastSibling();
+                primary.anchoredPosition = new Vector2(-122, -68);
+                primary.sizeDelta = HudSkin.PauseButtonSize;
+                OverlayButtonText.fontSize = HudSkin.PauseActionFontSize;
+                var colors = _resultButtonColors;
+                colors.normalColor = new Color(.86f, .86f, .83f);
+                colors.selectedColor = new Color(1f, .91f, .74f);
+                colors.highlightedColor = Color.white;
+                OverlayButton.colors = PauseQuitButton.colors = colors;
+                OverlayButton.navigation = Toward(PauseQuitButton);
+                PauseQuitButton.navigation = Toward(OverlayButton);
+                events?.SetSelectedGameObject(OverlayButton.gameObject);
+            }
+            else
+            {
+                primary.anchoredPosition = _resultButtonPosition;
+                primary.sizeDelta = _resultButtonSize;
+                OverlayButtonText.fontSize = _resultFontSize;
+                OverlayButton.colors = _resultButtonColors;
+                OverlayButton.navigation = _resultNavigation;
+                if (events != null && (events.currentSelectedGameObject == OverlayButton.gameObject ||
+                    events.currentSelectedGameObject == PauseQuitButton.gameObject))
+                    events.SetSelectedGameObject(null);
+            }
+            if (_overlayHint != null) _overlayHint.text = paused ? "ESC  /  RESUME" : "ENTER  /  CONTINUE";
+        }
+
+        static Navigation Toward(Button other) => new Navigation
+        {
+            mode = Navigation.Mode.Explicit, selectOnLeft = other, selectOnRight = other
+        };
 
         void OnWaveStarted(int wave, int mobs) => ShowToast($"웨이브 {wave}  (+{mobs})");
 
@@ -115,7 +187,7 @@ namespace BoneSquadKiting.UI
         {
             if (Toast == null) return;
             Toast.text = text;
-            _toastUntil = Time.unscaledTime + (seconds > 0f ? seconds : ToastSeconds);
+            _toastUntil = Time.time + (seconds > 0f ? seconds : ToastSeconds);
         }
 
         void Update()
@@ -131,31 +203,13 @@ namespace BoneSquadKiting.UI
             if (playing && !_wasPlaying && !string.IsNullOrEmpty(Director.StageTitle)) ShowToast(Director.StageTitle, 2f);
             _wasPlaying = playing;
 
-            // The bar shows the boss, or on a stage without one, the mini boss currently in play.
-            Elite elite = Director.Elites != null && Director.Elites.Elites.Count > 0 ? Director.Elites.Elites[0] : null;
-            bool hasBoss = Director.HasBoss || Director.Fight != null;
-            // A wall that blocks the way takes the bar over while the squad is at it.
-            var wall = hasBoss ? null : BoneSquadKiting.Stage.BreakableWall.Shown;
-            bool showBar = hasBoss || elite != null || wall != null;
-            if (BossBar != null && BossBar.activeSelf != showBar) BossBar.SetActive(showBar);
-            if (wall != null)
+            var target = playing ? EncounterHealth() : null;
+            if (BossBar != null && BossBar.activeSelf != target.HasValue) BossBar.SetActive(target.HasValue);
+            if (target is { } health)
             {
-                SetFill(BossFill, wall.HpFrac);
-                BossText.text = $"{wall.DisplayName}  {Mathf.CeilToInt(wall.HpFrac * 100)}%   {Mathf.CeilToInt(wall.Health)} / {wall.MaxHp:0}";
-            }
-            else if (elite != null && !hasBoss)
-            {
-                SetFill(BossFill, elite.HpFrac);
-                BossText.text = $"{elite.Def.DisplayName}  {Mathf.CeilToInt(elite.HpFrac * 100)}%   {Mathf.CeilToInt(elite.Health)} / {elite.Def.MaxHp:0}";
-            }
-            else
-            {
-                float frac = Director.Boss != null ? Director.Boss.HpFrac : 1f;
-                float hp = Director.Boss != null ? Director.Boss.Hp : GameConstants.BossMax;
-                SetFill(BossFill, frac);
-                float max = Director.Boss != null ? Director.Boss.MaxHp : GameConstants.BossMax;
-                string bossName = Director.Fight != null ? Director.Fight.BossName : "BOSS";
-                BossText.text = $"{bossName}  {Mathf.CeilToInt(frac * 100)}%   {Mathf.CeilToInt(hp)} / {max:0}";
+                float fraction = health.Max > 0f ? Mathf.Clamp01(health.Hp / health.Max) : 0f;
+                SetFill(BossFill, fraction);
+                BossText.text = $"{health.Name}  {Mathf.CeilToInt(fraction * 100)}%   {Mathf.CeilToInt(health.Hp)} / {health.Max:0}";
             }
 
             int alive = Director.AliveCount;
@@ -200,11 +254,20 @@ namespace BoneSquadKiting.UI
                     : id == recommend ? Recommended : id == Director.Squad.Formation ? Selected : Normal;
             }
 
-            if (Toast != null && Toast.text.Length > 0 && Time.unscaledTime >= _toastUntil) Toast.text = "";
-            PauseLabel.SetActive(playing && Director.Paused);
-
-            Overlay.SetActive(!playing);
-            if (!playing)
+            if (Toast != null && Toast.text.Length > 0 && Time.time >= _toastUntil) Toast.text = "";
+            bool paused = playing && Director.Paused;
+            Overlay.SetActive(!playing || paused);
+            SetPauseLayout(paused);
+            if (paused)
+            {
+                if (OverlayTitle.text != "일시정지")
+                {
+                    OverlayTitle.text = "일시정지";
+                    HudSkin.RefreshTitleFont(this);
+                }
+                OverlayButtonText.text = "재개";
+            }
+            else if (!playing)
             {
                 string stage = string.IsNullOrEmpty(Director.StageTitle) ? "" : Director.StageTitle + "  ";
                 OverlayTitle.text = Director.Phase switch
@@ -221,6 +284,42 @@ namespace BoneSquadKiting.UI
                 };
                 HudSkin.RefreshTitleFont(this);
             }
+        }
+
+        (string Name, float Hp, float Max)? EncounterHealth()
+        {
+            var fight = Director.Fight;
+            if (fight != null || Director.HasBoss)
+            {
+                var boss = Director.Boss;
+                if (boss == null || !boss.Alive || fight?.State == FrostKnightState.Waiting) return null;
+                return (fight?.BossName ?? "BOSS", boss.Hp, boss.MaxHp);
+            }
+
+            var wall = BreakableWall.Shown;
+            if (wall != null && wall.Director == Director && wall.Alive)
+                return (wall.DisplayName, wall.Health, wall.MaxHp);
+
+            var elites = Director.Elites?.Elites;
+            if (elites == null) return null;
+            Elite nearest = null;
+            float nearestSqr = float.PositiveInfinity;
+            for (int i = elites.Count - 1; i >= 0; i--)
+            {
+                var elite = elites[i];
+                if (!elite.Alive) continue;
+                // A newly arrived mini boss takes the bar even if an emplacement is still nearby.
+                if (elite.HealthBarApproachRadius is not float radius)
+                    return (elite.Def.DisplayName, elite.Health, elite.Def.MaxHp);
+                float distanceSqr = (elite.Pos - Director.Squad.Anchor).sqrMagnitude;
+                if (distanceSqr <= radius * radius && distanceSqr < nearestSqr)
+                {
+                    nearest = elite;
+                    nearestSqr = distanceSqr;
+                }
+            }
+            if (nearest == null) return null;
+            return (nearest.Def.DisplayName, nearest.Health, nearest.Def.MaxHp);
         }
 
         static void SetFill(RectTransform fill, float frac)

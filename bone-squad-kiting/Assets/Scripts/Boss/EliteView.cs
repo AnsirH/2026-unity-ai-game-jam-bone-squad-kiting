@@ -29,6 +29,7 @@ namespace BoneSquadKiting.Bosses
             public EnemyHealthBar HealthBar;
             public GameObject Root;
             public EnemyRef Ref;
+            public EnemyRef ModelPick;
             public Renderer Cylinder;          // placeholder only
             public CatapultThrow Throw;
             public UnitVisual Visual;          // model only
@@ -75,6 +76,7 @@ namespace BoneSquadKiting.Bosses
                 _live.Remove(e);
                 if (v.HealthBar != null) v.HealthBar.gameObject.SetActive(false);
                 v.Ref.Enemy = null;
+                v.ModelPick?.Bind(null);
                 if (Art == null)
                 {
                     var squad = FindAnyObjectByType<BoneSquadKiting.Squad.SquadView>();
@@ -141,7 +143,13 @@ namespace BoneSquadKiting.Bosses
             bool moving = (e.Pos - v.LastPos).sqrMagnitude > 1e-8f;
             if (v.Throw != null) v.Throw.Draw(e.Attacks);
             else if (e.Casting && !v.WasCasting) v.Visual.PlayAttack(e.Def.CastAnimSeconds);
-            else v.Visual.SetState(moving ? VisualState.Run : VisualState.Idle);
+            else
+            {
+                // A mobile caster can start walking before its stationary cast follow-through ends.
+                if (moving && !e.Casting && v.Visual.Current == VisualState.Attack && v.Visual.Has(VisualState.Run))
+                    v.Visual.CancelAttack();
+                v.Visual.SetState(moving ? VisualState.Run : VisualState.Idle);
+            }
             v.WasCasting = e.Casting;
             v.LastPos = e.Pos;
         }
@@ -161,6 +169,7 @@ namespace BoneSquadKiting.Bosses
                 if (e.Def.HealthBarPrefab != null)
                     v.HealthBar = Instantiate(e.Def.HealthBarPrefab, transform);
             }
+            v.ModelPick?.Bind(e);
             v.LastPos = e.Pos; v.WasCasting = false;
             if (v.Visual != null)
             {
@@ -188,10 +197,11 @@ namespace BoneSquadKiting.Bosses
 
                 var model = Instantiate(def.Prefab, v.Root.transform);
                 model.name = def.Prefab.name;
-                foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
+                foreach (var c in model.GetComponentsInChildren<Collider>()) { c.enabled = false; Destroy(c); }
                 v.Throw = model.GetComponent<CatapultThrow>();
                 v.Model = model.transform;
                 v.Model.localPosition = Vector3.zero;
+                v.ModelPick = EnemyRef.AddBodyPick(model);
                 v.Visual = model.GetComponent<UnitVisual>();
                 if (v.Visual == null)
                 {

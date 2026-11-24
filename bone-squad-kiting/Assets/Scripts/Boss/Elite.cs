@@ -11,6 +11,8 @@ namespace BoneSquadKiting.Bosses
         public float X, Z;
         public float Health;
         public float Flash;
+        // Pre-placed enemies reveal their top health bar inside this radius. An arriving enemy appears on the HUD immediately.
+        public float? HealthBarApproachRadius;
         public BossAttackSystem Attacks;
 
         /// <summary>The rest of its entry route. While this is set it is walking in: it neither chases nor casts.</summary>

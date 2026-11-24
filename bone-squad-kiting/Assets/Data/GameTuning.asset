@@ -25,10 +25,10 @@ MonoBehaviour:
   RotationStepDegrees: 15
   RotationSpeed: 0
   SeatSize: 0.5
-  UnitDamage: 35
+  UnitDamage: 33.425
   UnitAttackInterval: 0.6
   UnitAttackIntervalRandom: 0.16
-  LeaderDamage: 33
+  LeaderDamage: 31.515
   LeaderAttackInterval: 1.35
   LeaderAttackIntervalRandom: 0
   StationaryRampEnabled: 1

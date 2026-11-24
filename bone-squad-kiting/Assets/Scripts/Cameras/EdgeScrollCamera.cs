@@ -287,6 +287,7 @@ namespace BoneSquadKiting.Cameras
 
         void LateUpdate()
         {
+            if (Time.timeScale == 0f) return;
             TickShake(Time.unscaledDeltaTime);
             if (TickFocus(Time.unscaledDeltaTime)) return;   // no edge scrolling while the camera is being directed
             // Until the mouse has reported a position it reads (0, 0), which would look like the corner.

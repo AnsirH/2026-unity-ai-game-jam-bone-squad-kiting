@@ -14,7 +14,8 @@ namespace BoneSquadKiting.Stage
     public class MiniBossSpawn : MonoBehaviour
     {
         public EliteDefinition Definition;
-        public float TriggerRadius = 12f;
+        [Tooltip("Approach radius for a distance-triggered spawn, or for the top health bar of an enemy present from the start.")]
+        [Min(0f)] public float TriggerRadius = 12f;
 
         [Tooltip("On: it stands here from the start of the stage (a fixed cannon). Off: it appears when the squad comes within Trigger Radius.")]
         public bool PresentFromStart;
@@ -27,6 +28,14 @@ namespace BoneSquadKiting.Stage
 
         [Tooltip("0 or more: it appears when the squad's progress through the stage (0 = start, 1 = end point) reaches this, instead of by distance. Needs the stage to have waves and an end point. Below 0 = off.")]
         public float AtProgress = -1f;
+
+        [Header("This encounter")]
+        [Tooltip("Optional attack cycle for this marker, in casting order. Empty uses the enemy definition.")]
+        public PatternDefinition[] PatternCycle;
+        [Tooltip("Seconds in attack range before the first warning. A negative value uses the enemy's usual opening delay.")]
+        public float OpeningDelay = -1f;
+        [Tooltip("World-space directions revealed when this enemy dies.")]
+        public GameObject DefeatGuide;
 
         [Header("Entry route (optional)")]
         [Tooltip("Points it walks through on its way in, in order. It appears at the first one and ends on this marker. Empty = it appears on the marker.")]
@@ -70,7 +79,12 @@ namespace BoneSquadKiting.Stage
 
         public Vector2 Position => new(transform.position.x, transform.position.z);
 
-        public void ResetSpawn() { Triggered = false; Elite = null; }
+        public void ResetSpawn()
+        {
+            Triggered = false;
+            Elite = null;
+            if (DefeatGuide != null) DefeatGuide.SetActive(false);
+        }
         public void MarkTriggered(Elite elite) { Triggered = true; Elite = elite; }
 
         void OnDrawGizmos()

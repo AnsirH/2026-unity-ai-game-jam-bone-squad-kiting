@@ -5,6 +5,8 @@ namespace BoneSquadKiting.UI
 {
     public static class HudSkin
     {
+        internal const int PauseActionFontSize = 22;
+        internal static readonly Vector2 PauseButtonSize = new(228, 82);
         static readonly Color Ink = new(0.035f, 0.043f, 0.052f, 0.96f);
         static readonly Color Gold = new(0.66f, 0.59f, 0.46f, 0.85f);
         static readonly Color Paper = new(0.91f, 0.87f, 0.77f);
@@ -41,9 +43,27 @@ namespace BoneSquadKiting.UI
             return t;
         }
 
+        // StageKit stores the second action. Create it from the primary action for older HUDs as well.
+        public static void EnsurePauseButton(Hud hud)
+        {
+            if (hud.PauseQuitButton == null)
+            {
+                var button = Object.Instantiate(hud.OverlayButton, hud.Overlay.transform, false);
+                button.name = "Quit Button";
+                button.onClick = new Button.ButtonClickedEvent();
+                button.GetComponentInChildren<Text>(true).text = "게임 종료";
+                hud.PauseQuitButton = button;
+            }
+            Place((RectTransform)hud.PauseQuitButton.transform, new Vector2(.5f, .5f),
+                new Vector2(122, -68), PauseButtonSize);
+            hud.PauseQuitButton.GetComponentInChildren<Text>(true).fontSize = PauseActionFontSize;
+            hud.PauseQuitButton.gameObject.SetActive(false);
+        }
+
         public static void Apply(Hud hud)
         {
             if (hud == null || hud.AliveText == null || hud.Overlay == null) return;
+            EnsurePauseButton(hud);
             var scaler = hud.GetComponent<CanvasScaler>();
             if (scaler != null) { scaler.referenceResolution = new Vector2(1280, 720); scaler.matchWidthOrHeight = 0.5f; }
             foreach (var text in hud.GetComponentsInChildren<Text>(true))
@@ -103,8 +123,11 @@ namespace BoneSquadKiting.UI
             hud.OverlayTitle.resizeTextMinSize = 22;
             hud.OverlayTitle.resizeTextMaxSize = 34;
             Place((RectTransform)hud.OverlayButton.transform, new Vector2(0.5f, 0.5f), new Vector2(0, -67), new Vector2(290, 48));
-            Frame(hud.OverlayButton.gameObject);
-            hud.OverlayButton.image.color = new Color(0.24f, 0.18f, 0.11f, 1f);
+            foreach (var button in new[] { hud.OverlayButton, hud.PauseQuitButton })
+            {
+                Frame(button.gameObject);
+                button.image.color = new Color(0.24f, 0.18f, 0.11f, 1f);
+            }
             hud.OverlayButtonText.fontSize = 18;
             if (hud.Toast != null) { hud.Toast.fontSize = 23; hud.Toast.color = Paper; }
             ApplyArtwork(hud, panel, stats);
@@ -131,6 +154,7 @@ namespace BoneSquadKiting.UI
             Art(panel.GetComponent<Image>(), art.Menu);
             Art(stats.GetComponent<Image>(), art.Stats);
             Art(hud.OverlayButton.image, art.StartButton);
+            Art(hud.PauseQuitButton.image, art.StartButton);
             Place((RectTransform)panel, new Vector2(.5f,.5f), Vector2.zero, new Vector2(660,350));
             Place(stats, new Vector2(0,1), new Vector2(166,-59), new Vector2(304,108));
             Place(hud.AliveText.rectTransform, new Vector2(.5f,.5f), new Vector2(0,18), new Vector2(244,27));

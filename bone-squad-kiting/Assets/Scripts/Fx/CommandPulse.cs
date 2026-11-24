@@ -40,13 +40,13 @@ namespace BoneSquadKiting.Fx
             transform.position = new Vector3(point.x, GroundHeight.Y(point.x, point.y) + 0.12f, point.y);
             _material.SetColor(Tint, attack ? AttackColor : MoveColor);
             _material.SetFloat(Progress, 0f);
-            _start = Time.unscaledTime;
+            _start = Time.time;
             gameObject.SetActive(true);
         }
 
         void Update()
         {
-            float t = (Time.unscaledTime - _start) / Duration;
+            float t = (Time.time - _start) / Duration;
             if (t >= 1f) gameObject.SetActive(false);
             else _material.SetFloat(Progress, t);
         }

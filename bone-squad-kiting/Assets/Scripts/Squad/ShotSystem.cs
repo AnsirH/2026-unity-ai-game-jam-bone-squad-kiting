@@ -147,6 +147,22 @@ namespace BoneSquadKiting.Squad
 
         static bool NeedsShots(IEnemy e) => e.Hp > e.Reserved;
 
+        /// <summary>Turn an unloosed shot toward a newly ordered target without restarting its animation.</summary>
+        public void FocusPendingShots(IList<SquadUnit> units, IEnemy target, float range)
+        {
+            foreach (var u in units)
+            {
+                if (!NeedsShots(target)) break;
+                if (u.PendingTarget == null || u.PendingTarget == target || u.Dead || u.Reviving || u.Moving) continue;
+                var delta = target.Pos - new Vector2(u.X, u.Z);
+                if (delta.sqrMagnitude >= range * range) continue;
+                ReleaseReserve(u.PendingTarget, u.PendingReserve);
+                u.PendingTarget = target;
+                target.Reserved += u.PendingReserve;
+                u.Facing = delta.normalized;
+            }
+        }
+
         public void Tick(IList<SquadUnit> units, EnemyRegistry registry, SquadOrder order, float dt)
         {
             HitCounterRemaining = Mathf.Max(0f, HitCounterRemaining - dt);

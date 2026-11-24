@@ -48,20 +48,22 @@ namespace BoneSquadKiting.Bosses
         public string HitSound = "boss.greatsword.impact";
         [Tooltip("The circle attack's sword starts to fall.")]
         public string CircleFallSound = "boss.greatsword.fall";
-        [Tooltip("The charged slash is swung, and its wave flies across the room.")]
-        public string ChargeSwingSound = "boss.spinningblade.swing";
-        public string ChargeFlightSound = "boss.spinningblade.flight";
+        [Tooltip("The two parallel slashes leave the throne in phase one.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("ChargeFlightSound")]
+        public string ParallelFlightSound = "boss.spinningblade.flight";
+        [Tooltip("The phase-two knight takes the charged slash or sword-plant pose.")]
+        public string PhaseTwoWindupSound = "boss.frostknight.windup";
+        [Tooltip("The three charged waves leave the sword in phase two.")]
+        public string ChargeReleaseSound = "boss.frostknight.charge.release";
         [Tooltip("The squad walks in and the boss raises its head.")]
         public string WakeSound = "boss.frostknight.wake";
         public string StunSound = "boss.frostknight.stun";
         public string RiseSound = "boss.frostknight.rise";
-        [Tooltip("Fading out of sight, and showing up for an attack.")]
+        [Tooltip("The knight fades out of sight.")]
         public string VanishSound = "boss.frostknight.vanish";
-        public string AppearSound = "boss.frostknight.appear";
         public string GroggySound = "boss.frostknight.groggy";
         public string DeathSound = "boss.frostknight.death";
-        [Tooltip("The lethal slam: its warning starts, and it lands.")]
-        public string LethalWarnSound = "boss.frostknight.lethal.warn";
+        [Tooltip("The lethal sword plant hits the floor.")]
         public string LethalHitSound = "boss.frostknight.lethal.hit";
 
         FrostKnightFight _fight;
@@ -126,16 +128,18 @@ namespace BoneSquadKiting.Bosses
 
             Place(fight);
             if (_serial != fight.AnimSerial) PlayMotion(fight);
-            else if (fight.State == FrostKnightState.Charging && Animator != null) Animator.speed = fight.AnimSpeed;
+            else if (Animator != null && (fight.State == FrostKnightState.Charging || fight.State == FrostKnightState.Throne
+                || (fight.State == FrostKnightState.Slamming && fight.Anim == "SwordPlant")))
+                Animator.speed = fight.AnimSpeed;
             if (_collider != null) _collider.enabled = fight.Targetable;
             UpdateArmor(fight);
 
-            if (fight.Casting && fight.Telegraphs.Count > 0)
-                PlayCastSounds(fight.Attack, fight.Telegraphs[0].Remaining);
+            if (!fight.Casting || fight.Attack != FrostKnightAttack.Circle || fight.Telegraphs.Count == 0) return;
+            float remaining = fight.Telegraphs[0].Remaining;
+            PlayCircleSounds(remaining);
 
             // The falling sword has its own time to impact: start it that long before the circle goes off.
-            if (!_circleShown && CircleEffect != null && fight.Casting && fight.Attack == FrostKnightAttack.Circle
-                && fight.Telegraphs.Count > 0 && fight.Telegraphs[0].Remaining <= CircleEffectLead)
+            if (!_circleShown && CircleEffect != null && remaining <= CircleEffectLead)
             {
                 _circleShown = true;
                 foreach (var zone in fight.Telegraphs) PlayCircle(zone);
@@ -146,6 +150,15 @@ namespace BoneSquadKiting.Bosses
         {
             var at = new Vector3(cast.Cx, BoneSquadKiting.Stage.GroundHeight.Y(cast.Cx, cast.Cz), cast.Cz);
             var fx = Instantiate(CircleEffect, at, Quaternion.Euler(0f, cast.Angle, 0f));
+            // Enter the authored clip late when the warning is shorter than its pre-roll.
+            // The blade, ground wave, sounds and damage then land on the same gameplay tick.
+            var animation = fx.GetComponent<Animation>();
+            if (animation != null && animation.clip != null)
+            {
+                animation.Play(animation.clip.name);
+                animation[animation.clip.name].time = Mathf.Max(0f, CircleEffectLead - cast.Remaining);
+                animation.Sample();
+            }
             // The combat telegraph already draws the disc. Fit the ground wave to its radius.
             var disc = fx.transform.Find("TelegraphDisc/Disc");
             if (disc != null && cast.Shape.RMax > 0f)
@@ -189,7 +202,7 @@ namespace BoneSquadKiting.Bosses
             if (_fight != null)
             {
                 _fight.OnCast -= OnCast; _fight.OnHit -= OnHit; _fight.OnState -= OnState;
-                if (_fight.Attack == FrostKnightAttack.Circle) SoundManager.Current?.StopSfx(CircleFallSound);
+                StopAttackSound(_fight.Attack);
             }
             if (_cam != null) _cam.BossDeathRumble = 0f;
             _cam = fight != null && Director != null && Director.Stage != null ? Director.Stage.Cam : null;
@@ -220,11 +233,10 @@ namespace BoneSquadKiting.Bosses
                 case FrostKnightState.Throne: Sfx(WakeSound); break;
                 case FrostKnightState.Stunned: Sfx(StunSound); break;
                 case FrostKnightState.Rising: Sfx(RiseSound); break;
-                case FrostKnightState.Charging: Sfx(AppearSound); break;
                 case FrostKnightState.Groggy: Sfx(GroggySound); break;
                 case FrostKnightState.Vanishing: Sfx(VanishSound); break;
                 case FrostKnightState.Dying:
-                    if (_fight.Attack == FrostKnightAttack.Circle) SoundManager.Current?.StopSfx(CircleFallSound);
+                    StopAttackSound(_fight.Attack);
                     Sfx(DeathSound);
                     break;
             }
@@ -252,7 +264,8 @@ namespace BoneSquadKiting.Bosses
         void PlayMotion(FrostKnightFight fight)
         {
             _serial = fight.AnimSerial;
-            if (fight.Anim == "SwordPlant") Sfx(AppearSound);            // the lethal slam: it shows up just before it strikes
+            // The slam warns with a floor marker while hidden. Its audible windup begins when the knight raises the sword.
+            if (fight.Casting && (fight.Anim == "ChargedSlash" || fight.Anim == "SwordPlant")) Sfx(PhaseTwoWindupSound);
             if (Animator == null) return;
             Animator.speed = Mathf.Max(0.05f, fight.AnimSpeed);
             // Blend times are in real seconds, so they do not stretch with the motion's speed.
@@ -263,26 +276,24 @@ namespace BoneSquadKiting.Bosses
 
         void OnCast(FrostKnightAttack attack, BossAttackSystem.Active cast)
         {
+            if (attack == FrostKnightAttack.Parallel) Sfx(CastSound);
+            if (attack != FrostKnightAttack.Circle) return;
             _circleShown = false;
             _previousRemaining = float.PositiveInfinity;
-            if (attack >= FrostKnightAttack.LethalLeft) Sfx(LethalWarnSound);
-            else if (attack != FrostKnightAttack.Circle) Sfx(CastSound);
-            PlayCastSounds(attack, cast.Remaining);
+            PlayCircleSounds(cast.Remaining);
         }
 
-        void PlayCastSounds(FrostKnightAttack attack, float remaining)
+        void StopAttackSound(FrostKnightAttack attack)
+        {
+            if (attack == FrostKnightAttack.Circle) SoundManager.Current?.StopSfx(CircleFallSound);
+            else if (attack != FrostKnightAttack.Parallel) SoundManager.Current?.StopSfx(PhaseTwoWindupSound);
+        }
+
+        void PlayCircleSounds(float remaining)
         {
             // The plunge reveals its blade at 1.15 s, drops at 1.39 s and lands at 1.51 s.
-            if (attack == FrostKnightAttack.Circle)
-            {
-                if (Crossed(CircleEffectLead - 1.15f)) Sfx(CastSound);
-                if (Crossed(CircleEffectLead - 1.39f)) Sfx(CircleFallSound);
-            }
-            else if (attack == FrostKnightAttack.Charge)
-            {
-                // The blade accelerates at 6.75 s in ChargedSlash; the wave leaves at ChargeHitAt.
-                if (Crossed((FrostKnightFight.ChargeHitAt - 6.75f) / _fight.AnimSpeed)) Sfx(ChargeSwingSound);
-            }
+            if (Crossed(CircleEffectLead - 1.15f)) Sfx(CastSound);
+            if (Crossed(CircleEffectLead - 1.39f)) Sfx(CircleFallSound);
             _previousRemaining = remaining;
 
             bool Crossed(float lead) => _previousRemaining > lead && remaining <= lead;
@@ -310,11 +321,8 @@ namespace BoneSquadKiting.Bosses
             if (attack == FrostKnightAttack.Parallel && ParallelEffect != null)
                 foreach (var zone in _fight.Telegraphs) PlayParallel(zone);
             bool lethal = attack >= FrostKnightAttack.LethalLeft;
-            if (attack == FrostKnightAttack.Circle)
-            {
-                SoundManager.Current?.StopSfx(CircleFallSound);
-                Sfx(HitSound);
-            }
+            StopAttackSound(attack);
+            if (attack == FrostKnightAttack.Circle) Sfx(HitSound);
             else if (lethal)
             {
                 Sfx(LethalHitSound);
@@ -325,7 +333,7 @@ namespace BoneSquadKiting.Bosses
                         new Vector2(2f * cast.Shape.Outer, 2f * cast.Shape.HalfZ), Arena.transform);
                 }
             }
-            else Sfx(ChargeFlightSound); // one release for the whole volley, even on a miss
+            else Sfx(attack == FrostKnightAttack.Charge ? ChargeReleaseSound : ParallelFlightSound); // once for all lanes, even on a miss
             if (attack == FrostKnightAttack.Charge)
             {
                 if (ChargeEffect != null)

@@ -94,7 +94,7 @@ namespace BoneSquadKiting.Fx
             Flash = Mathf.Max(Flash, 0.25f);
         }
 
-        void Update() => Tick(Time.unscaledDeltaTime);
+        void Update() { if (Time.deltaTime > 0f) Tick(Time.deltaTime); }
 
         /// <summary>Advance the effects. Public so tests can drive time.</summary>
         public void Tick(float dt)

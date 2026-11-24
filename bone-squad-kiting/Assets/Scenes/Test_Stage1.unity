@@ -18453,6 +18453,9 @@ MonoBehaviour:
   PlayIntro: 1
   ActivateAfter: []
   AtProgress: -1
+  PatternCycle: []
+  OpeningDelay: 0.45
+  DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
   IntroWhen: 0
@@ -19808,6 +19811,9 @@ MonoBehaviour:
   PlayIntro: 1
   ActivateAfter: []
   AtProgress: -1
+  PatternCycle: []
+  OpeningDelay: 0.6
+  DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
   IntroWhen: 0
@@ -20823,6 +20829,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Bosses.EliteView
   Director: {fileID: 32514558}
+  Art: {fileID: 0}
   EliteMaterial: {fileID: 2100000, guid: 320bd24f8c2f75c43b8075c27826b2ee, type: 2}
   EnemyLayer: 6
   Height: 1.6
@@ -33926,6 +33933,9 @@ MonoBehaviour:
   PlayIntro: 1
   ActivateAfter: []
   AtProgress: -1
+  PatternCycle: []
+  OpeningDelay: -1
+  DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
   IntroWhen: 0
@@ -39766,6 +39776,11 @@ MonoBehaviour:
   PlayIntro: 1
   ActivateAfter: []
   AtProgress: -1
+  PatternCycle:
+  - {fileID: 11400000, guid: 986f8584ae4c00e4798c9313d1374855, type: 2}
+  - {fileID: 11400000, guid: ec0d90245c4c84d459651fc1f147e448, type: 2}
+  OpeningDelay: 0.45
+  DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
   IntroWhen: 0

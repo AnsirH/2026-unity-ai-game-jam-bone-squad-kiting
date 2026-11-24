@@ -145,6 +145,38 @@ public class MainMenuTests
     }
 
     [UnityTest]
+    public IEnumerator PauseMenu_ResumeButtonKeepsTheCurrentFight()
+    {
+        yield return SceneManager.LoadSceneAsync("Game");
+        yield return null;
+        var hud = Object.FindFirstObjectByType<Hud>();
+        var director = hud.Director;
+        director.Restart();
+        var shots = director.Shots;
+        var rect = (RectTransform)hud.OverlayButton.transform;
+        Vector2 startPosition = rect.anchoredPosition;
+        director.TogglePause();
+        try
+        {
+            yield return null;
+            Assert.AreEqual("일시정지", hud.OverlayTitle.text);
+            Assert.AreEqual("재개", hud.OverlayButtonText.text);
+            Assert.IsTrue(hud.PauseQuitButton.gameObject.activeInHierarchy);
+            hud.OverlayButton.onClick.Invoke();
+            yield return null;
+            Assert.IsFalse(director.Paused);
+            Assert.AreSame(shots, director.Shots, "Resume must not restart the match");
+            Assert.IsFalse(hud.Overlay.activeSelf);
+            Assert.IsFalse(hud.PauseQuitButton.gameObject.activeSelf);
+            Assert.AreEqual(startPosition, rect.anchoredPosition);
+        }
+        finally
+        {
+            if (director.Paused) director.TogglePause();
+        }
+    }
+
+    [UnityTest]
     public IEnumerator Continue_ToTheBossStage_AndClearingItEndsTheSave()
     {
         GameProgress.Save(2);
@@ -171,12 +203,18 @@ public class MainMenuTests
         Assert.IsNotNull(view, "and the boss model");
         yield return null; yield return null;
         Assert.AreEqual(BoneSquadKiting.Bosses.FrostKnightState.Waiting, fight.State);
+        var hud = Object.FindFirstObjectByType<Hud>();
+        hud.Refresh();
+        Assert.IsFalse(hud.BossBar.activeSelf, "the throne health bar stays hidden on the approach");
         Assert.That(Vector3.Distance(view.transform.position, arena.Seat.position), Is.LessThan(0.1f), "seated on the throne");
         director.Squad.Anchor = Flat(start.EndPoint.position);
         yield return null; yield return null;
         Assert.AreEqual(GamePhase.Play, director.Phase, "walking to the old end point no longer clears the stage");
         Assert.AreEqual(BoneSquadKiting.Bosses.FrostKnightState.Throne, fight.State, "the fight starts when the squad is in the room");
         Assert.IsTrue(fight.Targetable);
+        hud.Refresh();
+        Assert.IsTrue(hud.BossBar.activeSelf);
+        StringAssert.Contains(arena.BossName, hud.BossText.text);
 
         // Clearing the last stage (the boss dies) finishes the game: nothing is left to continue.
         arena.Tuning.DieAnimSpeed = 20f;

@@ -112,11 +112,13 @@ public class FrostKnightFightTests
     public void Circle_IsSmallerThanTheRingFormation_AndShrinksWithTheSquad()
     {
         const float ringRadius = 3.7f;                            // the ring formation's (E) radius for a full squad
+        _arena.Tuning.SlamHitSeconds = 2.9f;
         _roll = 0.9f;                                             // the circle, not the parallel lines
         SquadDamage.Invincible = true;
         MoveSquad(_arena.Center);
         Assert.IsTrue(RunUntil(() => _fight.Casting));
         Assert.AreEqual(FrostKnightAttack.Circle, _fight.Attack);
+        Assert.That(_fight.Telegraphs[0].Pattern.Time, Is.EqualTo(_arena.Tuning.CircleHitSeconds).Within(0.001f));
         var cast = _fight.Telegraphs[0];
         Assert.AreEqual("ring", cast.Pattern.Recommend, "the HUD recommends the ring formation");
         Assert.That(cast.Shape.RMax, Is.LessThan(ringRadius - 0.3f), "units on the ring stand outside the circle");
@@ -274,6 +276,37 @@ public class FrostKnightFightTests
         Assert.That(2f * cast.Shape.Outer, Is.EqualTo(_arena.Size.x * .5f));
         Assert.That(2f * cast.Shape.HalfZ, Is.EqualTo(_arena.Size.y));
         Assert.AreEqual(BoneSquadKiting.Core.DangerShapeType.Rectangle, cast.Shape.Type);
+    }
+
+    [TestCase(0f, -6f, 6f)]
+    [TestCase(.5f, 6f, -6f)]
+    [TestCase(.9f, 0f, 9f)]
+    public void LethalSlam_AllowsEscapeDuringTheExtraHalfSecond(float roll, float dangerX, float safeX)
+    {
+        _arena.Tuning.AttackOrder = "L";
+        _arena.Tuning.LethalWarnSeconds = new FrostKnightTuning().LethalWarnSeconds;
+        _roll = roll;
+        ToPhaseTwoAt(dangerX, 0f);
+        Assert.IsTrue(RunUntil(() => _fight.State == FrostKnightState.Slamming));
+        var cast = _fight.Telegraphs[0];
+        Assert.That(cast.Pattern.Time, Is.EqualTo(2.9f).Within(.001f));
+        int hits = 0, alive = Alive();
+        _fight.OnHit += (attack, area, hit, lost) => hits++;
+
+        Run(1.86f);
+        Assert.AreEqual("SwordPlant", _fight.Anim);
+        Assert.Less(_fight.AnimSpeed, .2f);
+        Run(.54f);                                      // the old impact time
+        Assert.AreEqual(0, hits);
+        Assert.AreEqual(alive, Alive());
+        MoveSquad(_arena.Point(safeX, 0f));
+        Run(.32f);
+        Assert.AreEqual(1f, _fight.AnimSpeed);          // the drop plays at normal speed
+        _fight.Tick(_fight.Telegraphs[0].Remaining - .01f);
+        Assert.AreEqual(0, hits);
+        _fight.Tick(.011f);
+        Assert.AreEqual(1, hits);
+        Assert.AreEqual(alive, Alive());
     }
 
     [Test]

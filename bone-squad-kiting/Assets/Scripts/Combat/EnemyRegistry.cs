@@ -11,6 +11,8 @@ namespace BoneSquadKiting.Combat
         public void Register(IEnemy e) { if (!Enemies.Contains(e)) Enemies.Add(e); }
         public void Unregister(IEnemy e) { Enemies.Remove(e); }
 
+        public bool CanTarget(IEnemy enemy) => enemy is { Alive: true } && Enemies.Contains(enemy);
+
         /// <summary>Closest living enemy within range of a point, or null.</summary>
         public IEnemy NearestInRange(Vector2 from, float range)
         {

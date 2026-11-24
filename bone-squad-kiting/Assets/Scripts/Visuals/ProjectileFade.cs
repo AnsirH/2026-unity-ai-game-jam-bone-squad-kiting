@@ -18,7 +18,7 @@ namespace BoneSquadKiting.Visuals
                 foreach (var mat in copies)
                 {
                     // Built-in URP Lit opaque surfaces need transparent rendering for alpha fades.
-                    if (mat.shader.name == "Universal Render Pipeline/Lit")
+                    if (mat.shader.name == "Universal Render Pipeline/Lit" && mat.GetFloat("_Surface") == 0f)
                     {
                         mat.SetFloat("_Surface", 1f);
                         mat.SetFloat("_Blend", 0f);

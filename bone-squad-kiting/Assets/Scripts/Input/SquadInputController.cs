@@ -26,12 +26,17 @@ namespace BoneSquadKiting.Input
 
         void Update()
         {
-            if (Director == null || Keyboard.current == null || Mouse.current == null) return;
+            if (Director == null || Keyboard.current == null) return;
+            if (Director.Phase == GamePhase.Play && (Pressed(Key.Escape) || Pressed(Key.P)))
+            {
+                AttackMovePending = false;
+                Director.TogglePause();
+                return;
+            }
 
-            if (Director.Phase == GamePhase.Play && !Director.Paused)
+            if (Director.Phase == GamePhase.Play && !Director.Paused && Mouse.current != null)
             {
                 if (Pressed(Key.A)) AttackMovePending = true;
-                if (Pressed(Key.Escape)) AttackMovePending = false;
                 if (Pressed(Key.S)) { AttackMovePending = false; Director.StopSquad(); }
                 if (Pressed(Key.F)) Director.TryRevive();
 
@@ -46,8 +51,9 @@ namespace BoneSquadKiting.Input
                 }
                 else if (Mouse.current.rightButton.wasPressedThisFrame)
                 {
-                    if (AttackMovePending) AttackMovePending = false; // right click cancels a pending attack-move
-                    else IssueClickOrder(false);
+                    bool cancelOnGround = AttackMovePending;
+                    AttackMovePending = false;
+                    IssueClickOrder(false, cancelOnGround);
                 }
 
                 HandleFormationKeys();
@@ -58,8 +64,6 @@ namespace BoneSquadKiting.Input
             }
             else AttackMovePending = false;
 
-            // Pause has to stay reachable while paused; restart only outside a running match.
-            if (Director.Phase == GamePhase.Play && Pressed(Key.P)) Director.TogglePause();
             if (Director.Phase != GamePhase.Play && Pressed(Key.Enter))
             {
                 if (Director.Phase == GamePhase.Win) Director.Proceed();   // next stage (or back to the title after the last)
@@ -67,12 +71,20 @@ namespace BoneSquadKiting.Input
             }
         }
 
-        void IssueClickOrder(bool attackMove)
+        void IssueClickOrder(bool attackMove, bool cancelOnGround = false)
         {
+            if (Cam == null) return;
+            var ray = Cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            var enemy = PickEnemy(ray);
             SquadOrder order;
-            if (PickEnemy(out var enemy)) order = SquadOrder.Attack(enemy);
-            else if (PickGround(out var ground)) order = attackMove ? SquadOrder.AttackMove(ground) : SquadOrder.Move(ground);
-            else return;
+            if (enemy != null) order = SquadOrder.Attack(enemy);
+            else
+            {
+                if (cancelOnGround || !Ground.Raycast(ray, out float distance)) return;
+                var world = ray.GetPoint(distance);
+                var point = new Vector2(world.x, world.z);
+                order = attackMove ? SquadOrder.AttackMove(point) : SquadOrder.Move(point);
+            }
 
             if (!Director.IssueOrder(order)) return;
             if (_pulse == null) _pulse = CommandPulse.Create(transform);
@@ -90,29 +102,21 @@ namespace BoneSquadKiting.Input
             }
         }
 
-        bool PickEnemy(out IEnemy enemy)
+        IEnemy PickEnemy(Ray ray)
         {
-            enemy = null;
-            if (Cam == null) return false;
-            var ray = Cam.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (Physics.Raycast(ray, out var hit, 500f, EnemyMask)
-                && hit.collider.TryGetComponent<EnemyRef>(out var r) && r.Enemy is { Alive: true })
+            // The actor views move in LateUpdate, between physics steps.
+            Physics.SyncTransforms();
+            IEnemy closest = null;
+            float nearest = float.PositiveInfinity;
+            foreach (var hit in Physics.RaycastAll(ray, 500f, EnemyMask, QueryTriggerInteraction.Collide))
             {
-                enemy = r.Enemy;
-                return true;
+                if (hit.distance >= nearest) continue;
+                var pick = hit.collider.GetComponentInParent<EnemyRef>();
+                if (pick == null || !Director.Enemies.CanTarget(pick.Enemy)) continue;
+                closest = pick.Enemy;
+                nearest = hit.distance;
             }
-            return false;
-        }
-
-        bool PickGround(out Vector2 point)
-        {
-            point = default;
-            if (Cam == null) return false;
-            var ray = Cam.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Ground.Raycast(ray, out float enter)) return false;
-            var w = ray.GetPoint(enter);
-            point = new Vector2(w.x, w.z);
-            return true;
+            return closest;
         }
 
         static bool Pressed(Key k) => k != Key.None && Keyboard.current[k].wasPressedThisFrame;

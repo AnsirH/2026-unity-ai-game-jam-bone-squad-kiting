@@ -15,8 +15,10 @@ namespace BoneSquadKiting.Bosses
         [Header("Phase 1: on the throne")]
         [Tooltip("Seconds between the squad entering and the first attack.")]
         public float FirstAttackDelay = 2f;
-        [Tooltip("From raising the hands to the sword touching the floor: the warning time of both throne attacks.")]
+        [Tooltip("From raising the hands to the sword touching the floor: the warning time of the parallel throne attack.")]
         public float SlamHitSeconds = 2.9f;
+        [Tooltip("The circle warning and sword impact share this duration.")]
+        [Min(.1f)] public float CircleHitSeconds = 1.6f;
         [Tooltip("After the sword lands: the rest of the motion, then this pause before the next attack.")]
         public float SlamRecoverSeconds = 1.7f;
         public float ThroneAttackGap = 1.2f;
@@ -55,7 +57,7 @@ namespace BoneSquadKiting.Bosses
         [Tooltip("While it hangs in the air with the sword raised, the squad can hit it: from when it has appeared until the sword comes down.")]
         public bool ChargeCanBeHit = true;
         [Tooltip("Warning time of the lethal slam.")]
-        public float LethalWarnSeconds = 2.4f;
+        public float LethalWarnSeconds = 2.9f;
         [Tooltip("The middle zone of the lethal slam is this share of the room's width.")]
         [Range(0.1f, 0.9f)] public float LethalCenterShare = .5f;
         [Tooltip("If the squad leader stands in the lethal zone, the whole squad falls.")]
@@ -81,7 +83,7 @@ namespace BoneSquadKiting.Bosses
         [Tooltip("Where the boss sits: position and facing of the throne's seat.")]
         public Transform Seat;
         public Transform[] MageSpawns = new Transform[0];
-        public string BossName = "서리 기사";
+        public string BossName = "마력의 주인";
         public FrostKnightTuning Tuning = new();
 
         public Vector2 Center => new(transform.position.x, transform.position.z);

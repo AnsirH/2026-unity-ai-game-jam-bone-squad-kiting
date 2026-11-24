@@ -63,20 +63,23 @@ public class CatapultModelTests
         var shot = model.GetComponent<CatapultThrow>();
         Assert.AreSame(shot.Socket, shot.Stone.transform.parent, "stone rides the arm during windup");
         Assert.IsFalse(shot.Trail.emitting);
-        dir.TogglePause(); // drive this cast explicitly while the view keeps drawing frames
+        dir.Frozen = true; // drive the cast explicitly while its animation and audio continue
         var cast = e.Attacks.Current.Value;
-        e.Attacks.Tick(_fc, null, shot.ReleaseSeconds - cast.Elapsed - 0.01f);
+        // A shortened telegraph leaves at least 40% of the cast for the stone's flight.
+        float releaseTime = Mathf.Min(shot.ReleaseSeconds, cast.Pattern.Time * 0.6f);
+        e.Attacks.Tick(_fc, null, releaseTime - cast.Elapsed - 0.01f);
         yield return null; yield return null;
         Assert.AreSame(shot.Socket, shot.Stone.transform.parent, "stone stays seated through the extended windup");
         Vector3 beforeRelease = shot.Stone.transform.position;
         Assert.IsFalse(CombatSoundTests.Playing("enemy.catapult.launch"));
-        e.Attacks.Tick(_fc, null, shot.ReleaseSeconds - e.Attacks.Current.Value.Elapsed);
+        e.Attacks.Tick(_fc, null, releaseTime - e.Attacks.Current.Value.Elapsed);
         yield return null; yield return null;
         Vector3 release = shot.Stone.transform.position;
         Assert.IsTrue(CombatSoundTests.Playing("enemy.catapult.launch"));
         Assert.IsTrue(CombatSoundTests.Playing("enemy.catapult.flight"));
         Assert.IsFalse(CombatSoundTests.Playing("enemy.catapult.impact"));
-        e.Attacks.Tick(_fc, null, 0.02f);
+        float flightSample = (cast.Pattern.Time - releaseTime) * 0.01f;
+        e.Attacks.Tick(_fc, null, flightSample);
         yield return null; yield return null;
         Assert.AreNotSame(shot.Socket, shot.Stone.transform.parent, "stone left the arm");
         Assert.IsTrue(shot.Trail.emitting);

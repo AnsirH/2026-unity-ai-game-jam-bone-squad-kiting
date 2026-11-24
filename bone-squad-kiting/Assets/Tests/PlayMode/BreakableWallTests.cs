@@ -24,6 +24,12 @@ public class BreakableWallTests
         Assert.IsNotNull(wall, "stage 2 has the gate");
         yield return null;
 
+        Assert.IsTrue(wall.EndsReinforcements);
+        Assert.IsFalse(wall.ExitGuide.activeInHierarchy);
+        var arrowRest = wall.ExitGuide.transform.localPosition;
+        var hud = Object.FindFirstObjectByType<BoneSquadKiting.UI.Hud>();
+        hud.Refresh();
+        Assert.IsFalse(hud.BossBar.activeSelf, "the stage starts outside the gate encounter");
         var grid = director.Squad.Grid;
         var gate = wall.Pos; var inside = gate + new Vector2(0f, 10f); var before = gate + new Vector2(0f, -4.5f);
         Assert.Contains(wall, director.Enemies.Enemies, "the squad can shoot it");
@@ -40,7 +46,14 @@ public class BreakableWallTests
         wall.ApplyDamage(wall.MaxHp * 0.25f);
         yield return null;
         Assert.That(wall.Flash, Is.GreaterThan(0.3f), "it flashes when hit");
-        Assert.AreEqual(wall, BreakableWall.Shown, "once hit, the top bar shows it");
+        Assert.IsNull(BreakableWall.Shown, "a distant hit cannot reveal the gate");
+        director.Squad.Anchor = gate - Vector2.up * (wall.ShowBarDistance - 1f);
+        director.Squad.Destination = director.Squad.Anchor;
+        yield return null; yield return null;
+        hud.Refresh();
+        Assert.AreSame(wall, BreakableWall.Shown);
+        Assert.IsTrue(hud.BossBar.activeSelf);
+        StringAssert.Contains(wall.DisplayName, hud.BossText.text);
         Assert.AreEqual(0.75f, wall.HpFrac, 0.001f);
         foreach (var go in wall.BreakObjects) Assert.IsTrue(go.activeSelf);
 
@@ -50,6 +63,24 @@ public class BreakableWallTests
         CollectionAssert.DoesNotContain(director.Enemies.Enemies, wall);
         foreach (var go in wall.BreakObjects) Assert.IsFalse(go.activeSelf, "the gate is gone");
         Assert.IsNull(BreakableWall.Shown);
+        Assert.IsTrue(wall.ExitGuide.activeInHierarchy);
+        hud.Refresh();
+        Assert.IsFalse(hud.BossBar.activeSelf, "the broken gate and its fallen guard leave no encounter bar");
+        var motion = wall.ExitGuide.GetComponent<Animation>();
+        Assert.IsTrue(motion.IsPlaying(motion.clip.name));
+        var state = motion[motion.clip.name];
+        state.normalizedTime = .5f;
+        motion.Sample();
+        var top = wall.ExitGuide.transform.localPosition;
+        Assert.Greater(top.z, arrowRest.z + .5f, "the arrows travel toward the warp");
+        Assert.Greater(top.y, arrowRest.y + .1f, "the arrows lift visibly");
+        state.normalizedTime = 1f;
+        motion.Sample();
+        Assert.Less(Vector3.Distance(arrowRest, wall.ExitGuide.transform.localPosition), .02f, "the loop returns to its starting point");
+        Assert.IsTrue(director.Waves.Stopped);
+        director.Waves.SpawnNow();
+        Assert.AreEqual(0, director.Waves.Tick(director.Squad, director.Mobs, director.Enemies, 15f));
+        Assert.AreEqual(0, director.Mobs.AliveCount);
         Assert.IsTrue(grid.IsWalkable(gate), "and the way through is open");
         Assert.IsTrue(grid.LineOpen(before, inside));
 
@@ -58,6 +89,11 @@ public class BreakableWallTests
         until = Time.time + 3f;
         while (director.Phase != GamePhase.Win && Time.time < until) yield return null;
         Assert.AreEqual(GamePhase.Win, director.Phase, "reaching the end point inside clears the stage");
+        director.Restart();
+        yield return null;
+        Assert.IsTrue(wall.Alive);
+        Assert.IsFalse(wall.ExitGuide.activeInHierarchy);
+        Assert.IsFalse(director.Waves.Stopped);
         LogAssert.NoUnexpectedReceived();
     }
 }

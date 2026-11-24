@@ -292,7 +292,7 @@ namespace BoneSquadKiting.Squad
             // Brighten units that were just hit; the flash value decays in SquadUnit.MoveToward.
             if (u.Reviving && u.Flash <= 0f)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f);
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 10f);
                 v.Flash.Apply(v.Capsule, _block, 0.35f + 0.65f * pulse, ReviveColor, reviving: true);
             }
             else v.Flash.Apply(v.Capsule, _block, u.Flash, HitFlashColor);

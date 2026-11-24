@@ -180,85 +180,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!1 &312774731246334344
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4737704352817445724}
-  - component: {fileID: 6159864511702940853}
-  - component: {fileID: 2935525191474073931}
-  m_Layer: 0
-  m_Name: Pause Label
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &4737704352817445724
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 312774731246334344}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1529055622916183384}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 60}
-  m_SizeDelta: {x: 600, y: 44}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &6159864511702940853
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 312774731246334344}
-  m_CullTransparentMesh: 1
---- !u!114 &2935525191474073931
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 312774731246334344}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 28
-    m_FontStyle: 1
-    m_BestFit: 0
-    m_MinSize: 10
-    m_MaxSize: 40
-    m_Alignment: 4
-    m_AlignByGeometry: 0
-    m_RichText: 1
-    m_HorizontalOverflow: 1
-    m_VerticalOverflow: 1
-    m_LineSpacing: 1
-  m_Text: "\uC77C\uC2DC\uC815\uC9C0 (P)"
 --- !u!1 &362537537786619586
 GameObject:
   m_ObjectHideFlags: 0
@@ -304,10 +225,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Bosses.EliteView
   Director: {fileID: 3359097076742001768}
+  Art: {fileID: 0}
   EliteMaterial: {fileID: 2100000, guid: 320bd24f8c2f75c43b8075c27826b2ee, type: 2}
   EnemyLayer: 6
   Height: 1.6
   HitFlashColor: {r: 4, g: 2.5, b: 2, a: 1}
+  TurnSpeed: 360
 --- !u!1 &753814527053963386
 GameObject:
   m_ObjectHideFlags: 0
@@ -5535,7 +5458,6 @@ RectTransform:
   - {fileID: 557344554564628106}
   - {fileID: 4577937989194593788}
   - {fileID: 6256409920714283355}
-  - {fileID: 4737704352817445724}
   - {fileID: 2208971501398246134}
   - {fileID: 9044480723899621364}
   - {fileID: 5659760666074170575}
@@ -5645,12 +5567,13 @@ MonoBehaviour:
   - {fileID: 5129676706514506052}
   - {fileID: 7727626979786357998}
   Toast: {fileID: 902536464676067755}
-  PauseLabel: {fileID: 312774731246334344}
+  PauseLabel: {fileID: 0}
   ToastSeconds: 1.6
   Overlay: {fileID: 4003142192867711249}
   OverlayTitle: {fileID: 3271457957737224824}
   OverlayButtonText: {fileID: 1907188364511390596}
   OverlayButton: {fileID: 5794932236624147502}
+  PauseQuitButton: {fileID: 3324688260228956460}
 --- !u!1 &1874529507666262933
 GameObject:
   m_ObjectHideFlags: 0
@@ -6242,6 +6165,127 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: 
+--- !u!1 &2555950253134655224
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8649821665690773995}
+  - component: {fileID: 1017755094870784776}
+  - component: {fileID: 8649939530140011127}
+  - component: {fileID: 3324688260228956460}
+  m_Layer: 0
+  m_Name: Quit Button
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &8649821665690773995
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2555950253134655224}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 463241831504847037}
+  m_Father: {fileID: 8987256731549348244}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 122, y: -68}
+  m_SizeDelta: {x: 228, y: 82}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &1017755094870784776
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2555950253134655224}
+  m_CullTransparentMesh: 1
+--- !u!114 &8649939530140011127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2555950253134655224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.56, g: 0.56, b: 0.54, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 6f3ab54cf3a8049ac95e1ef20ef23457, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &3324688260228956460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2555950253134655224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_Navigation:
+    m_Mode: 0
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 1
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 1.15, g: 1.15, b: 1.15, a: 1}
+    m_PressedColor: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 1
+  m_TargetGraphic: {fileID: 8649939530140011127}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &3226082887173470674
 GameObject:
   m_ObjectHideFlags: 0
@@ -6508,6 +6552,7 @@ RectTransform:
   m_Children:
   - {fileID: 2091262986231373969}
   - {fileID: 2003896526371787485}
+  - {fileID: 8649821665690773995}
   m_Father: {fileID: 1529055622916183384}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -6680,6 +6725,88 @@ MonoBehaviour:
   LockedColor: {r: 1, g: 0.15, b: 0.1, a: 0.6}
   LiveColor: {r: 1, g: 0.55, b: 0.1, a: 0.8}
   Height: 0.03
+  GroundStep: 1
+  TrackingOpacity: 0.55
+  LiveFillBoost: 1.6
+--- !u!1 &4462621761911899745
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 463241831504847037}
+  - component: {fileID: 397622679098880423}
+  - component: {fileID: 2794942872458103447}
+  m_Layer: 0
+  m_Name: Text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &463241831504847037
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4462621761911899745}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8649821665690773995}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &397622679098880423
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4462621761911899745}
+  m_CullTransparentMesh: 1
+--- !u!114 &2794942872458103447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4462621761911899745}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.91, g: 0.87, b: 0.77, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 12800000, guid: d02f8389e2d584503b7045795cc7a24c, type: 3}
+    m_FontSize: 22
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 10
+    m_MaxSize: 40
+    m_Alignment: 4
+    m_AlignByGeometry: 0
+    m_RichText: 1
+    m_HorizontalOverflow: 1
+    m_VerticalOverflow: 1
+    m_LineSpacing: 1
+  m_Text: "\uAC8C\uC784 \uC885\uB8CC"
 --- !u!1 &5202007290191663393
 GameObject:
   m_ObjectHideFlags: 0
@@ -7117,8 +7244,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Mobs.MobView
   Director: {fileID: 3359097076742001768}
+  Art: {fileID: 0}
   MobMaterial: {fileID: 2100000, guid: d877a3329067f7d448eb3c46759cd6d9, type: 2}
   HitFlashColor: {r: 3, g: 3, b: 3, a: 1}
+  TurnSpeed: 540
+  ShotColor: {r: 0.75, g: 0.3, b: 1, a: 1}
+  ShotHeight: 1.1
 --- !u!1 &7003655343096661306
 GameObject:
   m_ObjectHideFlags: 0
@@ -7505,7 +7636,14 @@ MonoBehaviour:
   Destination: {x: 0, y: 3.4}
   HasLeader: 1
   LeaderFacing: {x: 0, y: -1}
+  RingTurnFactor: 1
   SeatSize: 0.5
+  AnchorSpeed: 3.08
+  AnchorArrive: 0.024
+  UnitBaseSpeed: 2.8
+  UnitSpeedDistGain: 2.4
+  UnitSpeedDistCap: 9
+  UnitArrive: 0.015
   Formation: dense
   RotationStepDegrees: 15
   RotationDegrees: 0
@@ -7533,11 +7671,13 @@ MonoBehaviour:
   StageTitle: Stage
   NextScene: 
   Tuning: {fileID: 11400000, guid: 447ac52f31ce9ba479661e117a0526d8, type: 2}
-  UnitFireRange: 5.5
-  SquadEngageRange: 5
+  UnitFireRange: 9
+  SquadEngageRange: 8
+  NearMissMargin: 1
+  NearMissDamageMultiplier: 1.2
+  NearMissBuffSeconds: 5
   ReviveSeconds: 3
   Phase: 0
-  Paused: 0
   Elapsed: 0
   LastDps: 0
   TotalDamage: 0
@@ -7627,7 +7767,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 68857a931c58a46c3982cb9ba9390817, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Fx.PresentationManager
   Database: {fileID: 11400000, guid: 00f462a8b2895422185be1757f7f9185, type: 2}
   Cam: {fileID: 7412895378599517927}
@@ -7676,9 +7816,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Squad.ShotView
   Director: {fileID: 3359097076742001768}
+  Art: {fileID: 0}
   ShotMaterial: {fileID: 2100000, guid: 4e4af317e5af51c42881aae865e090a9, type: 2}
   Scale: 0.16
   Height: 0.45
+  ArcHeight: 0.4
+  FullArcDistance: 6
 --- !u!1 &8170653081153524830
 GameObject:
   m_ObjectHideFlags: 0
@@ -7834,6 +7977,12 @@ MonoBehaviour:
   EdgeWidth: 18
   Distance: 34
   LookAt: {x: 0, y: -0.1}
+  FollowSquad: 1
+  Squad: {fileID: 0}
+  LookAhead: 1
+  KeepMargin: 0.14
+  DeadZone: 0.12
+  SmoothTime: 0.22
   BoundsMin: {x: -12.3, y: -10.2}
   BoundsMax: {x: 12.3, y: 10.2}
 --- !u!1 &8238214753154059474
