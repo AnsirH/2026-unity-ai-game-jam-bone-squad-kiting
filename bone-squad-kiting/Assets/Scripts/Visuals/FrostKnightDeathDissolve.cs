@@ -16,6 +16,7 @@ namespace BoneSquadKiting.Visuals
         [SerializeField] ParticleSystemRenderer[] aura = System.Array.Empty<ParticleSystemRenderer>();
 
         public float StartNormalizedTime => roarStart;
+        public bool FullyDissolved => applied.x >= .98f;
 
         Animator animator;
         SkinnedMeshRenderer body;

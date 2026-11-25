@@ -24,6 +24,8 @@ namespace BoneSquadKiting.Stage
         {
             [Tooltip("The stage's map object in this scene. It needs a StageStart somewhere inside.")]
             public GameObject Map;
+            [Tooltip("Optional mid-stage checkpoint. Its transform marks the squad's respawn position.")]
+            public StageCheckpoint Checkpoint;
             [Tooltip("Shown when the stage begins and on its clear screen.")]
             public string Title = "Stage";
             [Tooltip("Music ID in the sound database for this stage.")]

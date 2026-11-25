@@ -73,6 +73,7 @@ namespace BoneSquadKiting.Game
         public EliteSystem Elites { get; private set; }
         /// <summary>The Frost Knight fight, on a stage that has a BossArena; null on every other stage.</summary>
         public FrostKnightFight Fight { get; private set; }
+        public FrostKnightView KnightModel { get; private set; }
 
         /// <summary>Every pattern being cast right now: the boss's and each mini boss's.</summary>
         public readonly List<BossAttackSystem.Active> Telegraphs = new();
@@ -98,6 +99,7 @@ namespace BoneSquadKiting.Game
         float _bossBodyHeight;
         Transform _bossTorso;
         int _aliveLastStep;
+        Elite _reinforcementLeader;
         MiniBossSpawn[] _miniBosses = new MiniBossSpawn[0];
 
         /// <summary>Whether the end point currently counts (for rules that open it only after the mini boss).</summary>
@@ -139,12 +141,14 @@ namespace BoneSquadKiting.Game
         public void Restart()
         {
             SetPaused(false);
+            SoundManager.Current?.StopSfx("squad.crossbow.fire");
+            SoundManager.Current?.StopSfx("squad.leader.throw");
             Boss = HasBoss ? new Boss() : null;
             Enemies = new EnemyRegistry();
             if (Boss != null) Enemies.Register(Boss);
             Mobs = new MobSystem();
+            Mobs.OnMobSpawned += () => SoundManager.Current?.PlayVolleySfx("stage.wave.start");
             Mobs.OnMobDied += _ => SoundManager.Current?.PlayVolleySfx("enemy.mob.death");
-            Mobs.OnProjectileHit += (shot, _) => { if (shot.Def != null && shot.Def.JavelinThrowClip == null) SoundManager.Current?.PlayVolleySfx("enemy.caster.hit"); };
             Elites = new EliteSystem();
             Elites.OnPatternStarted += (e, p) => PatternStarted?.Invoke(p);
             Elites.OnPatternResolved += (e, hit, lost) =>
@@ -161,6 +165,7 @@ namespace BoneSquadKiting.Game
             foreach (var m in FindObjectsByType<MiniBossSpawn>(FindObjectsSortMode.None))
                 if (m.gameObject.scene == gameObject.scene) found.Add(m);
             _miniBosses = found.ToArray();
+            _reinforcementLeader = null;
             foreach (var m in _miniBosses) m.ResetSpawn();
             _cutsceneRemaining = 0f;
             _lastPursuitPosition = null;
@@ -187,16 +192,16 @@ namespace BoneSquadKiting.Game
                 PatternResolved?.Invoke(hit, lost);
             };
             Shots = new ShotSystem();
-            Shots.OnLaunched += shot =>
-            {
-                SoundManager.Current?.PlayVolleySfx(shot.Heavy ? "squad.leader.throw" : "squad.crossbow.fire");
-            };
+            Shots.OnLaunched += shot => SoundManager.Current?.PlaySquadShot(shot.Heavy);
             Shots.OnTargetHit += shot =>
             {
+                bool hitKnight = Fight != null && shot.Target == Fight.Boss;
+                if (hitKnight && shot.DamageDealt <= 0f) return;
                 if (shot.Heavy) { SoundManager.Current?.PlayVolleySfx("squad.leader.hit"); return; }
                 bool metal;
                 if (shot.Target is Mob mob) metal = mob.Def.Armored;
                 else if (shot.Target is Elite elite) metal = elite.Def.Armored;
+                else if (hitKnight) metal = true;
                 else return;
                 SoundManager.Current?.PlayVolleySfx(metal ? "squad.arrow.hit.armor" : "squad.arrow.hit.humanoid");
             };
@@ -205,13 +210,26 @@ namespace BoneSquadKiting.Game
             _hits.Clear();
             TotalDamage = 0; Elapsed = 0; LastDps = 0; BossPhase = 1;
             NearMissBuffLeft = 0f;
-            Squad.Init();
+            var checkpoint = Run != null && GameProgress.AtCheckpoint && GameProgress.NextStage == Run.Current
+                ? Run.CurrentEntry?.Checkpoint : null;
+            var spawn = Squad.StartAnchor;
+            if (checkpoint != null)
+            {
+                spawn = Squad.Grid != null ? Squad.Grid.NearestWalkable(checkpoint.Position) : checkpoint.Position;
+                checkpoint.RestoreEncounters();
+            }
+            Squad.Init(spawn);
             StartBossFight();
+            if (checkpoint != null && Stage != null && Stage.Cam != null)
+            {
+                Stage.Cam.LookAt = spawn;
+                Stage.Cam.Apply();
+            }
             if (Waves != null)
             {
                 Vector2? end = Stage != null && Stage.EndPoint != null
                     ? new Vector2(Stage.EndPoint.position.x, Stage.EndPoint.position.z) : null;
-                Waves.Begin(Squad.Grid, Squad.Anchor, end);
+                Waves.Begin(Squad.Grid, Squad.StartAnchor, end, checkpoint != null ? spawn : (Vector2?)null);
             }
             if (BossView != null && Boss != null) BossView.Bind(Boss);
             ApplyTuning();
@@ -235,15 +253,16 @@ namespace BoneSquadKiting.Game
             if (Fight != null) Fight.OnState -= OnBossCameraState;
             if (Stage != null && Stage.Cam != null) Stage.Cam.CancelBossDeathFocus();
             Fight = null;
+            KnightModel = null;
             BossArena arena = null;
             foreach (var a in FindObjectsByType<BossArena>(FindObjectsSortMode.None))
                 if (a.isActiveAndEnabled && a.gameObject.scene == gameObject.scene) { arena = a; break; }
             if (arena == null) return;
             if (Boss == null) Boss = new Boss(); else Enemies.Unregister(Boss);     // the fight decides when it can be hit
-            var knight = arena.GetComponentInChildren<FrostKnightView>(true);
-            _bossBodyHeight = knight != null && knight.TryGetComponent<CapsuleCollider>(out var body)
+            KnightModel = arena.GetComponentInChildren<FrostKnightView>(true);
+            _bossBodyHeight = KnightModel != null && KnightModel.TryGetComponent<CapsuleCollider>(out var body)
                 ? body.height * Mathf.Abs(body.transform.lossyScale.y) : 8.4f;
-            var animator = knight != null ? knight.GetComponentInChildren<Animator>(true) : null;
+            var animator = KnightModel != null ? KnightModel.GetComponentInChildren<Animator>(true) : null;
             _bossTorso = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Spine) : null;
             if (_bossTorso == null && animator != null)
                 _bossTorso = System.Array.Find(animator.GetComponentsInChildren<Transform>(true), bone => bone.name == "mixamorig:Spine");
@@ -473,7 +492,11 @@ namespace BoneSquadKiting.Game
         {
             foreach (var m in _miniBosses)
             {
-                if (m.Triggered || m.Definition == null || !m.Unlocked) continue;
+                if (m.Definition == null || !m.Unlocked) continue;
+                if (m.ApproachGuide != null && !m.ApproachGuide.activeSelf && !m.Defeated &&
+                    Vector2.Distance(m.Position, Squad.Anchor) <= Mathf.Max(m.TriggerRadius, m.Definition.AttackRange))
+                    m.ApproachGuide.SetActive(true);
+                if (m.Triggered) continue;
                 if (!m.PresentFromStart)
                 {
                     // By progress when asked for (and the stage measures it), otherwise by distance.
@@ -498,6 +521,7 @@ namespace BoneSquadKiting.Game
             if (m.OpeningDelay >= 0f) elite.Attacks.NextAttack = m.OpeningDelay;
             if (m.PresentFromStart) elite.HealthBarApproachRadius = Mathf.Max(0f, m.TriggerRadius);
             m.MarkTriggered(elite);
+            if (m.EndsReinforcements && Fight == null) _reinforcementLeader = elite;
             MiniBossAppeared?.Invoke(elite);
             if (!m.PresentFromStart) SoundManager.Current?.PlaySfx("enemy.miniboss.appear");
             if (!m.PresentFromStart && (m.IntroWhen == MiniBossIntroWhen.OnAppear || !elite.Entering)) PlayMiniBossIntro(m, elite);
@@ -518,23 +542,30 @@ namespace BoneSquadKiting.Game
                 if (m.Elite == elite && m.IntroWhen == MiniBossIntroWhen.OnArrive) PlayMiniBossIntro(m, elite);
         }
 
-        // A mini boss fell. Only the stage's last one gets the big finish: its death moment plays, the swarm
-        // is swept away and the waves stop, so the walk to the end point is clear. Earlier ones just die and
-        // the waves keep coming.
+        // On the plains the priest ends reinforcements. Other encounters use the last guard or the gate.
         void OnMiniBossDied(Elite elite)
         {
             foreach (var marker in _miniBosses)
-                if (marker.Elite == elite && marker.DefeatGuide != null) marker.DefeatGuide.SetActive(true);
+            {
+                if (marker.Elite != elite) continue;
+                if (Run != null && Run.CurrentEntry?.Checkpoint?.Trigger == marker)
+                    GameProgress.Save(Run.Current, atCheckpoint: true);
+                if (marker.DefeatGuide != null) marker.DefeatGuide.SetActive(true);
+                if (marker.NextWaveClearGuide != null && Waves != null)
+                    Waves.RevealAfterNextWave(marker.NextWaveClearGuide);
+            }
             MiniBossDefeated?.Invoke(elite);
             SoundManager.Current?.PlaySfx("enemy.miniboss.death");
             if (Fight != null) return;                                // the boss fight's mages: the fight goes on
-            foreach (var m in _miniBosses) if (!m.Defeated) return;   // others remain (including ones yet to appear)
-            // A guard can fall before its gate. Keep the siege going until the gate itself breaks.
-            foreach (var target in Enemies.Enemies)
-                if (target is BreakableWall { EndsReinforcements: true, Alive: true }) return;
-            Mobs.Clear(Enemies);
+            if (elite != _reinforcementLeader)
+            {
+                if (_reinforcementLeader is { Alive: false }) return;
+                foreach (var m in _miniBosses) if (!m.Defeated) return;
+                foreach (var target in Enemies.Enemies)
+                    if (target is BreakableWall { EndsReinforcements: true, Alive: true }) return;
+            }
+            EndStageReinforcements();
             Shots.Shots.Clear();
-            if (Waves != null) Waves.Stopped = true;
             StartCutscene(elite.Pos, elite.Def.DeathDuration, null, elite.Def.DeathFx);
         }
 
@@ -581,12 +612,10 @@ namespace BoneSquadKiting.Game
 
             if (Waves != null)
             {
+                // A lethal hit can arrive between steps, just as a wave or progress burst becomes due.
+                if (_reinforcementLeader is { Alive: false }) Waves.Stopped = true;
                 int spawned = Waves.Tick(Squad, Mobs, Enemies, dt);
-                if (spawned > 0)
-                {
-                    WaveStarted?.Invoke(Waves.WavesSpawned, spawned);
-                    SoundManager.Current?.PlaySfx("stage.wave.start");
-                }
+                if (spawned > 0) WaveStarted?.Invoke(Waves.WavesSpawned, spawned);
             }
             Mobs.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
             if (Mobs.UnitsKilledLastTick > 0) Squad.Reform();   // close up around the survivors
@@ -600,13 +629,13 @@ namespace BoneSquadKiting.Game
             Shots.DamageMultiplier = DamageMultiplier;
             BossAttackSystem.NearMissMargin = NearMissMargin;
             Shots.Tick(Squad.Units, Enemies, Squad.Order, dt);
-            if (Fight != null) Fight.Tick(dt);
-            else if (Boss != null) Attacks.Tick(Squad, Boss, dt);
+            if (Fight == null && Boss != null) Attacks.Tick(Squad, Boss, dt);
 
-            // Deaths are processed before new arrivals, so a mini boss that waits for another one to die
-            // appears on the same frame, and a newcomer does not act on the frame it appears.
+            // Update existing elites first. A priest summoned by the fight below starts its timer
+            // on the next step, after its first frame on screen.
             Elites.Tick(Squad, Enemies, Squad.Grid, Flow, dt);
             if (InCutscene) return;   // the last mini boss just died: its moment starts now
+            Fight?.Tick(dt);
             TriggerMiniBosses();
             if (InCutscene) return;   // one just appeared with an intro: freeze from this frame on
 
@@ -643,6 +672,7 @@ namespace BoneSquadKiting.Game
                 Phase = GamePhase.Win;
                 SaveProgress();
                 if (Run != null && !Run.IsLast) PlayStageMusic(Run.Stages[Run.Current + 1]);
+                else if (IsFinalStage && Fight != null) SoundManager.Current?.PlayBgm("bgm.victory", immediate: true);
                 else if (IsFinalStage) SoundManager.Current?.PlaySfx("stage.clear");
             }
         }

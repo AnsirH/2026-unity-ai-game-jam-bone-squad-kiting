@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d3e5a91c4b24f6e8a1b0c2d9e4f6a71, type: 3}
+  m_Name: Stage1_v03
+  m_EditorClassIdentifier: 
+  Note: "\uAD7D\uC774 \uC9C4\uC785 \uC2DC \uADFC\uC811 10\xB7\uC6D0\uAC70\uB9AC 2,
+    \uAD7D\uC774 \uB4A4\uB294 \uADFC\uC811 10\xB7\uC6D0\uAC70\uB9AC 3, \uB9C8\uC9C0\uB9C9\uC740
+    \uADFC\uC811 14\xB7\uC6D0\uAC70\uB9AC 4. 60%\uC758 \uC77C\uD68C\uC131 \uADFC\uC811
+    \uC99D\uC6D0\uC740 16\uBA85."
+  FirstWaveDelay: 3
+  Blend: 0
+  Sections:
+  - FromProgress: 0
+    Interval: 8
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 8
+  - FromProgress: 0.35
+    Interval: 7.5
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 10
+    - Mob: {fileID: 11400000, guid: d2541eaa21726ac42b858f8998152e3b, type: 2}
+      Count: 2
+  - FromProgress: 0.6
+    Interval: 7.5
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 10
+    - Mob: {fileID: 11400000, guid: d2541eaa21726ac42b858f8998152e3b, type: 2}
+      Count: 3
+  - FromProgress: 0.85
+    Interval: 7.5
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 14
+    - Mob: {fileID: 11400000, guid: d2541eaa21726ac42b858f8998152e3b, type: 2}
+      Count: 4
+  Bursts:
+  - AtProgress: 0.6
+    Mobs:
+    - Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
+      Count: 16
+  MinSpawnDistance: 14
+  MaxSpawnDistance: 22
+  AheadShare: 0.7
+  GroupSize: 8
+  GroupSpread: 1.5

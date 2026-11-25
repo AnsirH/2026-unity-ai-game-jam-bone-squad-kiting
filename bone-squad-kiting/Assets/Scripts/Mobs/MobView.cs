@@ -177,7 +177,9 @@ namespace BoneSquadKiting.Mobs
                 go.transform.SetParent(transform, false);
                 if (_shotMaterial == null)
                 {
-                    _shotMaterial = new Material(go.GetComponent<Renderer>().sharedMaterial) { color = ShotColor };
+                    // The serialized mob material brings the active pipeline's shader into standalone builds.
+                    var template = MobMaterial != null ? MobMaterial : go.GetComponent<Renderer>().sharedMaterial;
+                    _shotMaterial = new Material(template) { color = ShotColor };
                     if (_shotMaterial.HasProperty("_BaseColor")) _shotMaterial.SetColor("_BaseColor", ShotColor);
                     if (_shotMaterial.HasProperty(EmissionId)) { _shotMaterial.EnableKeyword("_EMISSION"); _shotMaterial.SetColor(EmissionId, ShotColor * 2f); }
                 }

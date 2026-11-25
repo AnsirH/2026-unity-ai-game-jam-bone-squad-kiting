@@ -1,5 +1,6 @@
 using UnityEngine;
 using BoneSquadKiting.Audio;
+using BoneSquadKiting.Cameras;
 using BoneSquadKiting.Combat;
 using BoneSquadKiting.Game;
 using BoneSquadKiting.Visuals;
@@ -67,6 +68,7 @@ namespace BoneSquadKiting.Bosses
         public string LethalHitSound = "boss.frostknight.lethal.hit";
 
         FrostKnightFight _fight;
+        FrostKnightState _lastState;
         int _serial = -1;
         bool _circleShown;
         float _previousRemaining;
@@ -85,6 +87,7 @@ namespace BoneSquadKiting.Bosses
         BoneSquadKiting.Cameras.EdgeScrollCamera _cam;
         CapsuleCollider _pickCapsule;
         Transform _chargeTorso;
+        Transform[] _lowerLegBones = System.Array.Empty<Transform>();
         Vector3 _restPickCenter;
         float _seatY;
 
@@ -103,12 +106,16 @@ namespace BoneSquadKiting.Bosses
             _ref = GetComponent<EnemyRef>();
             _collider = GetComponent<Collider>();
             _pickCapsule = _collider as CapsuleCollider;
-            if (_pickCapsule != null)
+            if (_pickCapsule != null) _restPickCenter = _pickCapsule.center;
+            if (Animator != null)
             {
-                _restPickCenter = _pickCapsule.center;
-                if (Animator != null)
-                    _chargeTorso = System.Array.Find(Animator.GetComponentsInChildren<Transform>(true),
-                        bone => bone.name == "mixamorig:Spine1");
+                var bones = Animator.GetComponentsInChildren<Transform>(true);
+                _chargeTorso = System.Array.Find(bones, bone => bone.name == "mixamorig:Spine1");
+                _lowerLegBones = System.Array.FindAll(bones, bone => bone.name is
+                    "mixamorig:LeftLeg" or "mixamorig:RightLeg" or
+                    "mixamorig:LeftFoot" or "mixamorig:RightFoot" or
+                    "mixamorig:LeftToeBase" or "mixamorig:RightToeBase" or
+                    "mixamorig:LeftToe_End" or "mixamorig:RightToe_End");
             }
             _seatY = transform.position.y;
         }
@@ -174,6 +181,19 @@ namespace BoneSquadKiting.Bosses
             Destroy(fx, 6f);
         }
 
+        // Scene-view cameras, the telegraphs and an invisible teleport pose do not count as seeing the knight.
+        public bool BodyInView(Camera camera, int sceneryMask)
+        {
+            if (!isActiveAndEnabled || _body == null || !_body.enabled || _body.forceRenderingOff ||
+                !_body.gameObject.activeInHierarchy || (camera.cullingMask & (1 << _body.gameObject.layer)) == 0 ||
+                (_dissolve != null && _dissolve.FullyDissolved)) return false;
+
+            // On the approach the seated knight's boots cross the top edge before his torso.
+            foreach (var bone in _lowerLegBones)
+                if (GameplayVisibility.PointInView(camera, bone.position, sceneryMask)) return true;
+            return GameplayVisibility.PointInView(camera, _chargeTorso != null ? _chargeTorso.position : _body.bounds.center, sceneryMask);
+        }
+
         void UpdateArmor(FrostKnightFight fight)
         {
             if (_body == null) return;
@@ -215,6 +235,7 @@ namespace BoneSquadKiting.Bosses
             _previousRemaining = float.PositiveInfinity;
             if (_ref != null) _ref.Enemy = fight?.Boss;
             if (fight == null) { Place(null); if (Animator != null && Animator.isActiveAndEnabled) { Animator.speed = 1f; Animator.Play("HeadBowed", 0, 0f); } return; }
+            _lastState = fight.State;
             fight.OnCast += OnCast; fight.OnHit += OnHit; fight.OnState += OnState;
             // The director ticks before this view, including on the first frame in the room.
             if (fight.State == FrostKnightState.Throne && fight.StateTime == 0f) Sfx(WakeSound);
@@ -226,6 +247,8 @@ namespace BoneSquadKiting.Bosses
 
         void OnState(FrostKnightState state)
         {
+            var previous = _lastState;
+            _lastState = state;
             _landed = _deathPeak = false;
             if (_cam != null) _cam.BossDeathRumble = 0f;
             switch (state)
@@ -234,7 +257,11 @@ namespace BoneSquadKiting.Bosses
                 case FrostKnightState.Stunned: Sfx(StunSound); break;
                 case FrostKnightState.Rising: Sfx(RiseSound); break;
                 case FrostKnightState.Groggy: Sfx(GroggySound); break;
-                case FrostKnightState.Vanishing: Sfx(VanishSound); break;
+                // Standing up and finishing a charge can hide the knight without a separate fade state.
+                case FrostKnightState.Hidden when previous != FrostKnightState.Vanishing:
+                case FrostKnightState.Vanishing:
+                    Sfx(VanishSound);
+                    break;
                 case FrostKnightState.Dying:
                     StopAttackSound(_fight.Attack);
                     Sfx(DeathSound);

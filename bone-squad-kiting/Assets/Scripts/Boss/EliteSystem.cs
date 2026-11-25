@@ -44,7 +44,11 @@ namespace BoneSquadKiting.Bosses
                 FixedGapRandom = def.AttackGapRandom,
                 RotationSpeed = def.ZoneRotationSpeed,
             };
-            e.Attacks.OnStart += p => OnPatternStarted?.Invoke(e, p);
+            e.Attacks.OnStart += pattern =>
+            {
+                e.OpeningCastIgnoresRange = false;
+                OnPatternStarted?.Invoke(e, pattern);
+            };
             e.Attacks.OnResolved += (hit, lost) => OnPatternResolved?.Invoke(e, hit, lost);
             e.Attacks.OnNearMiss += near => OnNearMiss?.Invoke(e, near);
             Elites.Add(e);
@@ -86,10 +90,10 @@ namespace BoneSquadKiting.Bosses
                     if (!e.Entering) OnArrived?.Invoke(e);
                     continue;
                 }
-                // A cast in progress always finishes; a new one only starts while the squad is within reach.
+                // Scripted openers keep their timing even if the squad retreats to the entrance.
                 bool inReach = e.Def.AttackRange <= 0f || (squad.Anchor - e.Pos).magnitude <= e.Def.AttackRange;
                 e.Attacks.HasCaster = true; e.Attacks.CasterX = e.X; e.Attacks.CasterZ = e.Z;
-                if (e.Casting || inReach) e.Attacks.Tick(squad, null, dt);
+                if (e.Casting || inReach || e.OpeningCastIgnoresRange) e.Attacks.Tick(squad, null, dt);
                 if (e.Casting || e.Def.Speed <= 0f) continue;   // it stands still while casting: the squad's chance to shoot — or to move
 
                 var dir = Steer(e, squad, flow);

@@ -25,6 +25,7 @@ namespace BoneSquadKiting.Mobs
 
         public System.Action<SquadUnit, float> OnUnitHit;   // unit, damage
         public event System.Action<MobShot, SquadUnit> OnProjectileHit;
+        public event System.Action OnMobSpawned;
         public System.Action<Mob> OnMobDied;
 
         /// <summary>Units killed by mobs during the last Tick. The caller reforms the squad when it is non-zero.</summary>
@@ -42,6 +43,7 @@ namespace BoneSquadKiting.Mobs
             var m = new Mob { Def = def, X = pos.x, Z = pos.y, Health = def.Hp, AttackCd = Random.value * def.AttackPeriod };
             Mobs.Add(m);
             registry?.Register(m);
+            OnMobSpawned?.Invoke();
             return m;
         }
 
@@ -132,7 +134,7 @@ namespace BoneSquadKiting.Mobs
                 var target = NearestUnit(squad, m.Pos, m.Def.Radius + UnitRadius + m.Def.AttackReach);
                 if (target == null) continue;
                 m.AttackCd = m.Def.AttackPeriod;
-                var took = SquadDamage.Apply(squad.Units, target, m.Def.AttackDamage);   // the leader's hits land on someone else
+                var took = SquadDamage.Apply(squad.Units, target, m.Def.AttackDamage, m.Def.SquadHitSound);   // the leader's hits land on someone else
                 OnUnitHit?.Invoke(took, m.Def.AttackDamage);
                 if (took.Dead) UnitsKilledLastTick++;
             }
@@ -187,7 +189,7 @@ namespace BoneSquadKiting.Mobs
                 var hit = NearestUnit(squad, s.Pos, s.Def.ShotRadius + UnitRadius);
                 if (hit != null)
                 {
-                    var took = SquadDamage.Apply(squad.Units, hit, s.Def.AttackDamage);
+                    var took = SquadDamage.Apply(squad.Units, hit, s.Def.AttackDamage, s.Def.SquadHitSound);
                     OnUnitHit?.Invoke(took, s.Def.AttackDamage);
                     OnProjectileHit?.Invoke(s, took);
                     if (took.Dead) UnitsKilledLastTick++;

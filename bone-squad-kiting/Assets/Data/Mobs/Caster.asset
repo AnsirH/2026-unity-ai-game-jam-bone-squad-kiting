@@ -13,16 +13,47 @@ MonoBehaviour:
   m_Name: Caster
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.MobDefinition
   DisplayName: "\uC6D0\uAC70\uB9AC"
+  Armored: 0
   Radius: 0.3
   Speed: 2.7
   Hp: 44
   AttackDamage: 10
+  SquadHitSound: enemy.caster.hit
   AttackPeriod: 2.5
   AttackReach: 0.1
   AttackRange: 6.5
   ShotSpeed: 6
+  JavelinThrowClip: {fileID: 0}
   ShotRadius: 0.25
+  ShotLifetime: 0
+  ShotSpeedCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  ShotFadeStart: 0.55
   Prefab: {fileID: 6834550672567396701, guid: 55397ca90934c47c5b23256db442b70d, type: 3}
+  HealthBarPrefab: {fileID: 0}
+  HealthBarHeight: 2
   ModelScale: 0.85
   ModelYawOffset: 0
   AttackAnimSeconds: 1.2

@@ -15,7 +15,13 @@ namespace BoneSquadKiting.Audio
         public string CurrentBgmId => music.CurrentId;
         readonly Dictionary<string, float> _lastVolleySound = new();
 
-        // Several soldiers often fire or land the same sound on the same beat.
+        public void PlaySquadShot(bool leader)
+        {
+            var entry = database.FindSfx(leader ? "squad.leader.throw" : "squad.crossbow.fire");
+            if (entry?.Clip != null) effects.PlaySquadShot(entry, leader);
+        }
+
+        // Play one cue when several units spawn, hit or die on the same beat.
         public void PlayVolleySfx(string id)
         {
             float now = Time.unscaledTime;
@@ -48,8 +54,8 @@ namespace BoneSquadKiting.Audio
             if (Current == this) Current = null;
         }
 
-        public bool PlayBgm(string id, bool restart = false) =>
-            music.Play(database.FindBgm(id), crossfadeSeconds, restart);
+        public bool PlayBgm(string id, bool restart = false, bool immediate = false) =>
+            music.Play(database.FindBgm(id), immediate ? 0f : crossfadeSeconds, restart);
 
         public void StopBgm() => music.Stop(crossfadeSeconds);
 

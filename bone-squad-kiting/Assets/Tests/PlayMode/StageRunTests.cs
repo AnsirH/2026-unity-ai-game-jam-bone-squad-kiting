@@ -128,6 +128,31 @@ public class StageRunTests
 
         run.Enter(2);
         Assert.AreEqual("bgm.boss", sound.CurrentBgmId);
+        var battle = sources.Single(source => source.clip != null && source.clip.name == "stage3_boss");
+        var director = run.Kit.Director;
+        var previousKey = GameProgress.Key;
+        GameProgress.Key = "bsk.test.victory-music";
+        try
+        {
+            director.Fight.Kill();
+            float deadline = Time.realtimeSinceStartup + 20f;
+            while (director.Phase != GamePhase.Win && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.AreEqual(GamePhase.Win, director.Phase);
+            Assert.AreEqual("bgm.victory", sound.CurrentBgmId);
+            Assert.IsFalse(battle.isPlaying);
+            var victory = sources.Single(source => source.isPlaying && source.clip.name == "Victory in Ash");
+            Assert.AreEqual("Victory in Ash", victory.clip.name);
+            Assert.IsFalse(victory.loop);
+            victory.Stop();
+            yield return null;
+            yield return null;
+            Assert.IsFalse(victory.isPlaying, "the win screen does not restart the victory song");
+        }
+        finally
+        {
+            GameProgress.Clear();
+            GameProgress.Key = previousKey;
+        }
         yield return SceneManager.LoadSceneAsync("MainMenu");
         yield return null;
         Assert.AreSame(sound, SoundManager.Current);
@@ -336,5 +361,137 @@ public class StageRunTests
         Assert.That(Vector2.Distance(director.Squad.Anchor, new Vector2(0f, 12f)), Is.LessThan(1f));
         Assert.That(Mathf.DeltaAngle(run.Kit.Cam.transform.eulerAngles.y, 0f), Is.EqualTo(0f).Within(0.01f), "a stage starts with the camera's Rotation Y at 0 unless it says otherwise");
         Assert.IsFalse(director.IsFinalStage);
+    }
+
+    [UnityTest]
+    public IEnumerator PlainsCheckpointSurvivesDefeatRetryAndContinue()
+    {
+        GameProgress.Clear();
+        try
+        {
+            StageRun.RequestedStage = 0;
+            yield return SceneManager.LoadSceneAsync("Game");
+            yield return null;
+            var run = Object.FindFirstObjectByType<StageRun>();
+            run.Enter(0);
+            var d = run.Kit.Director;
+            d.enabled = false;
+            var hud = run.Kit.GetComponentInChildren<BoneSquadKiting.UI.Hud>();
+            var checkpoint = run.CurrentEntry.Checkpoint;
+            var entrance = d.Squad.StartAnchor;
+            Assert.NotNull(checkpoint);
+            var first = checkpoint.EarlierEncounters.Single();
+            var second = checkpoint.Trigger;
+            var third = run.CurrentEntry.Map.GetComponentsInChildren<MiniBossSpawn>(true)
+                .Single(m => m.Definition == second.Definition && m != first && m != second);
+            Assert.IsTrue(d.Squad.Grid.IsWalkable(checkpoint.Position));
+            Assert.That(Vector2.Distance(checkpoint.Position, second.Position), Is.InRange(2f, 5f));
+            Assert.Greater(Vector2.Dot(checkpoint.Position - second.Position, first.Position - second.Position), 0f);
+
+            void Defeat(MiniBossSpawn marker)
+            {
+                var enemy = marker.Elite ?? d.SpawnMiniBoss(marker);
+                enemy.ApplyDamage(enemy.Def.MaxHp);
+                d.Elites.Tick(d.Squad, d.Enemies, d.Squad.Grid, d.Flow, .01f);
+            }
+            void WipeAndRetry()
+            {
+                foreach (var member in d.Squad.Units) { member.Hp = 0f; member.Dead = true; }
+                d.Step(.02f);
+                Assert.AreEqual(GamePhase.Lose, d.Phase);
+                hud.Refresh();
+                hud.OverlayButton.onClick.Invoke();
+                Assert.AreEqual(GamePhase.Play, d.Phase);
+            }
+            Defeat(first);
+            Assert.IsFalse(GameProgress.HasSave);
+            WipeAndRetry();
+            Assert.AreEqual(entrance, d.Squad.Anchor);
+            Defeat(first);
+            Defeat(second);
+            Assert.IsTrue(GameProgress.AtCheckpoint);
+            Assert.IsTrue(GameProgress.HasSave);
+            WipeAndRetry();
+            Assert.AreEqual(checkpoint.Position, d.Squad.Anchor);
+            Assert.AreEqual(checkpoint.Position, run.Kit.Cam.LookAt);
+            Assert.IsTrue(first.Defeated && second.Defeated);
+            Assert.IsFalse(third.Defeated);
+            Assert.IsTrue(d.Squad.Units.All(u => !u.Dead && d.Squad.Grid.IsWalkable(new Vector2(u.X, u.Z))));
+            Assert.AreEqual(25, d.AliveCount);
+            Assert.Greater(d.Waves.MaxProgress, .1f);
+            Assert.AreEqual(d.Waves.ProgressAt(checkpoint.Position), d.Waves.MaxProgress, .0001f);
+            Assert.AreEqual(0f, d.Waves.ProgressAt(entrance), .0001f);
+            d.Step(.02f);
+            Assert.IsNull(first.Elite);
+            Assert.IsNull(second.Elite);
+            Assert.IsTrue(third.Elite.Alive);
+            WipeAndRetry();
+            Assert.AreEqual(checkpoint.Position, d.Squad.Anchor);
+            Vector2 respawn = checkpoint.Position;
+
+            yield return SceneManager.LoadSceneAsync("MainMenu");
+            yield return null;
+            var menu = Object.FindFirstObjectByType<BoneSquadKiting.UI.MainMenu>();
+            Assert.IsTrue(menu.ContinueButton.interactable);
+            menu.BurstSeconds = 0f;
+            menu.ContinueButton.onClick.Invoke();
+            yield return null;
+            yield return null;
+            run = Object.FindFirstObjectByType<StageRun>();
+            Assert.AreEqual(0, run.Current);
+            Assert.AreEqual(respawn, run.Kit.Director.Squad.Anchor);
+            Assert.IsTrue(run.CurrentEntry.Checkpoint.Trigger.Defeated);
+            GameProgress.Save(1);
+            Assert.IsFalse(GameProgress.AtCheckpoint);
+            Assert.AreEqual(1, GameProgress.NextStage);
+        }
+        finally { GameProgress.Clear(); }
+    }
+
+    [UnityTest]
+    public IEnumerator PriestGuidePointsNorthWestUntilWarpFirstEntersTheGameCamera()
+    {
+        StageRun.RequestedStage = 0;
+        yield return SceneManager.LoadSceneAsync("Game");
+        yield return null;
+        var run = Object.FindFirstObjectByType<StageRun>();
+        run.Enter(0);
+        var d = run.Kit.Director;
+        d.enabled = false;
+        var rig = run.Kit.Cam;
+        rig.enabled = false;
+        void Aim(Vector2 point) =>
+            rig.transform.position = new Vector3(point.x, 0f, point.y) - rig.transform.forward * rig.Distance;
+        var hud = run.Kit.GetComponentInChildren<BoneSquadKiting.UI.Hud>();
+        var icon = hud.PortalGuide;
+        var bossIcon = hud.GetComponentInChildren<BoneSquadKiting.UI.BossApproachGuide>(true).GetComponent<RectTransform>();
+        Assert.AreEqual(bossIcon.sizeDelta, icon.rectTransform.sizeDelta);
+        Assert.IsFalse(icon.enabled);
+        var priest = run.CurrentEntry.Map.GetComponentsInChildren<MiniBossSpawn>(true).Single(m => m.EndsReinforcements);
+        var e = d.SpawnMiniBoss(priest);
+        e.ApplyDamage(e.Def.MaxHp);
+        d.Elites.Tick(d.Squad, d.Enemies, d.Squad.Grid, d.Flow, .01f);
+        Aim(d.Squad.StartAnchor);
+        yield return null;
+        yield return null;
+        Assert.IsTrue(icon.enabled);
+        var before = icon.rectTransform.anchoredPosition;
+        Assert.Less(before.x, -140f);
+        Assert.Greater(before.y, -40f);
+        for (int i = 0; i < 12 && (icon.rectTransform.anchoredPosition - before).sqrMagnitude < .02f; i++)
+            yield return null;
+        Assert.Greater((icon.rectTransform.anchoredPosition - before).sqrMagnitude, .01f);
+        var end = d.Stage.EndPoint.position;
+        Aim(new Vector2(end.x, end.z));
+        yield return null;
+        yield return null;
+        Assert.IsFalse(icon.enabled);
+        Aim(d.Squad.StartAnchor);
+        yield return null;
+        Assert.IsFalse(icon.enabled, "once the actual warp was visible the icon stays dismissed");
+        run.Enter(1);
+        var arrows = run.CurrentEntry.Map.GetComponentInChildren<BreakableWall>().ExitGuide.GetComponentsInChildren<SpriteRenderer>(true);
+        Assert.AreEqual(2, arrows.Length);
+        foreach (var arrow in arrows) Assert.AreEqual(2.08f, arrow.sprite.bounds.size.x * arrow.transform.lossyScale.x, .01f);
     }
 }

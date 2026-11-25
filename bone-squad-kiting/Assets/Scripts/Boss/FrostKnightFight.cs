@@ -337,10 +337,22 @@ namespace BoneSquadKiting.Bosses
             if (Tuning.Mages == null || _elites == null) return;
             for (int i = 0; i < Tuning.Mages.Length; i++)
             {
-                if (Tuning.Mages[i] == null) continue;
+                var def = Tuning.Mages[i];
+                if (def == null) continue;
                 // Without placed points they stand left and right of the room's middle.
                 var at = i < _mageSpawns.Length ? _mageSpawns[i] : Point((i % 2 == 0 ? -1f : 1f) * _size.x * 0.25f, _size.y * 0.15f);
-                Mages.Add(_elites.Spawn(Tuning.Mages[i], at, _enemies));
+                var mage = _elites.Spawn(def, at, _enemies);
+                if (Tuning.MageOpeningPattern != null && def.Patterns != null)
+                {
+                    int index = def.Patterns.IndexOf(Tuning.MageOpeningPattern);
+                    if (index >= 0)
+                    {
+                        mage.Attacks.Index = index;
+                        mage.Attacks.NextAttack = Tuning.MageOpeningDelay;
+                        mage.OpeningCastIgnoresRange = true;
+                    }
+                }
+                Mages.Add(mage);
             }
         }
 

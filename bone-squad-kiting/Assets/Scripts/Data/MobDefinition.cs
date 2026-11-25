@@ -14,6 +14,8 @@ namespace BoneSquadKiting.Data
         public float Speed = 3.2f;          // well under the squad's 7.4 so it can always be outrun
         public float Hp = 66f;              // two unit shots
         public float AttackDamage = 10f;
+        [Tooltip("Sound database ID for this attack dealing damage to a squad member.")]
+        public string SquadHitSound;
         public float AttackPeriod = 1.0f;   // seconds between hits
         public float AttackReach = 0.1f;    // extra distance beyond touching at which it can hit
 

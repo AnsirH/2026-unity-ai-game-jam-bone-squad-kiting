@@ -91,7 +91,7 @@ namespace BoneSquadKiting.UI
             StartCoroutine(BurstThenLoad(GameScene, 0));
         }
 
-        /// <summary>The stage after the last one cleared, from its start point.</summary>
+        /// <summary>Resume from the saved stage entrance or its mid-stage checkpoint.</summary>
         public void Continue()
         {
             if (Starting || !GameProgress.HasSave) return;

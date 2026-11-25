@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using BoneSquadKiting.Audio;
 
 namespace BoneSquadKiting.Squad
 {
@@ -17,7 +18,7 @@ namespace BoneSquadKiting.Squad
         /// other unit lives: another unit takes it instead (and may die from it). Once the leader is the
         /// last one standing it takes damage itself. Returns the unit that actually took the damage.
         /// </summary>
-        public static SquadUnit Apply(IList<SquadUnit> units, SquadUnit victim, float amount)
+        public static SquadUnit Apply(IList<SquadUnit> units, SquadUnit victim, float amount, string hitSound = null)
         {
             if (Invincible) return victim;
             if (victim.IsLeader)
@@ -27,11 +28,12 @@ namespace BoneSquadKiting.Squad
             }
             if (victim.Dead) return victim;
             victim.Hp -= amount;
+            if (amount > 0f && !string.IsNullOrEmpty(hitSound)) SoundManager.Current?.PlayVolleySfx(hitSound);
             victim.Flash = 1f;
             if (victim.Hp <= 0f)
             {
                 victim.Dead = true;
-                BoneSquadKiting.Audio.SoundManager.Current?.PlayVolleySfx("squad.hit.bones");
+                SoundManager.Current?.PlayVolleySfx("squad.hit.bones");
             }
             return victim;
         }
