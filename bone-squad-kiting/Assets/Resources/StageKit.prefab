@@ -7249,6 +7249,7 @@ MonoBehaviour:
   HitFlashColor: {r: 3, g: 3, b: 3, a: 1}
   TurnSpeed: 540
   ShotColor: {r: 0.75, g: 0.3, b: 1, a: 1}
+  ShotMaterial: {fileID: 2100000, guid: 17b1d49ce48d73b4c8de511bdb878126, type: 2}
   ShotHeight: 1.1
 --- !u!1 &7003655343096661306
 GameObject:

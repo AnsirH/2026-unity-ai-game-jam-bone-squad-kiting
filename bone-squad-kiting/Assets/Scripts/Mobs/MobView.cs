@@ -21,6 +21,8 @@ namespace BoneSquadKiting.Mobs
         public Color HitFlashColor = new(3f, 3f, 3f, 1f);
         public float TurnSpeed = 540f;     // degrees per second a model turns toward where it walks
         public Color ShotColor = new(0.75f, 0.3f, 1f, 1f);
+        [Tooltip("The glowing material enemy shots are copied from. It must have emission switched on.")]
+        public Material ShotMaterial;
         public float ShotHeight = 1.1f;    // how high above the ground enemy shots are drawn
 
         class View
@@ -177,7 +179,12 @@ namespace BoneSquadKiting.Mobs
                 go.transform.SetParent(transform, false);
                 if (_shotMaterial == null)
                 {
-                    _shotMaterial = new Material(go.GetComponent<Renderer>().sharedMaterial) { color = ShotColor };
+                    // Start from a project material. A built player has no usable default primitive material
+                    // (a copy of it draws magenta), and it only ships the glowing shader variant when a material
+                    // asset with emission switched on is part of the build: that is what ShotMaterial is for.
+                    var source = ShotMaterial != null ? ShotMaterial
+                        : MobMaterial != null ? MobMaterial : go.GetComponent<Renderer>().sharedMaterial;
+                    _shotMaterial = new Material(source) { color = ShotColor };
                     if (_shotMaterial.HasProperty("_BaseColor")) _shotMaterial.SetColor("_BaseColor", ShotColor);
                     if (_shotMaterial.HasProperty(EmissionId)) { _shotMaterial.EnableKeyword("_EMISSION"); _shotMaterial.SetColor(EmissionId, ShotColor * 2f); }
                 }
