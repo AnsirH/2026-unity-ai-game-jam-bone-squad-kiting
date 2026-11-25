@@ -3,9 +3,7 @@ using UnityEngine;
 namespace BoneSquadKiting.Game
 {
     /// <summary>
-    /// What "continue" resumes from, kept between sessions: the number of the game scene's stage to play
-    /// next (0 = nothing cleared yet, no save), or, once every map is cleared, the name of the scene that
-    /// follows them (the boss arena).
+    /// Continue loads the saved stage, its optional mid-stage checkpoint, or a named scene.
     /// </summary>
     public static class GameProgress
     {
@@ -16,13 +14,17 @@ namespace BoneSquadKiting.Game
         public static int NextStage => Mathf.Max(0, PlayerPrefs.GetInt(Key, 0));
         /// <summary>Scene to continue in instead of a map of the game scene; empty when it is a map.</summary>
         public static string NextScene => PlayerPrefs.GetString(SceneKey, "");
-        public static bool HasSave => NextStage > 0;
+        static string CheckpointKey => Key + ".checkpoint";
+        public static bool AtCheckpoint => PlayerPrefs.GetInt(CheckpointKey, 0) == 1;
+        public static bool HasSave => NextStage > 0 || AtCheckpoint;
 
-        /// <summary>A stage was cleared: continue starts from <paramref name="nextStage"/> (in <paramref name="scene"/> if given).</summary>
-        public static void Save(int nextStage, string scene = "")
+        /// <summary>Record where the next retry or Continue should begin.</summary>
+        public static void Save(int nextStage, string scene = "", bool atCheckpoint = false)
         {
             PlayerPrefs.SetInt(Key, Mathf.Max(0, nextStage));
             PlayerPrefs.SetString(SceneKey, scene ?? "");
+            if (atCheckpoint) PlayerPrefs.SetInt(CheckpointKey, 1);
+            else PlayerPrefs.DeleteKey(CheckpointKey);
             PlayerPrefs.Save();
         }
 
@@ -30,6 +32,7 @@ namespace BoneSquadKiting.Game
         {
             PlayerPrefs.DeleteKey(Key);
             PlayerPrefs.DeleteKey(SceneKey);
+            PlayerPrefs.DeleteKey(CheckpointKey);
             PlayerPrefs.Save();
         }
     }

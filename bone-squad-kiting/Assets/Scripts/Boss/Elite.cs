@@ -14,6 +14,7 @@ namespace BoneSquadKiting.Bosses
         // Pre-placed enemies reveal their top health bar inside this radius. An arriving enemy appears on the HUD immediately.
         public float? HealthBarApproachRadius;
         public BossAttackSystem Attacks;
+        public bool OpeningCastIgnoresRange;
 
         /// <summary>The rest of its entry route. While this is set it is walking in: it neither chases nor casts.</summary>
         public System.Collections.Generic.List<Vector2> Path;

@@ -23,6 +23,7 @@ namespace BoneSquadKiting.UI
         public GameDirector Director;
 
         [Header("Top")]
+        public Image PortalGuide;
         public GameObject BossBar;          // shared by the current encounter
         public RectTransform BossFill;
         public Text BossText, AliveText, DpsText;

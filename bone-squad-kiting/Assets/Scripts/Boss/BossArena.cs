@@ -39,6 +39,10 @@ namespace BoneSquadKiting.Bosses
         public EliteDefinition[] Mages = new EliteDefinition[0];
         [Tooltip("Seconds after the boss is stunned before the mages appear.")]
         public float MageDelay = 1.2f;
+        [Tooltip("Summoned mages that know this pattern open with it, then continue their normal cycle.")]
+        public PatternDefinition MageOpeningPattern;
+        [Min(0f), Tooltip("Time from appearing to the opening warning, even when the squad is out of range.")]
+        public float MageOpeningDelay = 1f;
         [Tooltip("Standing up, then fading out of sight.")]
         public float StandUpSeconds = 4.2f;
 

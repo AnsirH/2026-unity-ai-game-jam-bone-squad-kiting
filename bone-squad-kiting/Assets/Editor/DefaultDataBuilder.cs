@@ -40,6 +40,7 @@ namespace BoneSquadKiting.EditorTools
             EnsureFolder(Root, "Mobs");
             var grunt = Upsert<MobDefinition>(Root + "/Mobs/Grunt.asset");
             grunt.DisplayName = "잡몹";
+            grunt.SquadHitSound = "enemy.grunt.hit";
             EditorUtility.SetDirty(grunt);
 
             // A basic mini boss, reusing three of the boss's patterns. Its zones are fixed where they are announced.
@@ -53,7 +54,7 @@ namespace BoneSquadKiting.EditorTools
             // The telekinetic mage is meant to cast rotating zones, which do not exist yet: it uses the plain
             // gate pattern for now.
             Elite("Catapult", "투석병", seq.Patterns[0], cannon: true);
-            Elite("DarkFlameMage", "잔화의 사제", seq.Patterns[3], second: seq.Patterns[2]);   // throne: shell (Q), then quadrants (R)
+            Elite("DarkFlameMage", "잔화의 사제", seq.Patterns[3], second: seq.Patterns[2]);   // shared cycle, encounters can select their opening cast
             Elite("SpearThrower", "창투척병", seq.Patterns[1]);
             Elite("ShadowSwordsman", "그림자검사", seq.Patterns[2]);
             // The telekinetic mage's zones turn (ZoneRotationSpeed on the mini boss). Three variants so every

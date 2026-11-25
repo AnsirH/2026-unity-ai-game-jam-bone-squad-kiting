@@ -16,6 +16,7 @@ namespace BoneSquadKiting.Squad
         public bool Heavy;      // thrown by the squad leader: drawn as its own projectile
         public Vector2 Dir;     // which way it is flying
         public float Damage;    // what it deals when it lands, fixed when it is fired
+        public float DamageDealt; // actual health lost on impact, including a phase HP floor
         public float Reserve;   // how much of the target's health was counted on for it
         public int AttackStreakEpoch;
     }
@@ -215,9 +216,11 @@ namespace BoneSquadKiting.Squad
                     var impactDir = dist > 1e-6f ? to / dist : s.Dir;
                     var impactPosition = s.Target.Pos - impactDir * Mathf.Min(dist, s.Target.Radius);
                     OnImpact?.Invoke(impactPosition, s.Target.Radius, impactDir);
-                    OnTargetHit?.Invoke(s);
                     Release(s);
+                    float before = s.Target.Hp;
                     (s.Target as IDamageable)?.ApplyDamage(s.Damage);
+                    s.DamageDealt = Mathf.Max(0f, before - s.Target.Hp);
+                    OnTargetHit?.Invoke(s);
                     if (s.Damage > 0f) RecordHit(s, units);
                     OnHit?.Invoke(s.Damage);
                     Shots.RemoveAt(i);

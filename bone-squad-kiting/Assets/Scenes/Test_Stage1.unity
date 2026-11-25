@@ -840,7 +840,6 @@ MonoBehaviour:
   NearMissBuffSeconds: 5
   ReviveSeconds: 3
   Phase: 0
-  Paused: 0
   Elapsed: 0
   LastDps: 0
   TotalDamage: 0
@@ -11843,6 +11842,7 @@ MonoBehaviour:
   OverlayTitle: {fileID: 685858602}
   OverlayButtonText: {fileID: 305692084}
   OverlayButton: {fileID: 133680302}
+  PauseQuitButton: {fileID: 0}
 --- !u!114 &407371479
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18455,6 +18455,9 @@ MonoBehaviour:
   AtProgress: -1
   PatternCycle: []
   OpeningDelay: 0.45
+  ApproachGuide: {fileID: 0}
+  NextWaveClearGuide: {fileID: 0}
+  EndsReinforcements: 0
   DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
@@ -19813,6 +19816,9 @@ MonoBehaviour:
   AtProgress: -1
   PatternCycle: []
   OpeningDelay: 0.6
+  ApproachGuide: {fileID: 0}
+  NextWaveClearGuide: {fileID: 0}
+  EndsReinforcements: 0
   DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
@@ -33935,6 +33941,9 @@ MonoBehaviour:
   AtProgress: -1
   PatternCycle: []
   OpeningDelay: -1
+  ApproachGuide: {fileID: 0}
+  NextWaveClearGuide: {fileID: 0}
+  EndsReinforcements: 0
   DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
@@ -39780,6 +39789,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 986f8584ae4c00e4798c9313d1374855, type: 2}
   - {fileID: 11400000, guid: ec0d90245c4c84d459651fc1f147e448, type: 2}
   OpeningDelay: 0.45
+  ApproachGuide: {fileID: 0}
+  NextWaveClearGuide: {fileID: 0}
+  EndsReinforcements: 1
   DefeatGuide: {fileID: 0}
   Route: []
   EntrySpeed: 4
@@ -51204,7 +51216,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd57e1b206411254290cff6126713453, type: 3}
   m_Name: 
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Stage.WaveSpawner
-  Plan: {fileID: 11400000, guid: 46592228117b4924aa2233f599b20ddd, type: 2}
+  Plan: {fileID: 11400000, guid: ab592a10d2ecb4e178debebc3ce7ef29, type: 2}
   Mob: {fileID: 11400000, guid: 4b4b08f65fa8c284a9e0f7d8c085212f, type: 2}
   Interval:
     serializedVersion: 2

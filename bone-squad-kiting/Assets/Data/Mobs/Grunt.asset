@@ -13,18 +13,50 @@ MonoBehaviour:
   m_Name: Grunt
   m_EditorClassIdentifier: BoneSquadKiting::BoneSquadKiting.Data.MobDefinition
   DisplayName: "\uC7A1\uBAB9"
+  Armored: 0
   Radius: 0.3
   Speed: 2.8
   Hp: 66
   AttackDamage: 10
+  SquadHitSound: enemy.grunt.hit
   AttackPeriod: 1
   AttackReach: 0.1
   AttackRange: 0
   ShotSpeed: 6
+  JavelinThrowClip: {fileID: 0}
   ShotRadius: 0.25
+  ShotLifetime: 0
+  ShotSpeedCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  ShotFadeStart: 0.55
   Prefab: {fileID: 6613591833629731662, guid: e6539bacac0dd4a458d793f028df778f, type: 3}
+  HealthBarPrefab: {fileID: 0}
+  HealthBarHeight: 2
   ModelScale: 0.85
   ModelYawOffset: 0
+  AttackAnimSeconds: 0.35
   States:
     Idle: 
     Run: Run

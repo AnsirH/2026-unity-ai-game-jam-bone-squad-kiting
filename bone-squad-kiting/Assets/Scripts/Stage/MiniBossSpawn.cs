@@ -34,7 +34,13 @@ namespace BoneSquadKiting.Stage
         public PatternDefinition[] PatternCycle;
         [Tooltip("Seconds in attack range before the first warning. A negative value uses the enemy's usual opening delay.")]
         public float OpeningDelay = -1f;
-        [Tooltip("World-space directions revealed when this enemy dies.")]
+        [Tooltip("Ground guide revealed when the squad enters the approach or attack radius, whichever is larger.")]
+        public GameObject ApproachGuide;
+        [Tooltip("Ground guide revealed after the next regular wave following this enemy's defeat is cleared.")]
+        public GameObject NextWaveClearGuide;
+        [Tooltip("Defeating this enemy ends wave and burst reinforcements, even if other encounters remain.")]
+        public bool EndsReinforcements;
+        [Tooltip("Guide revealed when this enemy dies.")]
         public GameObject DefeatGuide;
 
         [Header("Entry route (optional)")]
@@ -83,7 +89,9 @@ namespace BoneSquadKiting.Stage
         {
             Triggered = false;
             Elite = null;
+            if (ApproachGuide != null) ApproachGuide.SetActive(false);
             if (DefeatGuide != null) DefeatGuide.SetActive(false);
+            if (NextWaveClearGuide != null) NextWaveClearGuide.SetActive(false);
         }
         public void MarkTriggered(Elite elite) { Triggered = true; Elite = elite; }
 

@@ -72,6 +72,9 @@ namespace BoneSquadKiting.EditorTools
                     new Vector2(0.5f, 0), new Vector2(x, 58), new Vector2(bw, 40), out hud.FormationLabels[i]);
             }
 
+            AddBossApproachGuide(hud);
+            AddPortalApproachGuide(hud);
+
             // Start / result overlay, on top of everything.
             var overlay = Panel(root, "Overlay", new Color(0, 0, 0, 0.55f), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             hud.Overlay = overlay.gameObject;
@@ -80,6 +83,30 @@ namespace BoneSquadKiting.EditorTools
 
             HudSkin.EnsurePauseButton(hud);
             return hud;
+        }
+
+        public static void AddBossApproachGuide(Hud hud)
+        {
+            var image = ApproachImage(hud, "Boss Approach Guide", "BossApproach", new Vector2(0f, -19f));
+            image.gameObject.AddComponent<BossApproachGuide>();
+        }
+
+        public static void AddPortalApproachGuide(Hud hud)
+        {
+            hud.PortalGuide = ApproachImage(hud, "Portal Approach Guide", "PortalApproachNW", new Vector2(-173f, -22f));
+        }
+
+        static Image ApproachImage(Hud hud, string name, string art, Vector2 position)
+        {
+            var north = new Vector2(.5f, 1f);
+            var image = Panel(hud.transform, name, Color.white, north, north, position, new Vector2(106f, 92f));
+            image.rectTransform.pivot = north;
+            image.sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI/ClassicBone/" + art + ".svg");
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            image.enabled = false;
+            image.gameObject.layer = hud.gameObject.layer;
+            return image;
         }
 
         internal static RectTransform Rect(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 a, Vector2 b, bool stretch)

@@ -109,6 +109,53 @@ public class FrostKnightFightTests
     }
 
     [Test]
+    public void SummonedPriestOpensAfterOneSecondOutsideRangeThenAlternatesInRange()
+    {
+        SquadDamage.Invincible = true;
+        var priest = _arena.Tuning.Mages[0];
+        var shell = ScriptableObject.CreateInstance<PatternDefinition>();
+        var quadrants = ScriptableObject.CreateInstance<PatternDefinition>();
+        try
+        {
+            priest.Patterns.Add(shell);
+            priest.Patterns.Add(quadrants);
+            priest.Speed = 0f;
+            priest.AttackRange = 5f;
+            _arena.Tuning.Mages = new[] { priest };
+            _arena.Tuning.MageOpeningPattern = quadrants;
+            _arena.Tuning.MageOpeningDelay = 1f;
+
+            MoveSquad(_arena.Center);
+            Run(0.1f);
+            _boss.ApplyDamage(_boss.MaxHp);
+            Assert.IsTrue(RunUntil(() => _fight.Mages.Count == 1));
+            var mage = _fight.Mages[0];
+            MoveSquad(mage.Pos + Vector2.down * 20f);
+
+            void Tick(float seconds) => _elites.Tick(_fc, _enemies, null, null, seconds);
+            Tick(0.99f);
+            Assert.IsFalse(mage.Casting, "there is a full beat to see the priest arrive");
+            Tick(0.011f);
+            Assert.AreSame(quadrants, mage.Attacks.Current.Value.Pattern);
+            Tick(quadrants.Time + 0.1f);
+            Tick(priest.AttackGap + 1f);
+            Assert.IsFalse(mage.Casting, "at a distance only the scripted opener is forced");
+
+            MoveSquad(mage.Pos);
+            Tick(priest.AttackGap);
+            Assert.AreSame(shell, mage.Attacks.Current.Value.Pattern);
+            Tick(shell.Time + 0.1f);
+            Tick(priest.AttackGap);
+            Assert.AreSame(quadrants, mage.Attacks.Current.Value.Pattern);
+        }
+        finally
+        {
+            Object.DestroyImmediate(shell);
+            Object.DestroyImmediate(quadrants);
+        }
+    }
+
+    [Test]
     public void Circle_IsSmallerThanTheRingFormation_AndShrinksWithTheSquad()
     {
         const float ringRadius = 3.7f;                            // the ring formation's (E) radius for a full squad

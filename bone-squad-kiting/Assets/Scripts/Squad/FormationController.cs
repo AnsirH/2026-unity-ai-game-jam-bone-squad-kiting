@@ -75,8 +75,10 @@ namespace BoneSquadKiting.Squad
 
         public FormationDefinition Find(string id) => Formations.Find(f => f != null && f.Id == id);
 
-        /// <summary>Reset to the prototype's starting layout: dense formation at z = 3.4.</summary>
-        public void Init()
+        public void Init() => Init(StartAnchor);
+
+        /// <summary>Seat a fresh squad without changing the stage's entrance.</summary>
+        public void Init(Vector2 spawn)
         {
             var def = Find(DefaultFormation);
             if (def == null)
@@ -85,11 +87,11 @@ namespace BoneSquadKiting.Squad
                 return;
             }
             Units.Clear();
-            Anchor = Destination = StartAnchor;
+            Anchor = Destination = spawn;
             Formation = DefaultFormation; _slotsFormation = DefaultFormation;
             RotationDegrees = 0; TargetRotationDegrees = 0;
             LeaderFacing = RingFacing = new Vector2(0f, -1f);
-            Order = SquadOrder.Move(StartAnchor);
+            Order = SquadOrder.Move(spawn);
             var slots = FormationSlots.Generate(def, GameConstants.SquadSize);
             for (int i = 0; i < GameConstants.SquadSize; i++)
                 Units.Add(new SquadUnit

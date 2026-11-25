@@ -33,6 +33,11 @@ MonoBehaviour:
     Volume: 1
     Pitch: 1
     Loop: 1
+  - Id: bgm.victory
+    Clip: {fileID: 8300000, guid: 94b5b3069465e4e1693f21e77a7965af, type: 3}
+    Volume: 1
+    Pitch: 1
+    Loop: 0
   Sfx:
   - Id: squad.revive
     Clip: {fileID: 8300000, guid: f8584d47d6a240c5866b171a6e3b2b71, type: 3}
@@ -165,15 +170,15 @@ MonoBehaviour:
     Pitch: 1
     StartOffset: 0.008
   - Id: boss.frostknight.vanish
-    Clip: {fileID: 8300000, guid: 2024c569ff15c2046ba6db9a159bf306, type: 3}
+    Clip: {fileID: 8300000, guid: 37aba535efd7446c783a0da68a036bfa, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0.009
+    StartOffset: 0.068
   - Id: boss.frostknight.groggy
-    Clip: {fileID: 8300000, guid: 5bb10dc03b111894593e43924b7bf2f0, type: 3}
+    Clip: {fileID: 8300000, guid: daecf8356049b4c46a459021dca8739b, type: 3}
     Volume: 0.85
     Pitch: 1
-    StartOffset: 0.008
+    StartOffset: 0.046
   - Id: boss.frostknight.death
     Clip: {fileID: 8300000, guid: 7d3278f19b4b81f49b6d405511f2c8a9, type: 3}
     Volume: 0.85
@@ -195,10 +200,10 @@ MonoBehaviour:
     Pitch: 1
     StartOffset: 0
   - Id: stage.wave.start
-    Clip: {fileID: 8300000, guid: 63d03b19adc5cdd4491239c91bf88074, type: 3}
+    Clip: {fileID: 8300000, guid: 640f7e54bdc684e9e8a9046e37a8bc6e, type: 3}
     Volume: 0.55
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.04
   - Id: enemy.miniboss.appear
     Clip: {fileID: 8300000, guid: a7bec7c6a9ef83d4b9be9ff08caf169a, type: 3}
     Volume: 0.7
@@ -230,12 +235,17 @@ MonoBehaviour:
     Pitch: 1
     StartOffset: 0
   - Id: enemy.caster.hit
-    Clip: {fileID: 8300000, guid: 2a7796a5484530044860ede49adc8e44, type: 3}
-    Volume: 0.35
+    Clip: {fileID: 8300000, guid: d9bbbba2293824a5899c647076224ff9, type: 3}
+    Volume: 0.75
     Pitch: 1
-    StartOffset: 0
+    StartOffset: 0.045020834
   - Id: ui.click
     Clip: {fileID: 8300000, guid: 70f6b25eb0e6d694891b366e34bdc06c, type: 3}
     Volume: 0.6
     Pitch: 1
     StartOffset: 0
+  - Id: enemy.grunt.hit
+    Clip: {fileID: 8300000, guid: 3051a2995cf124dd8a6abd8656189bfd, type: 3}
+    Volume: 0.75
+    Pitch: 1
+    StartOffset: 0.0449375

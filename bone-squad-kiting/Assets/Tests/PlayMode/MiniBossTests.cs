@@ -230,6 +230,79 @@ public class MiniBossTests
     }
 
     [Test]
+    public void ReinforcementLeaderStopsDueWavesEvenWithAnotherArtilleryUnitAlive()
+    {
+        var other = AddSpawn(BossSpot + new Vector2(0, -20f));
+        other.PresentFromStart = true;
+        var unseen = AddSpawn(End);
+        _spawn.EndsReinforcements = true;
+        _spawn.PlayIntro = false;
+        _dir.Restart();
+        var leader = Summon();
+        _waves.SpawnNow();
+        _dir.Step(.02f);
+        int spawned = _waves.MobsSpawned;
+        Assert.Greater(spawned, 0);
+
+        leader.ApplyDamage(float.MaxValue);
+        _waves.SpawnNow();
+        _dir.Step(.02f);
+        Assert.IsTrue(other.Elite.Alive);
+        Assert.IsTrue(unseen.Defeated, "unreached encounter retired");
+        Assert.IsTrue(_waves.Stopped);
+        Assert.IsEmpty(_dir.Mobs.Mobs);
+        Run(6f);
+        Assert.AreEqual(spawned, _waves.MobsSpawned);
+        _dir.Restart();
+        _waves.SpawnNow();
+        _dir.Step(.02f);
+        Assert.Greater(_dir.Mobs.AliveCount, 0);
+        Assert.IsFalse(unseen.Triggered);
+    }
+
+    [Test]
+    public void GroundGuidesFollowApproachAndTheNextClearedWave()
+    {
+        AddSpawn(End);
+        _spawn.PresentFromStart = true;
+        _def.AttackRange = _spawn.TriggerRadius + 2f;
+        _spawn.ApproachGuide = new GameObject("Dodge");
+        _spawn.NextWaveClearGuide = new GameObject("Rescue");
+        _spawn.ApproachGuide.transform.SetParent(_fc.transform);
+        _spawn.NextWaveClearGuide.transform.SetParent(_fc.transform);
+        _dir.Restart();
+        _waves.SpawnNow();
+        _dir.Step(.02f);
+        Assert.IsFalse(_spawn.ApproachGuide.activeSelf);
+        Assert.IsFalse(_spawn.NextWaveClearGuide.activeSelf);
+        var olderMob = _dir.Mobs.Mobs[0];
+        int olderCount = _dir.Mobs.Mobs.Count;
+
+        Teleport(BossSpot + Vector2.up * (_def.AttackRange - .1f));
+        _dir.Step(.02f);
+        var gun = _spawn.Elite;
+        Assert.IsTrue(_spawn.ApproachGuide.activeSelf, "show the dodge before the first shot, even outside the HP-bar radius");
+        gun.ApplyDamage(float.MaxValue);
+        _dir.Step(.02f);
+        _waves.SpawnNow();
+        _dir.Step(.02f);
+        var targets = _dir.Mobs.Mobs.GetRange(olderCount, _dir.Mobs.Mobs.Count - olderCount);
+        Assert.Greater(targets.Count, 1);
+        _waves.SpawnNow();
+        _dir.Step(.02f);
+        for (int i = 1; i < targets.Count; i++) targets[i].ApplyDamage(float.MaxValue);
+        _dir.Step(.02f);
+        Assert.IsFalse(_spawn.NextWaveClearGuide.activeSelf, "one member of that wave remains");
+        targets[0].ApplyDamage(float.MaxValue);
+        _dir.Step(.02f);
+        Assert.IsTrue(olderMob.Alive);
+        Assert.IsTrue(_spawn.NextWaveClearGuide.activeSelf, "unrelated waves do not delay the guide");
+        _dir.Restart();
+        Assert.IsFalse(_spawn.ApproachGuide.activeSelf);
+        Assert.IsFalse(_spawn.NextWaveClearGuide.activeSelf);
+    }
+
+    [Test]
     public void TheSquadCanShootTheMiniBossDown()
     {
         var elite = Summon();

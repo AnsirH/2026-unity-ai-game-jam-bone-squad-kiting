@@ -59,6 +59,14 @@ namespace BoneSquadKiting.Stage
 
         readonly List<WaveEntry> _wave = new();
         readonly HashSet<int> _burstsDone = new();
+        readonly List<Mob> _guideWave = new();
+        GameObject _waveClearGuide;
+
+        public void RevealAfterNextWave(GameObject guide)
+        {
+            _waveClearGuide = guide;
+            _guideWave.Clear();
+        }
 
         /// <summary>Make the next wave arrive on the next step.</summary>
         public void SpawnNow() => TimeToNextWave = 0f;
@@ -72,16 +80,23 @@ namespace BoneSquadKiting.Stage
         int _startDistance;
 
         /// <summary>Call at match start. Without a grid or an end point, progress stays at 0.</summary>
-        public void Begin(WalkGrid grid, Vector2 start, Vector2? end)
+        public void Begin(WalkGrid grid, Vector2 start, Vector2? end, Vector2? checkpoint = null)
         {
             WavesSpawned = 0; MobsSpawned = 0; MaxProgress = 0f; Stopped = false;
             TimeToNextWave = Plan != null ? Plan.FirstWaveDelay : FirstWaveDelay;
             _burstsDone.Clear();
+            _waveClearGuide = null;
+            _guideWave.Clear();
             _toEnd = null; _startDistance = 0;
             if (grid == null || end == null) return;
             _toEnd = new FlowField(grid);
             _toEnd.Build(grid.Cell(grid.NearestWalkable(end.Value)));
             _startDistance = _toEnd.DistanceAt(start);
+            if (!checkpoint.HasValue) return;
+            MaxProgress = ProgressAt(checkpoint.Value);
+            if (Plan == null) return;
+            for (int i = 0; i < Plan.Bursts.Count; i++)
+                if (Plan.Bursts[i] != null && Plan.Bursts[i].AtProgress <= MaxProgress) _burstsDone.Add(i);
         }
 
         /// <summary>Progress for a position: 1 − (distance to the end / the start point's distance).</summary>
@@ -97,7 +112,14 @@ namespace BoneSquadKiting.Stage
         public int Tick(FormationController squad, MobSystem mobs, EnemyRegistry registry, float dt)
         {
             MaxProgress = Mathf.Max(MaxProgress, ProgressAt(squad.Anchor));
-            if (Stopped || Hold) return 0;
+            if (Stopped) return 0;
+            if (_waveClearGuide != null && _guideWave.Count > 0 && !_guideWave.Exists(mob => mob.Alive))
+            {
+                _waveClearGuide.SetActive(true);
+                _waveClearGuide = null;
+                _guideWave.Clear();
+            }
+            if (Hold) return 0;
             int spawned = 0;
 
             // One-off groups: the first time the squad gets this far. Read from the plan every step, so a
@@ -127,13 +149,14 @@ namespace BoneSquadKiting.Stage
                 _wave.Clear();
                 _wave.Add(new WaveEntry { Mob = Mob, Count = Mathf.Max(0, Mathf.RoundToInt(Count.Evaluate(MaxProgress))) });
             }
-            spawned += SpawnWave(_wave, squad, mobs, registry);
+            var trackedWave = _waveClearGuide != null && _guideWave.Count == 0 ? _guideWave : null;
+            spawned += SpawnWave(_wave, squad, mobs, registry, trackedWave);
             WavesSpawned++;
             MobsSpawned += spawned;
             return spawned;
         }
 
-        int SpawnWave(List<WaveEntry> entries, FormationController squad, MobSystem mobs, EnemyRegistry registry)
+        int SpawnWave(List<WaveEntry> entries, FormationController squad, MobSystem mobs, EnemyRegistry registry, List<Mob> trackedWave = null)
         {
             var grid = squad.Grid;
             List<Vector2> ahead = new(), behind = new();
@@ -149,7 +172,9 @@ namespace BoneSquadKiting.Stage
                     if (spawned % Group == 0) center = PickCenter(squad.Anchor, ahead, behind);
                     var p = center + Random.insideUnitCircle * Spread;
                     if (grid != null) p = grid.NearestWalkable(p);
-                    if (mobs.Spawn(entry.Mob, p, registry) == null) return spawned;   // alive cap reached: the wave is cut short
+                    var mob = mobs.Spawn(entry.Mob, p, registry);
+                    if (mob == null) return spawned;   // alive cap reached: the wave is cut short
+                    trackedWave?.Add(mob);
                     spawned++;
                 }
             }
